@@ -1,429 +1,33 @@
-import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
+import { setOptions } from '@googlemaps/js-api-loader';
 import { Head } from '@inertiajs/react';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import EventFields from '@/components/welcome/EventFields';
+import HealthBar from '@/components/welcome/HealthBar';
+import MapPicker from '@/components/welcome/MapPicker';
+import NamePrompt from '@/components/welcome/NamePrompt';
+import ResultsMap from '@/components/welcome/ResultsMap';
+import ShimmerText from '@/components/welcome/ShimmerText';
+import StreetViewPanel from '@/components/welcome/StreetViewPanel';
+import type {
+    Game,
+    GameEvent,
+    GameState,
+    LatLng,
+    Location,
+    Player,
+    Round,
+    RoundResult,
+} from '@/components/welcome/types';
 import echo from '@/echo';
-
-type Player = { id: string; name?: string | null; user: { name: string } };
-type Round = {
-    id: string;
-    round_number: number;
-    player_one_locked_in: boolean;
-    player_two_locked_in: boolean;
-};
-type Location = { lat: number; lng: number; heading: number };
-type Game = {
-    id: string;
-    player_one: Player;
-    player_two: Player;
-    player_one_health: number;
-    player_two_health: number;
-};
-type RoundResult = {
-    location: { lat: number; lng: number };
-    p1Guess: { lat: number; lng: number } | null;
-    p2Guess: { lat: number; lng: number } | null;
-};
-
-type GameState = 'waiting' | 'one_guessed' | 'finished' | 'game_over';
-
-type GameEvent = {
-    id: number;
-    name:
-        | 'PlayerGuessed'
-        | 'RoundFinished'
-        | 'RoundStarted'
-        | 'GameFinished'
-        | 'GameMessage';
-    ts: string;
-    data: Record<string, unknown>;
-};
 
 const MAX_EVENTS = 5;
 const MAX_MESSAGES = 6;
-
-function short(uuid: unknown) {
-    return typeof uuid === 'string' ? uuid.slice(0, 8) : '?';
-}
 
 setOptions({
     key: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
     v: 'weekly',
 });
-
-// --- Results map ---
-
-function svgDot(color: string) {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="7" fill="${color}" stroke="white" stroke-width="2"/></svg>`;
-    return {
-        url: 'data:image/svg+xml,' + encodeURIComponent(svg),
-        scaledSize: new google.maps.Size(16, 16),
-        anchor: new google.maps.Point(8, 8),
-    };
-}
-
-function svgFlagDot(circleColor: string) {
-    const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-  <circle cx="18" cy="18" r="16" fill="${circleColor}" stroke="white" stroke-width="2.5"/>
-  <path d="M16 9v18" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
-  <path d="M16 9h12l-3 4 3 4H16" fill="white"/>
-</svg>`;
-    return {
-        url: 'data:image/svg+xml,' + encodeURIComponent(svg),
-        scaledSize: new google.maps.Size(36, 36),
-        anchor: new google.maps.Point(18, 18),
-    };
-}
-
-function svgGuessCircle(circleColor: string) {
-    const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <circle cx="12" cy="12" r="10" fill="${circleColor}" stroke="white" stroke-width="2"/>
-</svg>`;
-    return {
-        url: 'data:image/svg+xml,' + encodeURIComponent(svg),
-        scaledSize: new google.maps.Size(24, 24),
-        anchor: new google.maps.Point(12, 12),
-    };
-}
-
-function ResultsMap({ result }: { result: RoundResult }) {
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        async function init() {
-            await importLibrary('maps');
-            await importLibrary('marker');
-            if (cancelled || !containerRef.current) return;
-
-            const map = new google.maps.Map(containerRef.current, {
-                center: result.location,
-                zoom: 3,
-                disableDefaultUI: true,
-                clickableIcons: false,
-            });
-
-            const bounds = new google.maps.LatLngBounds();
-
-            new google.maps.Marker({
-                position: result.location,
-                map,
-                icon: svgFlagDot('#facc15'),
-            });
-            bounds.extend(result.location);
-
-            const dashedLine = {
-                strokeColor: '#000000',
-                strokeOpacity: 0,
-                strokeWeight: 0,
-                icons: [
-                    {
-                        icon: {
-                            path: 'M 0,-1 0,1',
-                            strokeOpacity: 0.6,
-                            strokeWeight: 2,
-                            scale: 3,
-                        },
-                        offset: '0',
-                        repeat: '12px',
-                    },
-                ],
-            };
-
-            if (result.p1Guess) {
-                new google.maps.Marker({
-                    position: result.p1Guess,
-                    map,
-                    icon: svgDot('#60a5fa'),
-                });
-                bounds.extend(result.p1Guess);
-                new google.maps.Polyline({
-                    path: [result.location, result.p1Guess],
-                    map,
-                    ...dashedLine,
-                });
-            }
-
-            if (result.p2Guess) {
-                new google.maps.Marker({
-                    position: result.p2Guess,
-                    map,
-                    icon: svgDot('#f87171'),
-                });
-                bounds.extend(result.p2Guess);
-                new google.maps.Polyline({
-                    path: [result.location, result.p2Guess],
-                    map,
-                    ...dashedLine,
-                });
-            }
-
-            requestAnimationFrame(() =>
-                google.maps.event.trigger(map, 'resize'),
-            );
-            map.fitBounds(bounds, 80);
-        }
-
-        init().catch(console.error);
-        return () => {
-            cancelled = true;
-        };
-    }, [result]);
-
-    return (
-        <div ref={containerRef} className="streetview-lock absolute inset-0" />
-    );
-}
-
-// --- Street View ---
-
-function StreetViewPanel({ location }: { location: Location }) {
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        async function init() {
-            const { StreetViewPanorama } = await importLibrary('streetView');
-            if (cancelled || !containerRef.current) return;
-            const panorama = new StreetViewPanorama(containerRef.current, {
-                position: { lat: location.lat, lng: location.lng },
-                pov: { heading: location.heading, pitch: 0 },
-                disableDefaultUI: true,
-                clickToGo: false,
-                disableDoubleClickZoom: true,
-                scrollwheel: true,
-                showRoadLabels: false,
-                motionTracking: false,
-                motionTrackingControl: false,
-                keyboardShortcuts: false,
-                linksControl: false,
-                panControl: false,
-                zoomControl: true,
-                addressControl: false,
-                fullscreenControl: false,
-            });
-
-            const baseHeading = location.heading;
-            const basePitch = 0;
-            panorama.addListener('pov_changed', () => {
-                const pov = panorama.getPov();
-                if (
-                    Math.abs(pov.heading - baseHeading) > 0.01 ||
-                    Math.abs(pov.pitch - basePitch) > 0.01
-                ) {
-                    panorama.setPov({
-                        heading: baseHeading,
-                        pitch: basePitch,
-                        zoom: pov.zoom,
-                    });
-                }
-            });
-        }
-
-        init().catch(console.error);
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    return <div ref={containerRef} className="absolute inset-0" />;
-}
-
-// --- Map picker ---
-
-type LatLng = { lat: number; lng: number };
-
-function MapPicker({
-    onPin,
-    pinColor,
-    disabled,
-}: {
-    onPin: (coords: LatLng) => void;
-    pinColor: string;
-    disabled: boolean;
-}) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const markerRef = useRef<google.maps.Marker | null>(null);
-    const mapRef = useRef<google.maps.Map | null>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        async function init() {
-            await importLibrary('maps');
-            if (cancelled || !containerRef.current) return;
-
-            const map = new google.maps.Map(containerRef.current, {
-                center: { lat: 20, lng: 0 },
-                zoom: 1,
-                disableDefaultUI: true,
-                clickableIcons: false,
-                draggableCursor: 'crosshair',
-            });
-            mapRef.current = map;
-
-            map.addListener('click', (e: google.maps.MapMouseEvent) => {
-                if (disabled) return;
-                if (!e.latLng) return;
-                const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-                if (markerRef.current) {
-                    markerRef.current.setPosition(e.latLng);
-                } else {
-                    markerRef.current = new google.maps.Marker({
-                        position: e.latLng,
-                        map,
-                        icon: svgGuessCircle(pinColor),
-                        clickable: false,
-                    });
-                }
-                onPin(coords);
-            });
-
-            const observer = new ResizeObserver(() => {
-                google.maps.event.trigger(map, 'resize');
-            });
-            if (containerRef.current) observer.observe(containerRef.current);
-            return () => observer.disconnect();
-        }
-
-        init().catch(console.error);
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    return (
-        <div
-            ref={containerRef}
-            className={`map-lock h-full w-full ${disabled ? 'cursor-not-allowed' : 'cursor-crosshair'}`}
-        />
-    );
-}
-
-// --- Health bar ---
-
-function HealthBar({
-    health,
-    color,
-}: {
-    health: number;
-    color: 'blue' | 'red';
-}) {
-    const pct = Math.max(0, Math.min(100, (health / 5000) * 100));
-    const colorClass = color === 'blue' ? 'text-blue-400' : 'text-red-400';
-    const [flashing, setFlashing] = useState(false);
-    const [flashKey, setFlashKey] = useState(0);
-    const prevHealthRef = useRef<number | null>(null);
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    useEffect(() => {
-        if (prevHealthRef.current !== null && health < prevHealthRef.current) {
-            if (timerRef.current) clearTimeout(timerRef.current);
-            setFlashKey((k) => k + 1);
-            setFlashing(true);
-            timerRef.current = setTimeout(() => setFlashing(false), 900);
-        }
-        prevHealthRef.current = health;
-        return () => {
-            if (timerRef.current) clearTimeout(timerRef.current);
-        };
-    }, [health]);
-
-    return (
-        <div className="flex items-center gap-3 font-mono">
-            <div className="relative leading-none">
-                <span className="text-sm text-white opacity-20 select-none">
-                    {'█'.repeat(24)}
-                </span>
-                <span
-                    className={`absolute inset-0 overflow-hidden text-sm whitespace-nowrap select-none ${colorClass}`}
-                    style={{
-                        width: `${pct}%`,
-                        transition:
-                            'width 800ms cubic-bezier(0.19, 1, 0.22, 1)',
-                    }}
-                >
-                    {'█'.repeat(24)}
-                </span>
-                {flashing && (
-                    <span
-                        key={flashKey}
-                        className="health-flash pointer-events-none absolute inset-0 overflow-hidden text-sm whitespace-nowrap text-red-400 select-none"
-                        style={{ width: `${pct}%` }}
-                    >
-                        {'█'.repeat(24)}
-                    </span>
-                )}
-            </div>
-            <span className={`text-xs tabular-nums opacity-60 ${colorClass}`}>
-                {health}hp
-            </span>
-        </div>
-    );
-}
-
-// --- Event feed ---
-
-function EventFields({
-    name,
-    data,
-}: {
-    name: GameEvent['name'];
-    data: Record<string, unknown>;
-}) {
-    const row = (label: string, value: unknown) => (
-        <div key={label} className="flex gap-2">
-            <span className="w-24 opacity-40">{label}</span>
-            <span>{String(value)}</span>
-        </div>
-    );
-
-    const common = (
-        <>
-            {row('game', short(data.game_id))}
-            {row('round', short(data.round_id))}
-            {row('round #', data.round_number)}
-        </>
-    );
-
-    const extra =
-        name === 'PlayerGuessed' ? (
-            row('player', short(data.player_id))
-        ) : name === 'RoundFinished' ? (
-            <>
-                {row('p1 score', data.player_one_score)}
-                {row('p2 score', data.player_two_score)}
-            </>
-        ) : name === 'RoundStarted' ? (
-            <>
-                {row('p1 health', data.player_one_health)}
-                {row('p2 health', data.player_two_health)}
-            </>
-        ) : name === 'GameFinished' ? (
-            <>
-                {row('winner', short(data.winner_id))}
-                {row('p1 health', data.player_one_health)}
-                {row('p2 health', data.player_two_health)}
-            </>
-        ) : null;
-
-    return (
-        <div className="border-l border-white/20 pl-2">
-            {common}
-            {extra}
-        </div>
-    );
-}
-
-// --- Shimmer text ---
-
-function ShimmerText({ children }: { children: React.ReactNode }) {
-    return <span className="text-shimmer">{children}</span>;
-}
-
 // --- Helpers ---
 
 function getCsrfToken() {
@@ -455,46 +59,6 @@ function roundRemainingSeconds(startedAt: Date | null) {
     if (!startedAt || Number.isNaN(startedAt.getTime())) return null;
     const elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000);
     return Math.max(0, 60 - elapsed);
-}
-
-function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
-    const [name, setName] = useState('');
-    const inputRef = useRef<HTMLInputElement | null>(null);
-
-    useEffect(() => {
-        inputRef.current?.focus();
-    }, []);
-
-    function submit() {
-        const trimmed = name.trim();
-        if (!trimmed) return;
-        onSubmit(trimmed.slice(0, 50));
-    }
-
-    return (
-        <div>
-            <input
-                ref={inputRef}
-                value={name}
-                maxLength={50}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        submit();
-                    }
-                }}
-                placeholder="Your name"
-                className="w-full rounded border border-white/10 bg-black/40 px-2 py-1 text-white outline-none placeholder:text-white/30"
-            />
-            <button
-                onClick={submit}
-                className="mt-2 w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
-            >
-                Join queue
-            </button>
-        </div>
-    );
 }
 
 // --- Page ---
@@ -536,7 +100,6 @@ export default function Welcome({
     const [pin, setPin] = useState<LatLng | null>(null);
     const [roundFinished, setRoundFinished] = useState(false);
     const [mapHovered, setMapHovered] = useState(false);
-    const [roundStartedAt, setRoundStartedAt] = useState<Date | null>(null);
     const [roundResult, setRoundResult] = useState<RoundResult | null>(null);
     const [roundScores, setRoundScores] = useState<{
         p1: number | null;
@@ -652,7 +215,6 @@ export default function Welcome({
             pushEvent('RoundFinished', data);
             setRoundFinished(true);
             setUrgentCountdown(null);
-            setRoundStartedAt(null);
             setCountdown(6);
             const p1Score = (data.player_one_score as number) ?? 0;
             const p2Score = (data.player_two_score as number) ?? 0;
@@ -697,7 +259,6 @@ export default function Welcome({
             setCountdown(null);
             const startedAtRaw = data.started_at as string | undefined;
             const startedAt = startedAtRaw ? new Date(startedAtRaw) : null;
-            setRoundStartedAt(startedAt);
             roundStartedAtRef.current = startedAt;
             setUrgentCountdown(roundRemainingSeconds(startedAt));
             setRoundFinished(false);
@@ -740,7 +301,6 @@ export default function Welcome({
             pushEvent('GameFinished', data);
             setCountdown(null);
             setUrgentCountdown(null);
-            setRoundStartedAt(null);
             roundStartedAtRef.current = null;
             setRoundResult(null);
             setHealth({
@@ -906,8 +466,7 @@ export default function Welcome({
             }
             e.preventDefault();
             e.stopPropagation();
-            // @ts-expect-error - stop immediate propagation is needed to block StreetView handlers
-            e.stopImmediatePropagation?.();
+            e.stopImmediatePropagation();
         }
 
         window.addEventListener('keydown', onMoveKey, true);
@@ -988,7 +547,7 @@ export default function Welcome({
         return () => clearInterval(t);
     }, [playerName, game]);
 
-    const stateLabel: Record<GameState, React.ReactNode> = {
+    const stateLabel: Record<GameState, ReactNode> = {
         waiting:
             urgentCountdown !== null ? (
                 `${urgentCountdown}s to guess`
