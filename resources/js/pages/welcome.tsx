@@ -555,7 +555,9 @@ export default function Welcome({
             const p1 = data.player_one_locked_in as boolean;
             const p2 = data.player_two_locked_in as boolean;
             if (p1 !== p2) {
-                const remaining = roundRemainingSeconds(roundStartedAtRef.current);
+                const remaining = roundRemainingSeconds(
+                    roundStartedAtRef.current,
+                );
                 setUrgentCountdown(
                     remaining === null ? 15 : Math.min(remaining, 15),
                 );
@@ -739,6 +741,9 @@ export default function Welcome({
         <>
             <Head title="nmpz" />
             <div className="relative h-screen w-screen overflow-hidden font-mono text-white">
+                {urgentCountdown !== null && urgentCountdown <= 15 && (
+                    <div className="urgent-screen-halo pointer-events-none absolute inset-0 z-10" />
+                )}
                 {/* Fullscreen results during countdown */}
                 {roundFinished && roundResult ? (
                     <ResultsMap
