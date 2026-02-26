@@ -12,7 +12,8 @@ use Inertia\Inertia;
 
 Route::get('/', function () {
     $map = Map::firstOrFail();
-    $location = Location::where('map_id', $map->getKey())->inRandomOrder()->firstOrFail();
+    $locationCount = Location::where('map_id', $map->getKey())->count();
+    $seed = random_int(0, $locationCount - 1);
 
     $playerOne = Player::factory()
         ->for(User::factory()->create(['name' => 'Player One']))
@@ -26,7 +27,13 @@ Route::get('/', function () {
         'player_one_id' => $playerOne->getKey(),
         'player_two_id' => $playerTwo->getKey(),
         'map_id' => $map->getKey(),
+        'seed' => $seed,
     ]);
+
+    $location = Location::where('map_id', $map->getKey())
+        ->orderBy('id')
+        ->offset($seed % $locationCount)
+        ->firstOrFail();
 
     Round::factory()->for($game)->create([
         'round_number' => 1,

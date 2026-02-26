@@ -14,6 +14,7 @@ return new class extends Migration
             $table->foreignUuid('player_two_id')->constrained('players')->restrictOnDelete();
             $table->foreignUuid('winner_id')->nullable()->constrained('players')->nullOnDelete();
             $table->foreignUuid('map_id')->constrained()->restrictOnDelete();
+            $table->unsignedInteger('seed');
             $table->enum('status', ['pending', 'in_progress', 'completed'])->default('pending');
             $table->timestamps();
         });

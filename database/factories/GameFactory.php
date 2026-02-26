@@ -17,6 +17,7 @@ class GameFactory extends Factory
             'player_two_id' => Player::factory(),
             'winner_id' => null,
             'map_id' => Map::factory(),
+            'seed' => fake()->numberBetween(0, 99999),
             'status' => GameStatus::Pending,
             'player_one_health' => 5000,
             'player_two_health' => 5000,

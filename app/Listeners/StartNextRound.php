@@ -35,11 +35,12 @@ class StartNextRound implements ShouldQueue
             return;
         }
 
-        $location = $this->pickLocation($game->map_id);
+        $nextRoundNumber = $finished->round_number + 1;
+        $location = $this->pickLocation($game, $nextRoundNumber);
 
         $next = Round::query()->create([
             'game_id' => $finished->game_id,
-            'round_number' => $finished->round_number + 1,
+            'round_number' => $nextRoundNumber,
             'location_lat' => $location->lat,
             'location_lng' => $location->lng,
             'location_heading' => $location->heading,
@@ -63,11 +64,14 @@ class StartNextRound implements ShouldQueue
         $game->save();
     }
 
-    private function pickLocation(string $mapId): Location
+    private function pickLocation(Game $game, int $roundNumber): Location
     {
-        return Location::query()
-            ->where('map_id', $mapId)
-            ->inRandomOrder()
+        $count = Location::where('map_id', $game->map_id)->count();
+        $offset = ($game->seed + $roundNumber - 1) % $count;
+
+        return Location::where('map_id', $game->map_id)
+            ->orderBy('id')
+            ->offset($offset)
             ->firstOrFail();
     }
 }
