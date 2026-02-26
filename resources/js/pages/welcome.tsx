@@ -140,8 +140,8 @@ function StreetViewPanel({ location }: { location: Location }) {
                 pov: { heading: location.heading, pitch: 0 },
                 disableDefaultUI: true,
                 clickToGo: false,
-                disableDoubleClickZoom: true,
-                scrollwheel: false,
+                disableDoubleClickZoom: false,
+                scrollwheel: true,
                 showRoadLabels: false,
                 motionTracking: false,
                 motionTrackingControl: false,
@@ -153,7 +153,7 @@ function StreetViewPanel({ location }: { location: Location }) {
         return () => { cancelled = true; };
     }, []);
 
-    return <div ref={containerRef} className="h-96 grow rounded" />;
+    return <div ref={containerRef} className="absolute inset-0 h-full w-full" />;
 }
 
 function getCsrfToken() {
@@ -268,57 +268,24 @@ export default function Welcome({ game }: { game: Game }) {
     return (
         <>
             <Head title="Test UI" />
-            <div className="flex gap-12 p-8 font-mono">
-                <div className="w-64 shrink-0">
-                    {!round || !location ? (
-                        <p className="opacity-60">Waiting for round to start...</p>
-                    ) : (
-                        <>
-                            <p className="mb-4">Round {round.round_number}</p>
+            <div className="relative h-screen w-screen overflow-hidden font-mono text-neutral-100">
+                {location ? (
+                    <StreetViewPanel key={`${location.lat},${location.lng}`} location={location} />
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
+                        <p className="text-sm opacity-60">Waiting for round to start...</p>
+                    </div>
+                )}
 
-                            <div className="mb-4 space-y-1 text-sm">
-                                <HealthBar name={game.player_one.user.name} health={health.p1} />
-                                <HealthBar name={game.player_two.user.name} health={health.p2} />
-                            </div>
-
-                            <div className="mb-6 space-y-4">
-                                <div className="space-y-2">
-                                    <MapPicker onPin={setP1Pin} />
-                                    <button
-                                        onClick={() => guess(game.player_one, p1Pin)}
-                                        disabled={!p1Pin || round.player_one_locked_in || gameOver}
-                                    >
-                                        {game.player_one.user.name}
-                                        {round.player_one_locked_in ? ' ✓' : ''}
-                                    </button>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <MapPicker onPin={setP2Pin} />
-                                    <button
-                                        onClick={() => guess(game.player_two, p2Pin)}
-                                        disabled={!p2Pin || round.player_two_locked_in || gameOver}
-                                    >
-                                        {game.player_two.user.name}
-                                        {round.player_two_locked_in ? ' ✓' : ''}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <p className="opacity-60">{stateLabel[gameState]}</p>
-                        </>
-                    )}
-                </div>
-
-                <div className="w-112 shrink-0">
-                    <p className="mb-2">Events</p>
+                <div className="absolute bottom-6 left-6 z-10 w-112 rounded border border-neutral-700 bg-neutral-950/80 p-4">
+                    <p className="mb-2 text-sm opacity-70">Events</p>
                     {events.length === 0 && (
-                        <p className="text-sm opacity-40">none yet</p>
+                        <p className="text-xs opacity-40">none yet</p>
                     )}
                     {events.map((e) => (
-                        <div key={e.id} className="mb-4 text-sm">
+                        <div key={e.id} className="mb-3 text-xs">
                             <div className="mb-1">
-                                <span className="inline-block w-32 opacity-50">{e.ts}</span>
+                                <span className="inline-block w-28 opacity-50">{e.ts}</span>
                                 <strong>{e.name}</strong>
                             </div>
                             <EventFields name={e.name} data={e.data} />
@@ -326,9 +293,44 @@ export default function Welcome({ game }: { game: Game }) {
                     ))}
                 </div>
 
-                {location && (
-                    <StreetViewPanel key={`${location.lat},${location.lng}`} location={location} />
-                )}
+                <div className="absolute right-6 top-6 z-10 w-72 space-y-6">
+                    <div className="rounded border border-neutral-700 bg-neutral-950/80 p-3">
+                        <p className="mb-3 text-sm opacity-70">
+                            {round ? `Round ${round.round_number}` : 'Round pending'}
+                        </p>
+                        <div className="mb-3 space-y-1 text-xs">
+                            <HealthBar name={game.player_one.user.name} health={health.p1} />
+                            <HealthBar name={game.player_two.user.name} health={health.p2} />
+                        </div>
+                        <p className="text-xs opacity-60">{stateLabel[gameState]}</p>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="rounded border border-neutral-700 bg-neutral-950/80 p-3">
+                            <p className="mb-2 text-xs opacity-70">{game.player_one.user.name}</p>
+                            <MapPicker onPin={setP1Pin} />
+                            <button
+                                className="mt-2 w-full rounded border border-neutral-600 px-2 py-1 text-xs disabled:opacity-40"
+                                onClick={() => guess(game.player_one, p1Pin)}
+                                disabled={!p1Pin || !round || round.player_one_locked_in || gameOver}
+                            >
+                                Make guess{round?.player_one_locked_in ? ' ✓' : ''}
+                            </button>
+                        </div>
+
+                        <div className="rounded border border-neutral-700 bg-neutral-950/80 p-3">
+                            <p className="mb-2 text-xs opacity-70">{game.player_two.user.name}</p>
+                            <MapPicker onPin={setP2Pin} />
+                            <button
+                                className="mt-2 w-full rounded border border-neutral-600 px-2 py-1 text-xs disabled:opacity-40"
+                                onClick={() => guess(game.player_two, p2Pin)}
+                                disabled={!p2Pin || !round || round.player_two_locked_in || gameOver}
+                            >
+                                Make guess{round?.player_two_locked_in ? ' ✓' : ''}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </>
     );
