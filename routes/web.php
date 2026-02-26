@@ -2,6 +2,7 @@
 
 use App\Events\GameReady;
 use App\Events\RoundStarted;
+use App\Http\Controllers\PlayerLeavesQueue;
 use App\Http\Controllers\PlayerMakesGuess;
 use App\Models\Game;
 use App\Models\Location;
@@ -77,6 +78,9 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 });
+
+Route::post('players/{player}/leave-queue', PlayerLeavesQueue::class)
+    ->name('players.leave-queue');
 
 Route::post('players/{player}/games/{game}/rounds/{round}/guess', PlayerMakesGuess::class)
     ->name('games.rounds.guess');

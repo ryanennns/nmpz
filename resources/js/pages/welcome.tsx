@@ -503,8 +503,19 @@ export default function Welcome({
             });
         });
 
+        function leaveQueue() {
+            fetch(`/players/${player.id}/leave-queue`, {
+                method: 'POST',
+                keepalive: true,
+                headers: { 'X-XSRF-TOKEN': getCsrfToken() },
+            });
+        }
+
+        window.addEventListener('beforeunload', leaveQueue);
+
         return () => {
             echo.leaveChannel(`player.${player.id}`);
+            window.removeEventListener('beforeunload', leaveQueue);
         };
     }, [game?.id, player.id]);
 
