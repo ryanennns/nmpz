@@ -58,6 +58,18 @@ function svgFlagDot(circleColor: string) {
     };
 }
 
+function svgGuessCircle(circleColor: string) {
+    const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <circle cx="12" cy="12" r="10" fill="${circleColor}" stroke="white" stroke-width="2"/>
+</svg>`;
+    return {
+        url: 'data:image/svg+xml,' + encodeURIComponent(svg),
+        scaledSize: new google.maps.Size(24, 24),
+        anchor: new google.maps.Point(12, 12),
+    };
+}
+
 function ResultsMap({ result }: { result: RoundResult }) {
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -150,7 +162,7 @@ function StreetViewPanel({ location }: { location: Location }) {
 
 type LatLng = { lat: number; lng: number };
 
-function MapPicker({ onPin }: { onPin: (coords: LatLng) => void }) {
+function MapPicker({ onPin, pinColor }: { onPin: (coords: LatLng) => void; pinColor: string }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const markerRef = useRef<google.maps.Marker | null>(null);
     const mapRef = useRef<google.maps.Map | null>(null);
@@ -177,7 +189,12 @@ function MapPicker({ onPin }: { onPin: (coords: LatLng) => void }) {
                 if (markerRef.current) {
                     markerRef.current.setPosition(e.latLng);
                 } else {
-                    markerRef.current = new google.maps.Marker({ position: e.latLng, map });
+                    markerRef.current = new google.maps.Marker({
+                        position: e.latLng,
+                        map,
+                        icon: svgGuessCircle(pinColor),
+                        clickable: false,
+                    });
                 }
                 onPin(coords);
             });
@@ -565,7 +582,11 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
                         onMouseEnter={() => setMapHovered(true)}
                         onMouseLeave={() => setMapHovered(false)}
                     >
-                        <MapPicker key={round.id} onPin={setPin} />
+                        <MapPicker
+                            key={round.id}
+                            onPin={setPin}
+                            pinColor={isPlayerOne ? '#60a5fa' : '#f87171'}
+                        />
                         <div className="absolute bottom-2 left-2 right-2 font-mono">
                             <button
                                 onClick={guess}
