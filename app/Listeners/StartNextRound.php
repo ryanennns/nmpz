@@ -7,6 +7,7 @@ use App\Events\GameFinished;
 use App\Events\RoundFinished;
 use App\Events\RoundStarted;
 use App\Models\Game;
+use App\Models\Location;
 use App\Models\Round;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
@@ -34,11 +35,14 @@ class StartNextRound implements ShouldQueue
             return;
         }
 
+        $location = $this->pickLocation($game->map_id);
+
         $next = Round::query()->create([
             'game_id' => $finished->game_id,
             'round_number' => $finished->round_number + 1,
-            'location_lat' => $this->pickLocationLat(),
-            'location_lng' => $this->pickLocationLng(),
+            'location_lat' => $location->lat,
+            'location_lng' => $location->lng,
+            'location_heading' => $location->heading,
         ]);
 
         RoundStarted::dispatch($next, $game->player_one_health, $game->player_two_health);
@@ -59,13 +63,11 @@ class StartNextRound implements ShouldQueue
         $game->save();
     }
 
-    private function pickLocationLat(): float
+    private function pickLocation(string $mapId): Location
     {
-        return fake()->latitude();
-    }
-
-    private function pickLocationLng(): float
-    {
-        return fake()->longitude();
+        return Location::query()
+            ->where('map_id', $mapId)
+            ->inRandomOrder()
+            ->firstOrFail();
     }
 }

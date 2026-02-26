@@ -25,6 +25,11 @@ class Game extends Model
         ];
     }
 
+    public function map(): BelongsTo
+    {
+        return $this->belongsTo(Map::class);
+    }
+
     public function playerOne(): BelongsTo
     {
         return $this->belongsTo(Player::class, 'player_one_id');

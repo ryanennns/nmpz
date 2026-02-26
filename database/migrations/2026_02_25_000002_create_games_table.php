@@ -13,8 +13,7 @@ return new class extends Migration
             $table->foreignUuid('player_one_id')->constrained('players')->restrictOnDelete();
             $table->foreignUuid('player_two_id')->constrained('players')->restrictOnDelete();
             $table->foreignUuid('winner_id')->nullable()->constrained('players')->nullOnDelete();
-            $table->string('map_name');
-            $table->string('map_seed');
+            $table->foreignUuid('map_id')->constrained()->restrictOnDelete();
             $table->enum('status', ['pending', 'in_progress', 'completed'])->default('pending');
             $table->timestamps();
         });

@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\PlayerMakesGuess;
 use App\Models\Game;
+use App\Models\Location;
+use App\Models\Map;
 use App\Models\Player;
 use App\Models\Round;
 use App\Models\User;
@@ -9,6 +11,9 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
+    $map = Map::firstOrFail();
+    $location = Location::where('map_id', $map->getKey())->inRandomOrder()->firstOrFail();
+
     $playerOne = Player::factory()
         ->for(User::factory()->create(['name' => 'Player One']))
         ->create();
@@ -20,9 +25,15 @@ Route::get('/', function () {
     $game = Game::factory()->inProgress()->create([
         'player_one_id' => $playerOne->getKey(),
         'player_two_id' => $playerTwo->getKey(),
+        'map_id' => $map->getKey(),
     ]);
 
-    Round::factory()->for($game)->create(['round_number' => 1]);
+    Round::factory()->for($game)->create([
+        'round_number' => 1,
+        'location_lat' => $location->lat,
+        'location_lng' => $location->lng,
+        'location_heading' => $location->heading,
+    ]);
 
     $game->load(['playerOne.user', 'playerTwo.user']);
 

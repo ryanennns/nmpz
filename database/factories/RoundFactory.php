@@ -6,9 +6,6 @@ use App\Models\Game;
 use App\Models\Round;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Round>
- */
 class RoundFactory extends Factory
 {
     public function definition(): array
@@ -21,6 +18,7 @@ class RoundFactory extends Factory
             'round_number' => fake()->numberBetween(1, 5),
             'location_lat' => $locationLat,
             'location_lng' => $locationLng,
+            'location_heading' => fake()->numberBetween(0, 359),
             'player_one_guess_lat' => null,
             'player_one_guess_lng' => null,
             'player_two_guess_lat' => null,
@@ -30,9 +28,6 @@ class RoundFactory extends Factory
         ];
     }
 
-    /**
-     * Round where both players have submitted guesses and scores are calculated.
-     */
     public function withGuesses(): static
     {
         return $this->afterMaking(function (Round $round) {
