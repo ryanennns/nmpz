@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
+import { useEffect, useRef, useState } from 'react';
 import echo from '@/echo';
 
 type Player = { id: string; user: { name: string } };
@@ -75,16 +76,58 @@ function EventFields({ name, data }: { name: GameEvent['name']; data: Record<str
     return <div className="border-l-2 border-neutral-500 pl-3">{common}{extra}</div>;
 }
 
+type LatLng = { lat: number; lng: number };
+
+setOptions({
+    key: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
+    v: 'weekly',
+});
+
+function MapPicker({ onPin }: { onPin: (coords: LatLng) => void }) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const markerRef = useRef<google.maps.Marker | null>(null);
+
+    useEffect(() => {
+        let map: google.maps.Map;
+        let cancelled = false;
+
+        async function init() {
+            await importLibrary('maps');
+            await importLibrary('marker');
+            if (cancelled || !containerRef.current) return;
+            map = new google.maps.Map(containerRef.current, {
+                center: { lat: 20, lng: 0 },
+                zoom: 1,
+                disableDefaultUI: true,
+                clickableIcons: false,
+            });
+            map.addListener('click', (e: google.maps.MapMouseEvent) => {
+                if (!e.latLng) return;
+                const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+                if (markerRef.current) {
+                    markerRef.current.setPosition(e.latLng);
+                } else {
+                    markerRef.current = new google.maps.Marker({ position: e.latLng, map });
+                }
+                onPin(coords);
+            });
+        }
+
+        init().catch((err) => {
+            console.error('Failed to load Google Maps', err);
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    return <div ref={containerRef} className="h-40 w-64 rounded border border-neutral-600" />;
+}
+
 function getCsrfToken() {
     const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : '';
-}
-
-function randomCoords() {
-    return {
-        lat: +(Math.random() * 180 - 90).toFixed(6),
-        lng: +(Math.random() * 360 - 180).toFixed(6),
-    };
 }
 
 function deriveGameState(round: Round, gameOver: boolean): GameState {
@@ -102,6 +145,8 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
     const [gameOver, setGameOver] = useState(false);
     const [events, setEvents] = useState<GameEvent[]>([]);
     const [countdown, setCountdown] = useState<number | null>(null);
+    const [p1Pin, setP1Pin] = useState<LatLng | null>(null);
+    const [p2Pin, setP2Pin] = useState<LatLng | null>(null);
 
     const gameState = deriveGameState(round, gameOver);
 
@@ -155,8 +200,9 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
         };
     }, [game.id]);
 
-    async function guess(player: Player) {
-        const { lat, lng } = randomCoords();
+    async function guess(player: Player, pin: LatLng | null) {
+        if (!pin) return;
+        const { lat, lng } = pin;
         const url = `/players/${player.id}/games/${game.id}/rounds/${round.id}/guess`;
 
         const res = await fetch(url, {
@@ -193,22 +239,28 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
                         <HealthBar name={game.player_two.user.name} health={health.p2} />
                     </div>
 
-                    <div className="mb-4 flex gap-4">
-                        <button
-                            onClick={() => guess(game.player_one)}
-                            disabled={round.player_one_locked_in || gameOver}
-                        >
-                            {game.player_one.user.name}
-                            {round.player_one_locked_in ? ' ✓' : ''}
-                        </button>
+                    <div className="mb-6 space-y-4">
+                        <div className="space-y-2">
+                            <MapPicker onPin={setP1Pin} />
+                            <button
+                                onClick={() => guess(game.player_one, p1Pin)}
+                                disabled={!p1Pin || round.player_one_locked_in || gameOver}
+                            >
+                                {game.player_one.user.name}
+                                {round.player_one_locked_in ? ' ✓' : ''}
+                            </button>
+                        </div>
 
-                        <button
-                            onClick={() => guess(game.player_two)}
-                            disabled={round.player_two_locked_in || gameOver}
-                        >
-                            {game.player_two.user.name}
-                            {round.player_two_locked_in ? ' ✓' : ''}
-                        </button>
+                        <div className="space-y-2">
+                            <MapPicker onPin={setP2Pin} />
+                            <button
+                                onClick={() => guess(game.player_two, p2Pin)}
+                                disabled={!p2Pin || round.player_two_locked_in || gameOver}
+                            >
+                                {game.player_two.user.name}
+                                {round.player_two_locked_in ? ' ✓' : ''}
+                            </button>
+                        </div>
                     </div>
 
                     <p className="opacity-60">{stateLabel[gameState]}</p>
