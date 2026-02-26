@@ -4,13 +4,13 @@ import echo from '@/echo';
 
 type Player = { id: string; user: { name: string } };
 type Round = { id: string; round_number: number; player_one_locked_in: boolean; player_two_locked_in: boolean };
-type Game = { id: string; player_one: Player; player_two: Player };
+type Game = { id: string; player_one: Player; player_two: Player; player_one_health: number; player_two_health: number };
 
-type GameState = 'waiting' | 'one_guessed' | 'finished';
+type GameState = 'waiting' | 'one_guessed' | 'finished' | 'game_over';
 
 type GameEvent = {
     id: number;
-    name: 'PlayerGuessed' | 'RoundFinished' | 'RoundStarted';
+    name: 'PlayerGuessed' | 'RoundFinished' | 'RoundStarted' | 'GameFinished';
     ts: string;
     data: Record<string, unknown>;
 };
@@ -19,6 +19,18 @@ const MAX_EVENTS = 5;
 
 function short(uuid: unknown) {
     return typeof uuid === 'string' ? uuid.slice(0, 8) : '?';
+}
+
+function HealthBar({ name, health }: { name: string; health: number }) {
+    const filled = Math.round(Math.max(0, Math.min(5000, health)) / 250);
+    const empty = 20 - filled;
+    return (
+        <div className="flex gap-3">
+            <span className="w-28 truncate">{name}</span>
+            <span>{'█'.repeat(filled)}{'░'.repeat(empty)}</span>
+            <span className="w-12 text-right">{health}hp</span>
+        </div>
+    );
 }
 
 function EventFields({ name, data }: { name: GameEvent['name']; data: Record<string, unknown> }) {
@@ -45,6 +57,19 @@ function EventFields({ name, data }: { name: GameEvent['name']; data: Record<str
                 {row('p2 score', data.player_two_score)}
             </>
         )
+        : name === 'RoundStarted' ? (
+            <>
+                {row('p1 health', data.player_one_health)}
+                {row('p2 health', data.player_two_health)}
+            </>
+        )
+        : name === 'GameFinished' ? (
+            <>
+                {row('winner', short(data.winner_id))}
+                {row('p1 health', data.player_one_health)}
+                {row('p2 health', data.player_two_health)}
+            </>
+        )
         : null;
 
     return <div className="border-l-2 border-neutral-500 pl-3">{common}{extra}</div>;
@@ -62,7 +87,8 @@ function randomCoords() {
     };
 }
 
-function deriveGameState(round: Round): GameState {
+function deriveGameState(round: Round, gameOver: boolean): GameState {
+    if (gameOver) return 'game_over';
     if (round.player_one_locked_in && round.player_two_locked_in) return 'finished';
     if (round.player_one_locked_in || round.player_two_locked_in) return 'one_guessed';
     return 'waiting';
@@ -72,10 +98,12 @@ let eventSeq = 0;
 
 export default function Welcome({ game, round: initial }: { game: Game; round: Round }) {
     const [round, setRound] = useState(initial);
+    const [health, setHealth] = useState({ p1: game.player_one_health, p2: game.player_two_health });
+    const [gameOver, setGameOver] = useState(false);
     const [events, setEvents] = useState<GameEvent[]>([]);
     const [countdown, setCountdown] = useState<number | null>(null);
 
-    const gameState = deriveGameState(round);
+    const gameState = deriveGameState(round, gameOver);
 
     function pushEvent(name: GameEvent['name'], data: Record<string, unknown>) {
         setEvents((prev) => [
@@ -105,6 +133,7 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
         channel.listen('.RoundStarted', (data: Record<string, unknown>) => {
             pushEvent('RoundStarted', data);
             setCountdown(null);
+            setHealth({ p1: data.player_one_health as number, p2: data.player_two_health as number });
             setRound((prev) => ({
                 ...prev,
                 id: data.round_id as string,
@@ -112,6 +141,13 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
                 player_one_locked_in: false,
                 player_two_locked_in: false,
             }));
+        });
+
+        channel.listen('.GameFinished', (data: Record<string, unknown>) => {
+            pushEvent('GameFinished', data);
+            setCountdown(null);
+            setHealth({ p1: data.player_one_health as number, p2: data.player_two_health as number });
+            setGameOver(true);
         });
 
         return () => {
@@ -142,6 +178,7 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
         waiting: 'Waiting for guesses',
         one_guessed: 'Waiting for second player',
         finished: countdown !== null ? `Round finished — next round in ${countdown}s` : 'Round finished',
+        game_over: 'Game over',
     };
 
     return (
@@ -149,12 +186,17 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
             <Head title="Test UI" />
             <div className="flex gap-12 p-8 font-mono">
                 <div className="w-64 shrink-0">
-                    <p>Round {round.round_number}</p>
+                    <p className="mb-4">Round {round.round_number}</p>
 
-                    <div className="my-4 flex gap-4">
+                    <div className="mb-4 space-y-1 text-sm">
+                        <HealthBar name={game.player_one.user.name} health={health.p1} />
+                        <HealthBar name={game.player_two.user.name} health={health.p2} />
+                    </div>
+
+                    <div className="mb-4 flex gap-4">
                         <button
                             onClick={() => guess(game.player_one)}
-                            disabled={round.player_one_locked_in}
+                            disabled={round.player_one_locked_in || gameOver}
                         >
                             {game.player_one.user.name}
                             {round.player_one_locked_in ? ' ✓' : ''}
@@ -162,7 +204,7 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
 
                         <button
                             onClick={() => guess(game.player_two)}
-                            disabled={round.player_two_locked_in}
+                            disabled={round.player_two_locked_in || gameOver}
                         >
                             {game.player_two.user.name}
                             {round.player_two_locked_in ? ' ✓' : ''}

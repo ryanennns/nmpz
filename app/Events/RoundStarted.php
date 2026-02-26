@@ -14,6 +14,8 @@ class RoundStarted implements ShouldBroadcast
 
     public function __construct(
         public readonly Round $round,
+        public readonly int $playerOneHealth,
+        public readonly int $playerTwoHealth,
     ) {}
 
     public function broadcastOn(): Channel
@@ -32,6 +34,8 @@ class RoundStarted implements ShouldBroadcast
             'game_id' => $this->round->game_id,
             'round_id' => $this->round->getKey(),
             'round_number' => $this->round->round_number,
+            'player_one_health' => $this->playerOneHealth,
+            'player_two_health' => $this->playerTwoHealth,
         ];
     }
 }

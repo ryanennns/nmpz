@@ -27,6 +27,8 @@ class GameFactory extends Factory
             'map_name' => fake()->randomElement(self::MAPS),
             'map_seed' => Str::random(16),
             'status' => GameStatus::Pending,
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
         ];
     }
 

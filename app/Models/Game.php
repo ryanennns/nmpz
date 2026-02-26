@@ -20,6 +20,8 @@ class Game extends Model
     {
         return [
             'status' => GameStatus::class,
+            'player_one_health' => 'integer',
+            'player_two_health' => 'integer',
         ];
     }
 
