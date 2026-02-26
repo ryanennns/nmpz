@@ -7,6 +7,11 @@ type Player = { id: string; user: { name: string } };
 type Round = { id: string; round_number: number; player_one_locked_in: boolean; player_two_locked_in: boolean };
 type Location = { lat: number; lng: number; heading: number };
 type Game = { id: string; player_one: Player; player_two: Player; player_one_health: number; player_two_health: number };
+type RoundResult = {
+    location: { lat: number; lng: number };
+    p1Guess: { lat: number; lng: number } | null;
+    p2Guess: { lat: number; lng: number } | null;
+};
 
 type GameState = 'waiting' | 'one_guessed' | 'finished' | 'game_over';
 
@@ -27,6 +32,75 @@ setOptions({
     key: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
     v: 'weekly',
 });
+
+// --- Results map ---
+
+function svgDot(color: string) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="7" fill="${color}" stroke="white" stroke-width="2"/></svg>`;
+    return {
+        url: 'data:image/svg+xml,' + encodeURIComponent(svg),
+        scaledSize: new google.maps.Size(16, 16),
+        anchor: new google.maps.Point(8, 8),
+    };
+}
+
+function ResultsMap({ result }: { result: RoundResult }) {
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function init() {
+            await importLibrary('maps');
+            await importLibrary('marker');
+            if (cancelled || !containerRef.current) return;
+
+            const map = new google.maps.Map(containerRef.current, {
+                center: result.location,
+                zoom: 3,
+                disableDefaultUI: true,
+                clickableIcons: false,
+            });
+
+            const bounds = new google.maps.LatLngBounds();
+
+            new google.maps.Marker({ position: result.location, map, icon: svgDot('#facc15') });
+            bounds.extend(result.location);
+
+            if (result.p1Guess) {
+                new google.maps.Marker({ position: result.p1Guess, map, icon: svgDot('#60a5fa') });
+                bounds.extend(result.p1Guess);
+                new google.maps.Polyline({
+                    path: [result.location, result.p1Guess],
+                    map,
+                    strokeColor: '#60a5fa',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                });
+            }
+
+            if (result.p2Guess) {
+                new google.maps.Marker({ position: result.p2Guess, map, icon: svgDot('#f87171') });
+                bounds.extend(result.p2Guess);
+                new google.maps.Polyline({
+                    path: [result.location, result.p2Guess],
+                    map,
+                    strokeColor: '#f87171',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                });
+            }
+
+            requestAnimationFrame(() => google.maps.event.trigger(map, 'resize'));
+            map.fitBounds(bounds, 80);
+        }
+
+        init().catch(console.error);
+        return () => { cancelled = true; };
+    }, [result]);
+
+    return <div ref={containerRef} className="absolute inset-0" />;
+}
 
 // --- Street View ---
 
@@ -197,6 +271,7 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
     const [pin, setPin] = useState<LatLng | null>(null);
     const [roundFinished, setRoundFinished] = useState(false);
     const [mapHovered, setMapHovered] = useState(false);
+    const [roundResult, setRoundResult] = useState<RoundResult | null>(null);
     const guessRef = useRef<() => void>(() => {});
 
     const isPlayerOne = game ? player.id === game.player_one.id : false;
@@ -244,13 +319,29 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
         channel.listen('.RoundFinished', (data: Record<string, unknown>) => {
             pushEvent('RoundFinished', data);
             setRoundFinished(true);
-            setCountdown(3);
+            setCountdown(6);
+            const locLat = Number(data.location_lat);
+            const locLng = Number(data.location_lng);
+            if (!Number.isFinite(locLat) || !Number.isFinite(locLng)) {
+                setRoundResult(null);
+                return;
+            }
+            const p1Lat = Number(data.player_one_guess_lat);
+            const p1Lng = Number(data.player_one_guess_lng);
+            const p2Lat = Number(data.player_two_guess_lat);
+            const p2Lng = Number(data.player_two_guess_lng);
+            setRoundResult({
+                location: { lat: locLat, lng: locLng },
+                p1Guess: Number.isFinite(p1Lat) && Number.isFinite(p1Lng) ? { lat: p1Lat, lng: p1Lng } : null,
+                p2Guess: Number.isFinite(p2Lat) && Number.isFinite(p2Lng) ? { lat: p2Lat, lng: p2Lng } : null,
+            });
         });
 
         channel.listen('.RoundStarted', (data: Record<string, unknown>) => {
             pushEvent('RoundStarted', data);
             setCountdown(null);
             setRoundFinished(false);
+            setRoundResult(null);
             setHealth({ p1: data.player_one_health as number, p2: data.player_two_health as number });
             setLocation({
                 lat: data.location_lat as number,
@@ -269,6 +360,7 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
         channel.listen('.GameFinished', (data: Record<string, unknown>) => {
             pushEvent('GameFinished', data);
             setCountdown(null);
+            setRoundResult(null);
             setHealth({ p1: data.player_one_health as number, p2: data.player_two_health as number });
             setGameOver(true);
         });
@@ -327,13 +419,16 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
             <Head title="nmpz" />
             <div className="relative h-screen w-screen overflow-hidden font-mono text-white">
 
-                {/* Panorama or loading state */}
-                {location
-                    ? <StreetViewPanel key={`${location.lat},${location.lng}`} location={location} />
-                    : <div className="absolute inset-0 bg-neutral-900 flex items-center justify-center text-neutral-500 text-sm">
+                {/* Fullscreen results during countdown */}
+                {roundFinished && roundResult ? (
+                    <ResultsMap key={`result-${round?.id ?? 'pending'}`} result={roundResult} />
+                ) : location ? (
+                    <StreetViewPanel key={`${location.lat},${location.lng}`} location={location} />
+                ) : (
+                    <div className="absolute inset-0 bg-neutral-900 flex items-center justify-center text-neutral-500 text-sm">
                         Waiting for round to start...
-                      </div>
-                }
+                    </div>
+                )}
 
                 {/* Bottom-left: event feed */}
                 <div className={`absolute bottom-4 left-4 z-10 w-80 space-y-2 text-xs ${panel}`}>
@@ -365,7 +460,7 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
                 </div>
 
                 {/* Bottom-right: guess map for current player */}
-                {round && (
+                {round && !roundFinished && (
                     <div
                         className={`absolute bottom-4 right-4 z-10 overflow-hidden rounded transition-all duration-300 ${mapHovered ? 'h-[70vh] w-[55vw]' : 'h-40 w-64'}`}
                         onMouseEnter={() => setMapHovered(true)}
