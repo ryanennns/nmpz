@@ -60,6 +60,10 @@ class StartNextRound implements ShouldQueue
             return;
         }
 
+        if ($game->status === GameStatus::Completed) {
+            return;
+        }
+
         $nextRoundNumber = $finished->round_number + 1;
         $location = $this->pickLocation($game, $nextRoundNumber);
 
