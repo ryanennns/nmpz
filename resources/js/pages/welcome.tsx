@@ -1026,18 +1026,23 @@ export default function Welcome({
                             )}
                         </div>
                     ) : (
-                        <div className="w-full max-w-sm rounded border border-white/10 bg-black/60 p-4 text-xs text-white/80 backdrop-blur-sm">
-                            <div className="mb-2 text-sm text-white">
-                                Enter your name
+                        <div className="flex w-full max-w-sm flex-col items-center gap-4">
+                            <div className="text-center font-mono text-5xl text-white">
+                                nmpz.dev
                             </div>
-                            <NamePrompt
-                                onSubmit={(name) => {
-                                    void joinQueue(name);
-                                }}
-                            />
-                            <div className="mt-2 text-xs text-white/40">
-                                {queueCount} player
-                                {queueCount === 1 ? '' : 's'} queued
+                            <div className="w-full rounded border border-white/10 bg-black/60 p-4 text-xs text-white/80 backdrop-blur-sm">
+                                <div className="mb-2 text-sm text-white">
+                                    Enter your name
+                                </div>
+                                <NamePrompt
+                                    onSubmit={(name) => {
+                                        void joinQueue(name);
+                                    }}
+                                />
+                                <div className="mt-2 text-xs text-white/40">
+                                    {queueCount} player
+                                    {queueCount === 1 ? '' : 's'} queued
+                                </div>
                             </div>
                         </div>
                     )}
