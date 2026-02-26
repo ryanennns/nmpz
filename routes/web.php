@@ -1,23 +1,31 @@
 <?php
 
+use App\Http\Controllers\JoinQueue;
 use App\Http\Controllers\PlayerLeavesQueue;
 use App\Http\Controllers\PlayerMakesGuess;
-use App\Http\Controllers\JoinQueue;
 use App\Http\Controllers\SendMessage;
+use App\Models\Game;
 use App\Models\Player;
+use App\Models\Round;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Models\Game;
-use App\Models\Round;
 
-Route::get('/', function () {
-    $player = Player::factory()
-        ->for(User::factory()->create(['name' => 'Guest']))
-        ->create(['name' => null]);
+Route::get('/', function (Request $request) {
+    $playerId = $request->session()->get('player_id');
+    $player = $playerId ? Player::with('user')->find($playerId) : null;
+
+    if (! $player) {
+        $player = Player::factory()
+            ->for(User::factory()->create(['name' => 'Guest']))
+            ->create(['name' => null]);
+        $request->session()->put('player_id', $player->getKey());
+        $player->load('user');
+    }
 
     return Inertia::render('welcome', [
-        'player' => $player->load('user'),
+        'player' => $player,
         'queue_count' => count(Cache::get('matchmaking_queue', [])),
         'game' => null,
     ]);

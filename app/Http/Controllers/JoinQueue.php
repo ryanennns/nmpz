@@ -19,11 +19,15 @@ class JoinQueue extends Controller
     public function __invoke(Request $request, Player $player): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:50'],
+            'name' => ['sometimes', 'nullable', 'string', 'max:50'],
         ]);
 
-        $player->update(['name' => $validated['name']]);
-        $player->user()->update(['name' => $validated['name']]);
+        if (! empty($validated['name'])) {
+            $player->update(['name' => $validated['name']]);
+            $player->user()->update(['name' => $validated['name']]);
+        } elseif (! $player->name) {
+            return response()->json(['error' => 'Name is required'], 422);
+        }
 
         $queue = Cache::get('matchmaking_queue', []);
         $queue = array_values(array_filter($queue, fn ($id) => $id !== $player->getKey()));
@@ -32,7 +36,7 @@ class JoinQueue extends Controller
         $queuedPlayer = $queuedPlayerId ? Player::query()->find($queuedPlayerId) : null;
 
         if ($queuedPlayer) {
-            Cache::put('matchmaking_queue', $queue, now()->addMinutes(5));
+            Cache::put('matchmaking_queue', array_values(array_unique($queue)), now()->addMinutes(5));
 
             $map = Map::query()->firstOrFail();
             $locationCount = Location::query()->where('map_id', $map->getKey())->count();
@@ -72,7 +76,7 @@ class JoinQueue extends Controller
         }
 
         $queue[] = $player->getKey();
-        Cache::put('matchmaking_queue', $queue, now()->addMinutes(5));
+        Cache::put('matchmaking_queue', array_values(array_unique($queue)), now()->addMinutes(5));
 
         return response()->json([
             'queued' => true,
