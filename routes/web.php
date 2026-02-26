@@ -17,6 +17,7 @@ Route::get('/', function () {
 
     return Inertia::render('welcome', [
         'player' => $player->load('user'),
+        'queue_count' => count(Cache::get('matchmaking_queue', [])),
         'game' => null,
     ]);
 })->name('home');

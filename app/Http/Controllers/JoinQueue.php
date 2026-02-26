@@ -74,6 +74,9 @@ class JoinQueue extends Controller
         $queue[] = $player->getKey();
         Cache::put('matchmaking_queue', $queue, now()->addMinutes(5));
 
-        return response()->json(['queued' => true]);
+        return response()->json([
+            'queued' => true,
+            'queue_count' => count($queue),
+        ]);
     }
 }

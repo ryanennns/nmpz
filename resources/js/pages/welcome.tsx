@@ -418,15 +418,10 @@ function EventFields({
     );
 }
 
-// --- Animated dots ---
+// --- Shimmer text ---
 
-function Dots() {
-    const [count, setCount] = useState(1);
-    useEffect(() => {
-        const t = setInterval(() => setCount((c) => (c % 3) + 1), 500);
-        return () => clearInterval(t);
-    }, []);
-    return <span>{'.'.repeat(count)}</span>;
+function ShimmerText({ children }: { children: React.ReactNode }) {
+    return <span className="text-shimmer">{children}</span>;
 }
 
 // --- Helpers ---
@@ -507,14 +502,17 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
 export default function Welcome({
     player,
     game: initialGame,
+    queue_count: initialQueueCount,
 }: {
     player: Player;
     game: Game | null;
+    queue_count: number;
 }) {
     const [game, setGame] = useState<Game | null>(initialGame);
     const [playerName, setPlayerName] = useState<string | null>(
         player.name ?? null,
     );
+    const [queueCount, setQueueCount] = useState<number>(initialQueueCount);
     const [round, setRound] = useState<Round | null>(null);
     const [location, setLocation] = useState<Location | null>(null);
     const [health, setHealth] = useState({
@@ -810,6 +808,10 @@ export default function Welcome({
             body: JSON.stringify({ name }),
         });
         if (res.ok) {
+            const payload = (await res.json()) as { queue_count?: number };
+            if (typeof payload.queue_count === 'number') {
+                setQueueCount(payload.queue_count);
+            }
             setPlayerName(name);
         }
     }
@@ -921,19 +923,13 @@ export default function Welcome({
             urgentCountdown !== null ? (
                 `${urgentCountdown}s to guess`
             ) : (
-                <span>
-                    Waiting for guesses
-                    <Dots />
-                </span>
+                <ShimmerText>Waiting for guesses</ShimmerText>
             ),
         one_guessed:
             urgentCountdown !== null ? (
                 `${urgentCountdown}s to guess`
             ) : (
-                <span>
-                    Waiting for opponent
-                    <Dots />
-                </span>
+                <ShimmerText>Waiting for opponent</ShimmerText>
             ),
         finished:
             countdown !== null
@@ -948,10 +944,7 @@ export default function Welcome({
                 <Head title="nmpz" />
                 <div className="relative flex h-screen items-center justify-center bg-neutral-900 font-mono text-sm text-neutral-400">
                     {playerName ? (
-                        <>
-                            Waiting for opponent
-                            <Dots />
-                        </>
+                        <ShimmerText>Waiting for opponent</ShimmerText>
                     ) : (
                         <div className="w-full max-w-sm rounded border border-white/10 bg-black/60 p-4 text-xs text-white/80 backdrop-blur-sm">
                             <div className="mb-2 text-sm text-white">
@@ -962,6 +955,10 @@ export default function Welcome({
                                     void joinQueue(name);
                                 }}
                             />
+                            <div className="mt-2 text-xs text-white/40">
+                                {queueCount} player
+                                {queueCount === 1 ? '' : 's'} queued
+                            </div>
                         </div>
                     )}
                 </div>
@@ -989,8 +986,7 @@ export default function Welcome({
                     />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 text-sm text-neutral-500">
-                        Waiting for round to start
-                        <Dots />
+                        <ShimmerText>Waiting for round to start</ShimmerText>
                     </div>
                 )}
 
