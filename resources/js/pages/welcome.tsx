@@ -66,20 +66,23 @@ type LatLng = { lat: number; lng: number };
 function MapPicker({ onPin }: { onPin: (coords: LatLng) => void }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const markerRef = useRef<google.maps.Marker | null>(null);
+    const mapRef = useRef<google.maps.Map | null>(null);
 
     useEffect(() => {
-        let map: google.maps.Map;
         let cancelled = false;
 
         async function init() {
             await importLibrary('maps');
             if (cancelled || !containerRef.current) return;
-            map = new google.maps.Map(containerRef.current, {
+
+            const map = new google.maps.Map(containerRef.current, {
                 center: { lat: 20, lng: 0 },
                 zoom: 1,
                 disableDefaultUI: true,
                 clickableIcons: false,
             });
+            mapRef.current = map;
+
             map.addListener('click', (e: google.maps.MapMouseEvent) => {
                 if (!e.latLng) return;
                 const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
@@ -90,13 +93,19 @@ function MapPicker({ onPin }: { onPin: (coords: LatLng) => void }) {
                 }
                 onPin(coords);
             });
+
+            const observer = new ResizeObserver(() => {
+                google.maps.event.trigger(map, 'resize');
+            });
+            if (containerRef.current) observer.observe(containerRef.current);
+            return () => observer.disconnect();
         }
 
         init().catch(console.error);
         return () => { cancelled = true; };
     }, []);
 
-    return <div ref={containerRef} className="h-40 w-64 rounded" />;
+    return <div ref={containerRef} className="h-full w-full" />;
 }
 
 // --- Health bar ---
@@ -187,6 +196,8 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
     const [countdown, setCountdown] = useState<number | null>(null);
     const [pin, setPin] = useState<LatLng | null>(null);
     const [roundFinished, setRoundFinished] = useState(false);
+    const [mapHovered, setMapHovered] = useState(false);
+    const guessRef = useRef<() => void>(() => {});
 
     const isPlayerOne = game ? player.id === game.player_one.id : false;
     const myLocked = round ? (isPlayerOne ? round.player_one_locked_in : round.player_two_locked_in) : false;
@@ -266,7 +277,7 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
     }, [game?.id]);
 
     async function guess() {
-        if (!pin || !round || !game) return;
+        if (!pin || !round || !game || myLocked || gameOver) return;
         const url = `/players/${player.id}/games/${game.id}/rounds/${round.id}/guess`;
         const res = await fetch(url, {
             method: 'POST',
@@ -279,6 +290,19 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
         });
         if (res.ok) setRound(await res.json());
     }
+
+    guessRef.current = guess;
+
+    useEffect(() => {
+        function onKeyDown(e: KeyboardEvent) {
+            if (e.code === 'Space' && !e.repeat) {
+                e.preventDefault();
+                guessRef.current();
+            }
+        }
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
 
     const stateLabel: Record<GameState, string> = {
         waiting: 'Waiting for guesses',
@@ -342,16 +366,21 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
 
                 {/* Bottom-right: guess map for current player */}
                 {round && (
-                    <div className={`absolute bottom-4 right-4 z-10 space-y-2 ${panel}`}>
-                        <p className="text-xs opacity-60">{player.user.name}</p>
+                    <div
+                        className={`absolute bottom-4 right-4 z-10 overflow-hidden rounded transition-all duration-300 ${mapHovered ? 'h-[70vh] w-[55vw]' : 'h-40 w-64'}`}
+                        onMouseEnter={() => setMapHovered(true)}
+                        onMouseLeave={() => setMapHovered(false)}
+                    >
                         <MapPicker key={round.id} onPin={setPin} />
-                        <button
-                            onClick={guess}
-                            disabled={!pin || myLocked || gameOver}
-                            className="w-full rounded border border-white/20 px-2 py-1 text-xs disabled:opacity-30 enabled:hover:bg-white/10"
-                        >
-                            {myLocked ? 'Locked in ✓' : 'Lock in guess'}
-                        </button>
+                        <div className="absolute bottom-2 left-2 right-2 font-mono">
+                            <button
+                                onClick={guess}
+                                disabled={!pin || myLocked || gameOver}
+                                className="w-full rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm disabled:opacity-30 enabled:hover:bg-black/80"
+                            >
+                                {myLocked ? 'Locked in ✓' : pin ? 'Lock in guess [space]' : 'Click map to place pin'}
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
