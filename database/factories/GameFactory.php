@@ -7,9 +7,12 @@ use App\Models\Game;
 use App\Models\Map;
 use App\Models\Player;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Foundation\Testing\WithFaker;
 
 class GameFactory extends Factory
 {
+    use WithFaker;
+
     public function definition(): array
     {
         return [
@@ -17,7 +20,7 @@ class GameFactory extends Factory
             'player_two_id' => Player::factory(),
             'winner_id' => null,
             'map_id' => Map::factory(),
-            'seed' => fake()->numberBetween(0, 99999),
+            'seed' => $this->faker->numberBetween(0, 99999),
             'status' => GameStatus::Pending,
             'player_one_health' => 5000,
             'player_two_health' => 5000,
@@ -36,7 +39,7 @@ class GameFactory extends Factory
         return $this->afterCreating(function (Game $game) {
             $game->update([
                 'status' => GameStatus::Completed,
-                'winner_id' => fake()->randomElement([$game->player_one_id, $game->player_two_id]),
+                'winner_id' => $this->faker->randomElement([$game->player_one_id, $game->player_two_id]),
             ]);
         });
     }

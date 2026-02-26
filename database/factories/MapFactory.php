@@ -5,13 +5,16 @@ namespace Database\Factories;
 use App\Models\Location;
 use App\Models\Map;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Foundation\Testing\WithFaker;
 
 class MapFactory extends Factory
 {
+    use WithFaker;
+
     public function definition(): array
     {
         return [
-            'name' => fake()->words(2, true),
+            'name' => $this->faker->words(2, true),
         ];
     }
 
