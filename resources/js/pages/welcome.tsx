@@ -17,6 +17,39 @@ type GameEvent = {
 
 const MAX_EVENTS = 5;
 
+function short(uuid: unknown) {
+    return typeof uuid === 'string' ? uuid.slice(0, 8) : '?';
+}
+
+function EventFields({ name, data }: { name: GameEvent['name']; data: Record<string, unknown> }) {
+    const row = (label: string, value: unknown) => (
+        <div key={label}>
+            <span style={{ opacity: 0.5, display: 'inline-block', width: '8rem' }}>{label}</span>
+            <span>{String(value)}</span>
+        </div>
+    );
+
+    const common = (
+        <>
+            {row('game', short(data.game_id))}
+            {row('round', short(data.round_id))}
+            {row('round #', data.round_number)}
+        </>
+    );
+
+    const extra =
+        name === 'PlayerGuessed' ? row('player', short(data.player_id))
+        : name === 'RoundFinished' ? (
+            <>
+                {row('p1 score', data.player_one_score)}
+                {row('p2 score', data.player_two_score)}
+            </>
+        )
+        : null;
+
+    return <div style={{ paddingLeft: '0.75rem', borderLeft: '2px solid #555' }}>{common}{extra}</div>;
+}
+
 function getCsrfToken() {
     const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : '';
@@ -146,10 +179,12 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
                         <p style={{ opacity: 0.4, fontSize: '0.85rem' }}>none yet</p>
                     )}
                     {events.map((e) => (
-                        <div key={e.id} style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-                            <span style={{ opacity: 0.5 }}>{e.ts}</span>{' '}
-                            <strong>{e.name}</strong>{' '}
-                            <span style={{ opacity: 0.7 }}>{JSON.stringify(e.data)}</span>
+                        <div key={e.id} style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>
+                            <div style={{ marginBottom: '0.2rem' }}>
+                                <span style={{ opacity: 0.5 }}>{e.ts}</span>{' '}
+                                <strong>{e.name}</strong>
+                            </div>
+                            <EventFields name={e.name} data={e.data} />
                         </div>
                     ))}
                 </div>
