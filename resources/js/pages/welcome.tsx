@@ -209,13 +209,45 @@ function HealthBar({
     color: 'blue' | 'red';
     isYou?: boolean;
 }) {
-    const filled = Math.round(Math.max(0, Math.min(5000, health)) / 250);
-    const empty = 20 - filled;
+    const pct = Math.max(0, Math.min(100, (health / 5000) * 100));
     const colorClass = color === 'blue' ? 'text-blue-400' : 'text-red-400';
+    const [flashing, setFlashing] = useState(false);
+    const [flashKey, setFlashKey] = useState(0);
+    const prevHealthRef = useRef<number | null>(null);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (prevHealthRef.current !== null && health < prevHealthRef.current) {
+            if (timerRef.current) clearTimeout(timerRef.current);
+            setFlashKey(k => k + 1);
+            setFlashing(true);
+            timerRef.current = setTimeout(() => setFlashing(false), 900);
+        }
+        prevHealthRef.current = health;
+        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    }, [health]);
+
     return (
-        <div className="flex gap-2 text-xs">
+        <div className="flex gap-2 text-xs items-center">
             <span className="w-20 truncate opacity-60">{isYou ? 'You' : name}</span>
-            <span className={colorClass}>{'█'.repeat(filled)}{'░'.repeat(empty)}</span>
+            <div className="relative font-mono leading-none">
+                <span className="opacity-20 text-white select-none">{'█'.repeat(20)}</span>
+                <span
+                    className={`absolute inset-0 overflow-hidden whitespace-nowrap select-none ${colorClass}`}
+                    style={{ width: `${pct}%`, transition: 'width 800ms cubic-bezier(0.19, 1, 0.22, 1)' }}
+                >
+                    {'█'.repeat(20)}
+                </span>
+                {flashing && (
+                    <span
+                        key={flashKey}
+                        className="health-flash absolute inset-0 overflow-hidden whitespace-nowrap select-none text-red-400 pointer-events-none"
+                        style={{ width: `${pct}%` }}
+                    >
+                        {'█'.repeat(20)}
+                    </span>
+                )}
+            </div>
             <span className={`w-12 text-right opacity-60 ${colorClass}`}>{health}hp</span>
         </div>
     );
@@ -351,7 +383,15 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
             pushEvent('RoundFinished', data);
             setRoundFinished(true);
             setCountdown(6);
-            setRoundScores({ p1: data.player_one_score as number ?? null, p2: data.player_two_score as number ?? null });
+            const p1Score = (data.player_one_score as number) ?? 0;
+            const p2Score = (data.player_two_score as number) ?? 0;
+            setRoundScores({ p1: p1Score, p2: p2Score });
+            const damage = Math.abs(p1Score - p2Score);
+            setHealth(prev => {
+                if (p1Score < p2Score) return { p1: prev.p1 - damage, p2: prev.p2 };
+                if (p2Score < p1Score) return { p1: prev.p1, p2: prev.p2 - damage };
+                return prev;
+            });
             const locLat = Number(data.location_lat);
             const locLng = Number(data.location_lng);
             if (!Number.isFinite(locLat) || !Number.isFinite(locLng)) {
