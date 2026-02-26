@@ -25,6 +25,7 @@ const MAX_MESSAGES = 6;
 const END_MAP_HOLD_MS = 3000;
 const END_FADE_MS = 500;
 const END_WINNER_HOLD_MS = 2500;
+const QUEUE_FADE_MS = 500;
 
 setOptions({
     key: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
@@ -112,6 +113,7 @@ export default function Welcome({
     const guessRef = useRef<() => void>(() => {});
     const roundStartedAtRef = useRef<Date | null>(null);
     const endTimersRef = useRef<number[]>([]);
+    const queueFadeTimerRef = useRef<number | null>(null);
     const [chatOpen, setChatOpen] = useState(false);
     const [chatText, setChatText] = useState('');
     const chatInputRef = useRef<HTMLInputElement | null>(null);
@@ -141,6 +143,13 @@ export default function Welcome({
     function clearEndSequenceTimers() {
         endTimersRef.current.forEach((id) => window.clearTimeout(id));
         endTimersRef.current = [];
+    }
+
+    function clearQueueFadeTimer() {
+        if (queueFadeTimerRef.current !== null) {
+            window.clearTimeout(queueFadeTimerRef.current);
+            queueFadeTimerRef.current = null;
+        }
     }
 
     function scheduleEndSequence(resetGame: () => void) {
@@ -249,17 +258,28 @@ export default function Welcome({
 
         channel.listen('.GameReady', (data: { game: Game }) => {
             clearEndSequenceTimers();
+            clearQueueFadeTimer();
             setBlackoutVisible(false);
             setWinnerOverlayVisible(false);
             setPageVisible(true);
-            setGame(data.game);
-            setHealth({
-                p1: data.game.player_one_health,
-                p2: data.game.player_two_health,
-            });
+            const applyGame = () => {
+                setGame(data.game);
+                setHealth({
+                    p1: data.game.player_one_health,
+                    p2: data.game.player_two_health,
+                });
+            };
+            setPageVisible(false);
+            queueFadeTimerRef.current = window.setTimeout(() => {
+                applyGame();
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => setPageVisible(true));
+                });
+            }, QUEUE_FADE_MS);
         });
 
         return () => {
+            clearQueueFadeTimer();
             echo.leaveChannel(`player.${player.id}`);
         };
     }, [game?.id, player.id]);
