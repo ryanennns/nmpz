@@ -198,17 +198,7 @@ function MapPicker({ onPin }: { onPin: (coords: LatLng) => void }) {
 
 // --- Health bar ---
 
-function HealthBar({
-    name,
-    health,
-    color,
-    isYou,
-}: {
-    name: string;
-    health: number;
-    color: 'blue' | 'red';
-    isYou?: boolean;
-}) {
+function HealthBar({ health, color }: { health: number; color: 'blue' | 'red' }) {
     const pct = Math.max(0, Math.min(100, (health / 5000) * 100));
     const colorClass = color === 'blue' ? 'text-blue-400' : 'text-red-400';
     const [flashing, setFlashing] = useState(false);
@@ -228,27 +218,26 @@ function HealthBar({
     }, [health]);
 
     return (
-        <div className="flex gap-2 text-xs items-center">
-            <span className="w-20 truncate opacity-60">{isYou ? 'You' : name}</span>
-            <div className="relative font-mono leading-none">
-                <span className="opacity-20 text-white select-none">{'█'.repeat(20)}</span>
+        <div className="flex gap-3 items-center font-mono">
+            <div className="relative leading-none">
+                <span className="opacity-20 text-white select-none text-sm">{'█'.repeat(24)}</span>
                 <span
-                    className={`absolute inset-0 overflow-hidden whitespace-nowrap select-none ${colorClass}`}
+                    className={`absolute inset-0 overflow-hidden whitespace-nowrap select-none text-sm ${colorClass}`}
                     style={{ width: `${pct}%`, transition: 'width 800ms cubic-bezier(0.19, 1, 0.22, 1)' }}
                 >
-                    {'█'.repeat(20)}
+                    {'█'.repeat(24)}
                 </span>
                 {flashing && (
                     <span
                         key={flashKey}
-                        className="health-flash absolute inset-0 overflow-hidden whitespace-nowrap select-none text-red-400 pointer-events-none"
+                        className="health-flash absolute inset-0 overflow-hidden whitespace-nowrap select-none text-sm text-red-400 pointer-events-none"
                         style={{ width: `${pct}%` }}
                     >
-                        {'█'.repeat(20)}
+                        {'█'.repeat(24)}
                     </span>
                 )}
             </div>
-            <span className={`w-12 text-right opacity-60 ${colorClass}`}>{health}hp</span>
+            <span className={`text-xs opacity-60 tabular-nums ${colorClass}`}>{health}hp</span>
         </div>
     );
 }
@@ -503,34 +492,42 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
                     </div>
                 )}
 
-                {/* Round scores between rounds */}
-                {roundFinished && (roundScores.p1 !== null || roundScores.p2 !== null) && (() => {
-                    const myScore = isPlayerOne ? roundScores.p1 : roundScores.p2;
+                {/* Top corners: player panels (always visible) */}
+                {(() => {
                     const myColor = isPlayerOne ? 'text-blue-400' : 'text-red-400';
                     const myColorDim = isPlayerOne ? 'text-blue-400/60' : 'text-red-400/60';
-                    const oppScore = isPlayerOne ? roundScores.p2 : roundScores.p1;
+                    const myHealth = isPlayerOne ? health.p1 : health.p2;
+                    const myScore = isPlayerOne ? roundScores.p1 : roundScores.p2;
                     const oppColor = isPlayerOne ? 'text-red-400' : 'text-blue-400';
                     const oppColorDim = isPlayerOne ? 'text-red-400/60' : 'text-blue-400/60';
+                    const oppHealth = isPlayerOne ? health.p2 : health.p1;
+                    const oppScore = isPlayerOne ? roundScores.p2 : roundScores.p1;
                     const oppName = isPlayerOne ? game.player_two.user.name : game.player_one.user.name;
                     return (
                         <>
                             <div className="absolute top-6 left-8 z-20 pointer-events-none rounded px-4 py-3 bg-black/50 backdrop-blur-sm">
-                                <div className={`${myColor} text-6xl font-mono font-bold tabular-nums`}>
-                                    {myScore?.toLocaleString() ?? '—'}
-                                </div>
-                                <div className={`${myColorDim} text-sm font-mono mt-1`}>You</div>
+                                {roundFinished && myScore !== null && (
+                                    <div className={`${myColor} text-6xl font-mono font-bold tabular-nums mb-3`}>
+                                        {myScore.toLocaleString()}
+                                    </div>
+                                )}
+                                <div className={`${myColorDim} text-xs font-mono mb-1`}>You</div>
+                                <HealthBar health={myHealth} color={isPlayerOne ? 'blue' : 'red'} />
                             </div>
-                            {countdown !== null && (
+                            {roundFinished && countdown !== null && (
                                 <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none rounded px-4 py-3 bg-black/50 backdrop-blur-sm text-center">
                                     <div className="text-white text-6xl font-mono font-bold tabular-nums">{countdown}</div>
                                     <div className="text-white/40 text-sm font-mono mt-1">next round</div>
                                 </div>
                             )}
                             <div className="absolute top-6 right-8 z-20 pointer-events-none text-right rounded px-4 py-3 bg-black/50 backdrop-blur-sm">
-                                <div className={`${oppColor} text-6xl font-mono font-bold tabular-nums`}>
-                                    {oppScore?.toLocaleString() ?? '—'}
-                                </div>
-                                <div className={`${oppColorDim} text-sm font-mono mt-1`}>{oppName}</div>
+                                {roundFinished && oppScore !== null && (
+                                    <div className={`${oppColor} text-6xl font-mono font-bold tabular-nums mb-3`}>
+                                        {oppScore.toLocaleString()}
+                                    </div>
+                                )}
+                                <div className={`${oppColorDim} text-xs font-mono mb-1`}>{oppName}</div>
+                                <HealthBar health={oppHealth} color={isPlayerOne ? 'red' : 'blue'} />
                             </div>
                         </>
                     );
@@ -543,20 +540,6 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
                             <div className="flex justify-between opacity-70 text-xs">
                                 <span>Round {round.round_number}</span>
                                 <span>{stateLabel[gameState]}</span>
-                            </div>
-                            <div className="space-y-1">
-                                <HealthBar
-                                    name={game.player_one.user.name}
-                                    health={health.p1}
-                                    color="blue"
-                                    isYou={player.id === game.player_one.id}
-                                />
-                                <HealthBar
-                                    name={game.player_two.user.name}
-                                    health={health.p2}
-                                    color="red"
-                                    isYou={player.id === game.player_two.id}
-                                />
                             </div>
                             {events.length > 0 && <div className="border-t border-white/10" />}
                         </>
