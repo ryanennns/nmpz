@@ -23,26 +23,36 @@ class PlayerMakesGuess extends Controller
 
         $isPlayerOne = $player->getKey() === $game->player_one_id;
 
-        abort_if($isPlayerOne ? $round->player_one_locked_in : $round->player_two_locked_in, 403);
-
         $validated = $request->validate([
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
+            'locked_in' => ['sometimes', 'boolean'],
         ]);
+
+        $lockedInAlready = $isPlayerOne ? $round->player_one_locked_in : $round->player_two_locked_in;
+        if ($lockedInAlready) {
+            return response()->json($round);
+        }
 
         if ($isPlayerOne) {
             $round->player_one_guess_lat = $validated['lat'];
             $round->player_one_guess_lng = $validated['lng'];
-            $round->player_one_locked_in = true;
+            if (($validated['locked_in'] ?? false) === true) {
+                $round->player_one_locked_in = true;
+            }
         } else {
             $round->player_two_guess_lat = $validated['lat'];
             $round->player_two_guess_lng = $validated['lng'];
-            $round->player_two_locked_in = true;
+            if (($validated['locked_in'] ?? false) === true) {
+                $round->player_two_locked_in = true;
+            }
         }
 
         $round->save();
 
-        PlayerGuessed::dispatch($round, $player);
+        if (($validated['locked_in'] ?? false) === true) {
+            PlayerGuessed::dispatch($round, $player);
+        }
 
         if ($round->player_one_locked_in && $round->player_two_locked_in) {
             $updated = Round::query()->where('id', $round->getKey())
@@ -54,7 +64,7 @@ class PlayerMakesGuess extends Controller
                 RoundFinished::dispatch($round);
                 ForceEndRound::cancelPending($round->getKey());
             }
-        } else {
+        } elseif (($validated['locked_in'] ?? false) === true) {
             $startedAt = $round->started_at ?? now();
             if ($round->started_at === null) {
                 $round->forceFill(['started_at' => $startedAt])->save();

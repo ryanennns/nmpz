@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\PlayerLeavesQueue;
 use App\Http\Controllers\PlayerMakesGuess;
-use App\Http\Controllers\PlayerUpdatesGuess;
 use App\Http\Controllers\JoinQueue;
 use App\Http\Controllers\SendMessage;
 use App\Models\Player;
@@ -35,8 +34,6 @@ Route::post('players/{player}/join-queue', JoinQueue::class)
 
 Route::post('players/{player}/games/{game}/rounds/{round}/guess', PlayerMakesGuess::class)
     ->name('games.rounds.guess');
-Route::post('players/{player}/games/{game}/rounds/{round}/guess-preview', PlayerUpdatesGuess::class)
-    ->name('games.rounds.guess-preview');
 Route::post('players/{player}/games/{game}/send-message', SendMessage::class)
     ->name('games.send-message');
 

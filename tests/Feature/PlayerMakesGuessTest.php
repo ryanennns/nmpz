@@ -28,6 +28,11 @@ class PlayerMakesGuessTest extends TestCase
         return ['lat' => 48.8566, 'lng' => 2.3522];
     }
 
+    private function lockedPayload(): array
+    {
+        return ['lat' => 48.8566, 'lng' => 2.3522, 'locked_in' => true];
+    }
+
     private function makeScenario(string $playerSlot = 'player_one_id'): array
     {
         $player = Player::factory()->create();
@@ -44,7 +49,7 @@ class PlayerMakesGuessTest extends TestCase
         Event::fake();
         [$player, $game, $round] = $this->makeScenario('player_one_id');
 
-        $this->postJson($this->url($player, $game, $round), $this->validPayload())
+        $this->postJson($this->url($player, $game, $round), $this->lockedPayload())
             ->assertOk();
 
         $this->assertDatabaseHas('rounds', [
@@ -61,7 +66,7 @@ class PlayerMakesGuessTest extends TestCase
         Event::fake();
         [$player, $game, $round] = $this->makeScenario('player_two_id');
 
-        $this->postJson($this->url($player, $game, $round), $this->validPayload())
+        $this->postJson($this->url($player, $game, $round), $this->lockedPayload())
             ->assertOk();
 
         $this->assertDatabaseHas('rounds', [
@@ -78,7 +83,7 @@ class PlayerMakesGuessTest extends TestCase
         Event::fake();
         [$player, $game, $round] = $this->makeScenario('player_one_id');
 
-        $this->postJson($this->url($player, $game, $round), $this->validPayload());
+        $this->postJson($this->url($player, $game, $round), $this->lockedPayload());
 
         Event::assertDispatched(PlayerGuessed::class, function (PlayerGuessed $event) use ($round, $player) {
             return $event->round->getKey() === $round->getKey()
@@ -97,7 +102,7 @@ class PlayerMakesGuessTest extends TestCase
             'player_two_locked_in' => true,
         ]);
 
-        $this->postJson($this->url($player, $game, $round), $this->validPayload());
+        $this->postJson($this->url($player, $game, $round), $this->lockedPayload());
 
         Event::assertDispatched(RoundFinished::class, fn (RoundFinished $e) => $e->round->getKey() === $round->getKey());
     }
@@ -108,7 +113,7 @@ class PlayerMakesGuessTest extends TestCase
         Bus::fake();
         [$player, $game, $round] = $this->makeScenario('player_one_id');
 
-        $this->postJson($this->url($player, $game, $round), $this->validPayload());
+        $this->postJson($this->url($player, $game, $round), $this->lockedPayload());
 
         Event::assertNotDispatched(RoundFinished::class);
     }
@@ -119,7 +124,7 @@ class PlayerMakesGuessTest extends TestCase
         Bus::fake();
         [$player, $game, $round] = $this->makeScenario('player_one_id');
 
-        $this->postJson($this->url($player, $game, $round), $this->validPayload());
+        $this->postJson($this->url($player, $game, $round), $this->lockedPayload());
 
         Bus::assertDispatched(ForceEndRound::class, fn (ForceEndRound $job) => $job->roundId === $round->getKey());
     }
@@ -137,7 +142,7 @@ class PlayerMakesGuessTest extends TestCase
             'started_at' => $now->subSeconds(55),
         ]);
 
-        $this->postJson($this->url($player, $game, $round), $this->validPayload());
+        $this->postJson($this->url($player, $game, $round), $this->lockedPayload());
 
         $expected = $now->addSeconds(5);
         Bus::assertDispatched(ForceEndRound::class, function (ForceEndRound $job) use ($expected) {
@@ -160,7 +165,7 @@ class PlayerMakesGuessTest extends TestCase
             'player_two_locked_in' => true,
         ]);
 
-        $this->postJson($this->url($player, $game, $round), $this->validPayload());
+        $this->postJson($this->url($player, $game, $round), $this->lockedPayload());
 
         Bus::assertNotDispatched(ForceEndRound::class);
     }
@@ -176,7 +181,7 @@ class PlayerMakesGuessTest extends TestCase
             'player_two_locked_in' => true,
         ]);
 
-        $this->postJson($this->url($player, $game, $round), $this->validPayload());
+        $this->postJson($this->url($player, $game, $round), $this->lockedPayload());
 
         $round->refresh();
         $this->assertNotNull($round->player_one_score);
@@ -225,8 +230,15 @@ class PlayerMakesGuessTest extends TestCase
         $game = Game::factory()->create(['player_one_id' => $player->getKey()]);
         $round = Round::factory()->for($game)->create(['player_one_locked_in' => true]);
 
-        $this->postJson($this->url($player, $game, $round), $this->validPayload())
-            ->assertForbidden();
+        $this->postJson($this->url($player, $game, $round), $this->lockedPayload())
+            ->assertOk();
+
+        $this->assertDatabaseHas('rounds', [
+            'id' => $round->getKey(),
+            'player_one_guess_lat' => null,
+            'player_one_guess_lng' => null,
+            'player_one_locked_in' => true,
+        ]);
     }
 
     public function test_player_two_cannot_change_guess_after_locking_in(): void
@@ -235,8 +247,15 @@ class PlayerMakesGuessTest extends TestCase
         $game = Game::factory()->create(['player_two_id' => $player->getKey()]);
         $round = Round::factory()->for($game)->create(['player_two_locked_in' => true]);
 
-        $this->postJson($this->url($player, $game, $round), $this->validPayload())
-            ->assertForbidden();
+        $this->postJson($this->url($player, $game, $round), $this->lockedPayload())
+            ->assertOk();
+
+        $this->assertDatabaseHas('rounds', [
+            'id' => $round->getKey(),
+            'player_two_guess_lat' => null,
+            'player_two_guess_lng' => null,
+            'player_two_locked_in' => true,
+        ]);
     }
 
     // --- Validation failures ---

@@ -765,14 +765,14 @@ export default function Welcome({
                 Accept: 'application/json',
                 'X-XSRF-TOKEN': getCsrfToken(),
             },
-            body: JSON.stringify(pin),
+            body: JSON.stringify({ ...pin, locked_in: true }),
         });
         if (res.ok) setRound(await res.json());
     }
 
     async function updateGuess(coords: LatLng) {
         if (!round || !game || myLocked || gameOver) return;
-        const url = `/players/${player.id}/games/${game.id}/rounds/${round.id}/guess-preview`;
+        const url = `/players/${player.id}/games/${game.id}/rounds/${round.id}/guess`;
         const res = await fetch(url, {
             method: 'POST',
             headers: {
@@ -973,7 +973,9 @@ export default function Welcome({
     useEffect(() => {
         if (!playerName || game) return;
         const t = setInterval(async () => {
-            const res = await fetch('/stats', { headers: { Accept: 'application/json' } });
+            const res = await fetch('/stats', {
+                headers: { Accept: 'application/json' },
+            });
             if (res.ok) {
                 const data = (await res.json()) as {
                     games_in_progress: number;
