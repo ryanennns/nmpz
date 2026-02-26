@@ -1,0 +1,100 @@
+<?php
+
+namespace App\Actions;
+
+use App\Events\GameReady;
+use App\Events\RoundStarted;
+use App\Jobs\ForceEndRound;
+use App\Models\Game;
+use App\Models\Location;
+use App\Models\Map;
+use App\Models\Player;
+use App\Models\Round;
+use Illuminate\Support\Facades\Cache;
+
+class MatchmakeQueue
+{
+    public function handle(): int
+    {
+        $lock = Cache::lock('matchmaking_queue_lock', 10);
+        if (! $lock->get()) {
+            return 0;
+        }
+
+        try {
+            $queue = Cache::get('matchmaking_queue', []);
+            $queue = array_values(array_unique($queue));
+
+            if (count($queue) < 2) {
+                Cache::put('matchmaking_queue', $queue, now()->addMinutes(5));
+                return 0;
+            }
+
+            $players = Player::query()->whereIn('id', $queue)->get()->keyBy('id');
+            $queue = array_values(array_filter($queue, fn ($id) => $players->has($id)));
+
+            $matches = 0;
+
+            while (count($queue) >= 2) {
+                $p1Id = array_shift($queue);
+                $p2Id = array_shift($queue);
+                $p1 = $players->get($p1Id);
+                $p2 = $players->get($p2Id);
+
+                if (! $p1 || ! $p2) {
+                    continue;
+                }
+
+                $this->createMatch($p1, $p2);
+                $matches++;
+            }
+
+            Cache::put('matchmaking_queue', $queue, now()->addMinutes(5));
+
+            return $matches;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function createMatch(Player $playerOne, Player $playerTwo): void
+    {
+        $map = Map::query()->firstOrFail();
+        $locationCount = Location::query()->where('map_id', $map->getKey())->count();
+        if ($locationCount === 0) {
+            return;
+        }
+
+        $seed = random_int(0, $locationCount - 1);
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_id' => $playerOne->getKey(),
+            'player_two_id' => $playerTwo->getKey(),
+            'map_id' => $map->getKey(),
+            'seed' => $seed,
+        ]);
+
+        $location = Location::query()->where('map_id', $map->getKey())
+            ->orderBy('id')
+            ->offset($seed % $locationCount)
+            ->firstOrFail();
+
+        $round = Round::factory()->for($game)->create([
+            'round_number' => 1,
+            'location_lat' => $location->lat,
+            'location_lng' => $location->lng,
+            'location_heading' => $location->heading,
+        ]);
+
+        GameReady::dispatch($game, $playerOne);
+        GameReady::dispatch($game, $playerTwo);
+
+        $p1Health = $game->player_one_health;
+        $p2Health = $game->player_two_health;
+        dispatch(function () use ($round, $p1Health, $p2Health) {
+            $round->forceFill(['started_at' => now()])->save();
+            RoundStarted::dispatch($round, $p1Health, $p2Health);
+            ForceEndRound::dispatch($round->getKey())->delay(now()->addSeconds(60));
+        })->delay(now()->addSeconds(2));
+    }
+}
