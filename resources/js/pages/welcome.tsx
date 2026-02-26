@@ -22,6 +22,9 @@ import echo from '@/echo';
 
 const MAX_EVENTS = 5;
 const MAX_MESSAGES = 6;
+const END_MAP_HOLD_MS = 3000;
+const END_FADE_MS = 500;
+const END_WINNER_HOLD_MS = 2500;
 
 setOptions({
     key: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
@@ -89,7 +92,10 @@ export default function Welcome({
     >([]);
     const [countdown, setCountdown] = useState<number | null>(null);
     const [urgentCountdown, setUrgentCountdown] = useState<number | null>(null);
-    const [pendingRoundData, setPendingRoundData] = useState<Record<string, unknown> | null>(null);
+    const [pendingRoundData, setPendingRoundData] = useState<Record<
+        string,
+        unknown
+    > | null>(null);
     const [pin, setPin] = useState<LatLng | null>(null);
     const [roundFinished, setRoundFinished] = useState(false);
     const [mapHovered, setMapHovered] = useState(false);
@@ -98,11 +104,14 @@ export default function Welcome({
         p1: number | null;
         p2: number | null;
     }>({ p1: null, p2: null });
+    const [winnerId, setWinnerId] = useState<string | null>(null);
     const [winnerName, setWinnerName] = useState<string | null>(null);
     const [winnerOverlayVisible, setWinnerOverlayVisible] = useState(false);
+    const [blackoutVisible, setBlackoutVisible] = useState(false);
     const [pageVisible, setPageVisible] = useState(true);
     const guessRef = useRef<() => void>(() => {});
     const roundStartedAtRef = useRef<Date | null>(null);
+    const endTimersRef = useRef<number[]>([]);
     const [chatOpen, setChatOpen] = useState(false);
     const [chatText, setChatText] = useState('');
     const chatInputRef = useRef<HTMLInputElement | null>(null);
@@ -127,6 +136,59 @@ export default function Welcome({
             },
             ...prev.slice(0, MAX_EVENTS - 1),
         ]);
+    }
+
+    function clearEndSequenceTimers() {
+        endTimersRef.current.forEach((id) => window.clearTimeout(id));
+        endTimersRef.current = [];
+    }
+
+    function scheduleEndSequence(resetGame: () => void) {
+        clearEndSequenceTimers();
+        setBlackoutVisible(false);
+        setWinnerOverlayVisible(false);
+        setPageVisible(true);
+
+        const t1 = window.setTimeout(() => {
+            setBlackoutVisible(true);
+
+            const t2 = window.setTimeout(() => {
+                setWinnerOverlayVisible(true);
+
+                const t3 = window.setTimeout(() => {
+                    setWinnerOverlayVisible(false);
+
+                    const t4 = window.setTimeout(() => {
+                        setPageVisible(false);
+
+                        const t5 = window.setTimeout(() => {
+                            resetGame();
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() =>
+                                    setPageVisible(true),
+                                );
+                            });
+
+                            const t6 = window.setTimeout(() => {
+                                setBlackoutVisible(false);
+                            }, END_FADE_MS);
+
+                            endTimersRef.current.push(t6);
+                        }, END_FADE_MS);
+
+                        endTimersRef.current.push(t5);
+                    }, END_FADE_MS);
+
+                    endTimersRef.current.push(t4);
+                }, END_WINNER_HOLD_MS);
+
+                endTimersRef.current.push(t3);
+            }, END_FADE_MS);
+
+            endTimersRef.current.push(t2);
+        }, END_MAP_HOLD_MS);
+
+        endTimersRef.current.push(t1);
     }
 
     // Countdown tick (next round)
@@ -186,6 +248,10 @@ export default function Welcome({
         const channel = echo.channel(`player.${player.id}`);
 
         channel.listen('.GameReady', (data: { game: Game }) => {
+            clearEndSequenceTimers();
+            setBlackoutVisible(false);
+            setWinnerOverlayVisible(false);
+            setPageVisible(true);
             setGame(data.game);
             setHealth({
                 p1: data.game.player_one_health,
@@ -297,7 +363,6 @@ export default function Welcome({
             setCountdown(null);
             setUrgentCountdown(null);
             roundStartedAtRef.current = null;
-            setRoundResult(null);
             setHealth({
                 p1: data.player_one_health as number,
                 p2: data.player_two_health as number,
@@ -305,6 +370,7 @@ export default function Welcome({
             setGameOver(true);
 
             const winnerId = data.winner_id as string | null;
+            setWinnerId(winnerId);
             const name =
                 winnerId === game.player_one.id
                     ? game.player_one.user.name
@@ -312,44 +378,41 @@ export default function Welcome({
                       ? game.player_two.user.name
                       : null;
             setWinnerName(name);
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => setWinnerOverlayVisible(true));
+
+            scheduleEndSequence(() => {
+                setGame(null);
+                setRound(null);
+                setLocation(null);
+                setHealth({ p1: 5000, p2: 5000 });
+                setGameOver(false);
+                setEvents([]);
+                setMessages([]);
+                setCountdown(null);
+                setUrgentCountdown(null);
+                setPin(null);
+                setRoundFinished(false);
+                setMapHovered(false);
+                setRoundResult(null);
+                setRoundScores({ p1: null, p2: null });
+                setChatOpen(false);
+                setChatText('');
+                setWinnerId(null);
+                setWinnerName(null);
+                setWinnerOverlayVisible(false);
             });
-            setTimeout(() => {
-                setPageVisible(false);
-                setTimeout(() => {
-                    setGame(null);
-                    setRound(null);
-                    setLocation(null);
-                    setHealth({ p1: 5000, p2: 5000 });
-                    setGameOver(false);
-                    setEvents([]);
-                    setMessages([]);
-                    setCountdown(null);
-                    setUrgentCountdown(null);
-                    setPin(null);
-                    setRoundFinished(false);
-                    setMapHovered(false);
-                    setRoundResult(null);
-                    setRoundScores({ p1: null, p2: null });
-                    setChatOpen(false);
-                    setChatText('');
-                    setWinnerName(null);
-                    setWinnerOverlayVisible(false);
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => setPageVisible(true));
-                    });
-                }, 500);
-            }, 4000);
         });
 
         return () => {
+            clearEndSequenceTimers();
             echo.leaveChannel(`game.${game.id}`);
         };
     }, [game?.id]);
 
+    useEffect(() => () => clearEndSequenceTimers(), []);
+
     async function guess() {
         if (!pin || !round || !game || myLocked || gameOver) return;
+        setMapHovered(false);
         const url = `/players/${player.id}/games/${game.id}/rounds/${round.id}/guess`;
         const res = await fetch(url, {
             method: 'POST',
@@ -520,254 +583,288 @@ export default function Welcome({
     return (
         <>
             <Head title="nmpz" />
-            <div className={`transition-opacity duration-500 ${pageVisible ? 'opacity-100' : 'opacity-0'}`}>
-            {!game ? (
-                <Lobby
-                    player={player}
-                    initialQueueCount={initialQueueCount}
-                    playerName={playerName}
-                    onNameChange={setPlayerName}
-                />
-            ) : (
-            <div className="relative h-screen w-screen overflow-hidden font-mono text-white">
-                {urgentCountdown !== null && urgentCountdown <= 15 && (
-                    <div className="urgent-screen-halo pointer-events-none absolute inset-0 z-10" />
-                )}
-                {/* Fullscreen results during countdown */}
-                {roundFinished && roundResult ? (
-                    <ResultsMap
-                        key={`result-${round?.id ?? 'pending'}`}
-                        result={roundResult}
-                    />
-                ) : location ? (
-                    <StreetViewPanel
-                        key={`${location.lat},${location.lng}`}
-                        location={location}
+            <div
+                className={`transition-opacity duration-500 ${pageVisible ? 'opacity-100' : 'opacity-0'}`}
+            >
+                {!game ? (
+                    <Lobby
+                        player={player}
+                        initialQueueCount={initialQueueCount}
+                        playerName={playerName}
+                        onNameChange={setPlayerName}
                     />
                 ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 text-sm text-neutral-500">
-                        <ShimmerText>Waiting for round to start</ShimmerText>
-                    </div>
-                )}
+                    <div className="relative h-screen w-screen overflow-hidden font-mono text-white">
+                        {urgentCountdown !== null && urgentCountdown <= 15 && (
+                            <div className="urgent-screen-halo pointer-events-none absolute inset-0 z-10" />
+                        )}
+                        {/* Fullscreen results during countdown */}
+                        {roundFinished && roundResult ? (
+                            <ResultsMap
+                                key={`result-${round?.id ?? 'pending'}`}
+                                result={roundResult}
+                            />
+                        ) : location ? (
+                            <StreetViewPanel
+                                key={`${location.lat},${location.lng}`}
+                                location={location}
+                            />
+                        ) : (
+                            <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 text-sm text-neutral-500">
+                                <ShimmerText>
+                                    Waiting for round to start
+                                </ShimmerText>
+                            </div>
+                        )}
 
-                {/* Top corners: player panels (always visible) */}
-                {(() => {
-                    const myColor = isPlayerOne
-                        ? 'text-blue-400'
-                        : 'text-red-400';
-                    const myColorDim = isPlayerOne
-                        ? 'text-blue-400/60'
-                        : 'text-red-400/60';
-                    const myHealth = isPlayerOne ? health.p1 : health.p2;
-                    const myScore = isPlayerOne
-                        ? roundScores.p1
-                        : roundScores.p2;
-                    const oppColor = isPlayerOne
-                        ? 'text-red-400'
-                        : 'text-blue-400';
-                    const oppColorDim = isPlayerOne
-                        ? 'text-red-400/60'
-                        : 'text-blue-400/60';
-                    const oppHealth = isPlayerOne ? health.p2 : health.p1;
-                    const oppScore = isPlayerOne
-                        ? roundScores.p2
-                        : roundScores.p1;
-                    const oppName = isPlayerOne
-                        ? game.player_two.user.name
-                        : game.player_one.user.name;
-                    return (
-                        <>
-                            <div className="pointer-events-none absolute top-6 left-8 z-20 flex w-72 flex-col gap-3">
-                                <div className="rounded bg-black/50 px-4 py-3 backdrop-blur-sm">
-                                    {roundFinished && myScore !== null && (
-                                        <div
-                                            className={`${myColor} mb-3 font-mono text-6xl font-bold tabular-nums`}
-                                        >
-                                            {myScore.toLocaleString()}
-                                        </div>
-                                    )}
-                                    <div
-                                        className={`${myColorDim} mb-1 font-mono text-xs`}
-                                    >
-                                        You
-                                    </div>
-                                    <HealthBar
-                                        health={myHealth}
-                                        color={isPlayerOne ? 'blue' : 'red'}
-                                    />
-                                </div>
-                                <div className="pointer-events-none space-y-2">
-                                    {messages.length > 0 && (
-                                        <div className="rounded border border-white/10 bg-black/50 p-2 text-xs text-white/80 backdrop-blur-sm">
-                                            {messages.map((m) => (
-                                                <div
-                                                    key={m.id}
-                                                    className="mb-1 last:mb-0"
-                                                >
-                                                    <span className="text-white/40">
-                                                        {m.ts}
-                                                    </span>{' '}
-                                                    <span className="text-white/70">
-                                                        {m.name}:
-                                                    </span>{' '}
-                                                    <span>{m.text}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    <div
-                                        className={`pointer-events-auto rounded border border-white/10 bg-black/60 p-2 text-xs backdrop-blur-sm ${chatOpen ? '' : 'opacity-70'}`}
-                                    >
-                                        {chatOpen ? (
-                                            <input
-                                                ref={chatInputRef}
-                                                value={chatText}
-                                                maxLength={255}
-                                                onChange={(e) =>
-                                                    setChatText(e.target.value)
+                        {/* Top corners: player panels (always visible) */}
+                        {(() => {
+                            const myColor = isPlayerOne
+                                ? 'text-blue-400'
+                                : 'text-red-400';
+                            const myColorDim = isPlayerOne
+                                ? 'text-blue-400/60'
+                                : 'text-red-400/60';
+                            const myHealth = isPlayerOne
+                                ? health.p1
+                                : health.p2;
+                            const myScore = isPlayerOne
+                                ? roundScores.p1
+                                : roundScores.p2;
+                            const oppColor = isPlayerOne
+                                ? 'text-red-400'
+                                : 'text-blue-400';
+                            const oppColorDim = isPlayerOne
+                                ? 'text-red-400/60'
+                                : 'text-blue-400/60';
+                            const oppHealth = isPlayerOne
+                                ? health.p2
+                                : health.p1;
+                            const oppScore = isPlayerOne
+                                ? roundScores.p2
+                                : roundScores.p1;
+                            const oppName = isPlayerOne
+                                ? game.player_two.user.name
+                                : game.player_one.user.name;
+                            return (
+                                <>
+                                    <div className="pointer-events-none absolute top-6 left-8 z-20 flex w-72 flex-col gap-3">
+                                        <div className="rounded bg-black/50 px-4 py-3 backdrop-blur-sm">
+                                            {roundFinished &&
+                                                myScore !== null && (
+                                                    <div
+                                                        className={`${myColor} mb-3 font-mono text-6xl font-bold tabular-nums`}
+                                                    >
+                                                        {myScore.toLocaleString()}
+                                                    </div>
+                                                )}
+                                            <div
+                                                className={`${myColorDim} mb-1 font-mono text-xs`}
+                                            >
+                                                You
+                                            </div>
+                                            <HealthBar
+                                                health={myHealth}
+                                                color={
+                                                    isPlayerOne ? 'blue' : 'red'
                                                 }
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        void sendMessage();
-                                                    }
-                                                }}
-                                                placeholder="Type a message…"
-                                                className="w-full bg-transparent text-white outline-none placeholder:text-white/30"
                                             />
-                                        ) : (
-                                            <div className="text-white/40">
-                                                Press Enter to chat
+                                        </div>
+                                        <div className="pointer-events-none space-y-2">
+                                            {messages.length > 0 && (
+                                                <div className="rounded border border-white/10 bg-black/50 p-2 text-xs text-white/80 backdrop-blur-sm">
+                                                    {messages.map((m) => (
+                                                        <div
+                                                            key={m.id}
+                                                            className="mb-1 last:mb-0"
+                                                        >
+                                                            <span className="text-white/40">
+                                                                {m.ts}
+                                                            </span>{' '}
+                                                            <span className="text-white/70">
+                                                                {m.name}:
+                                                            </span>{' '}
+                                                            <span>
+                                                                {m.text}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div
+                                                className={`pointer-events-auto rounded border border-white/10 bg-black/60 p-2 text-xs backdrop-blur-sm ${chatOpen ? '' : 'opacity-70'}`}
+                                            >
+                                                {chatOpen ? (
+                                                    <input
+                                                        ref={chatInputRef}
+                                                        value={chatText}
+                                                        maxLength={255}
+                                                        onChange={(e) =>
+                                                            setChatText(
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        onKeyDown={(e) => {
+                                                            if (
+                                                                e.key ===
+                                                                'Enter'
+                                                            ) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                void sendMessage();
+                                                            }
+                                                        }}
+                                                        placeholder="Type a message…"
+                                                        className="w-full bg-transparent text-white outline-none placeholder:text-white/30"
+                                                    />
+                                                ) : (
+                                                    <div className="text-white/40">
+                                                        Press Enter to chat
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {roundFinished && countdown !== null && (
+                                        <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-4 py-3 text-center backdrop-blur-sm">
+                                            <div className="font-mono text-6xl font-bold text-white tabular-nums">
+                                                {countdown}
+                                            </div>
+                                            <div className="mt-1 font-mono text-sm text-white/40">
+                                                next round
+                                            </div>
+                                        </div>
+                                    )}
+                                    {(gameState === 'one_guessed' ||
+                                        gameState === 'waiting') &&
+                                        urgentCountdown !== null && (
+                                            <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-4 py-3 text-center backdrop-blur-sm">
+                                                <div
+                                                    className={`font-mono text-6xl font-bold tabular-nums ${urgentCountdown <= 15 ? 'text-red-400' : 'text-amber-400'}`}
+                                                >
+                                                    {urgentCountdown}
+                                                </div>
+                                                <div className="mt-1 font-mono text-sm text-white/40">
+                                                    {gameState === 'waiting'
+                                                        ? 'time to guess'
+                                                        : myLocked
+                                                          ? 'waiting for opponent'
+                                                          : 'time to guess'}
+                                                </div>
                                             </div>
                                         )}
-                                    </div>
-                                </div>
-                            </div>
-                            {roundFinished && countdown !== null && (
-                                <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-4 py-3 text-center backdrop-blur-sm">
-                                    <div className="font-mono text-6xl font-bold text-white tabular-nums">
-                                        {countdown}
-                                    </div>
-                                    <div className="mt-1 font-mono text-sm text-white/40">
-                                        next round
-                                    </div>
-                                </div>
-                            )}
-                            {(gameState === 'one_guessed' ||
-                                gameState === 'waiting') &&
-                                urgentCountdown !== null && (
-                                    <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-4 py-3 text-center backdrop-blur-sm">
+                                    <div className="pointer-events-none absolute top-6 right-8 z-20 rounded bg-black/50 px-4 py-3 text-right backdrop-blur-sm">
+                                        {roundFinished && oppScore !== null && (
+                                            <div
+                                                className={`${oppColor} mb-3 font-mono text-6xl font-bold tabular-nums`}
+                                            >
+                                                {oppScore.toLocaleString()}
+                                            </div>
+                                        )}
                                         <div
-                                            className={`font-mono text-6xl font-bold tabular-nums ${urgentCountdown <= 15 ? 'text-red-400' : 'text-amber-400'}`}
+                                            className={`${oppColorDim} mb-1 font-mono text-xs`}
                                         >
-                                            {urgentCountdown}
+                                            {oppName}
                                         </div>
-                                        <div className="mt-1 font-mono text-sm text-white/40">
-                                            {gameState === 'waiting'
-                                                ? 'time to guess'
-                                                : myLocked
-                                                  ? 'waiting for opponent'
-                                                  : 'time to guess'}
-                                        </div>
+                                        <HealthBar
+                                            health={oppHealth}
+                                            color={isPlayerOne ? 'red' : 'blue'}
+                                        />
                                     </div>
-                                )}
-                            <div className="pointer-events-none absolute top-6 right-8 z-20 rounded bg-black/50 px-4 py-3 text-right backdrop-blur-sm">
-                                {roundFinished && oppScore !== null && (
-                                    <div
-                                        className={`${oppColor} mb-3 font-mono text-6xl font-bold tabular-nums`}
-                                    >
-                                        {oppScore.toLocaleString()}
-                                    </div>
-                                )}
-                                <div
-                                    className={`${oppColorDim} mb-1 font-mono text-xs`}
-                                >
-                                    {oppName}
-                                </div>
-                                <HealthBar
-                                    health={oppHealth}
-                                    color={isPlayerOne ? 'red' : 'blue'}
-                                />
-                            </div>
-                        </>
-                    );
-                })()}
+                                </>
+                            );
+                        })()}
 
-                {/* Bottom-left: event feed */}
-                <div
-                    className={`absolute bottom-4 left-4 z-10 w-80 space-y-2 text-xs ${panel}`}
-                >
-                    {round && (
-                        <>
-                            <div className="flex justify-between text-xs opacity-70">
-                                <span>Round {round.round_number}</span>
-                                <span>{stateLabel[gameState]}</span>
-                            </div>
-                            {events.length > 0 && (
-                                <div className="border-t border-white/10" />
+                        {/* Bottom-left: event feed */}
+                        <div
+                            className={`absolute bottom-4 left-4 z-10 w-80 space-y-2 text-xs ${panel}`}
+                        >
+                            {round && (
+                                <>
+                                    <div className="flex justify-between text-xs opacity-70">
+                                        <span>Round {round.round_number}</span>
+                                        <span>{stateLabel[gameState]}</span>
+                                    </div>
+                                    {events.length > 0 && (
+                                        <div className="border-t border-white/10" />
+                                    )}
+                                </>
                             )}
-                        </>
-                    )}
-                    {events.length === 0 ? (
-                        <p className="opacity-30">no events yet</p>
-                    ) : (
-                        events.map((e) => (
-                            <div key={e.id} className="flex gap-2 opacity-40">
-                                <span>{e.ts}</span>
-                                <span className="truncate text-white/70">
-                                    {e.name}
-                                </span>
-                            </div>
-                        ))
-                    )}
-                </div>
+                            {events.length === 0 ? (
+                                <p className="opacity-30">no events yet</p>
+                            ) : (
+                                events.map((e) => (
+                                    <div
+                                        key={e.id}
+                                        className="flex gap-2 opacity-40"
+                                    >
+                                        <span>{e.ts}</span>
+                                        <span className="truncate text-white/70">
+                                            {e.name}
+                                        </span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
 
-                {/* Bottom-right: guess map for current player */}
-                {round && !roundFinished && (
-                    <div
-                        className={`absolute right-4 bottom-4 z-10 overflow-hidden rounded transition-all duration-150 ${mapHovered ? 'h-[70vh] w-[55vw]' : 'h-40 w-64'}`}
-                        onMouseEnter={() => setMapHovered(true)}
-                        onMouseLeave={() => setMapHovered(false)}
-                    >
-                        <MapPicker
-                            key={round.id}
-                            onPin={(coords) => {
-                                setPin(coords);
-                                void updateGuess(coords);
-                            }}
-                            pinColor={isPlayerOne ? '#60a5fa' : '#f87171'}
-                            disabled={myLocked || gameOver}
-                        />
-                        <div className="absolute right-2 bottom-2 left-2 font-mono">
-                            <button
-                                onClick={guess}
-                                disabled={!pin || myLocked || gameOver}
-                                className="w-full rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm enabled:hover:bg-black/80 disabled:opacity-30"
+                        {/* Bottom-right: guess map for current player */}
+                        {round && !roundFinished && (
+                            <div
+                                className={`absolute right-4 bottom-4 z-10 overflow-hidden rounded transition-all duration-150 ${mapHovered ? 'h-[70vh] w-[55vw]' : 'h-40 w-64'}`}
+                                onMouseEnter={() => setMapHovered(true)}
+                                onMouseLeave={() => setMapHovered(false)}
                             >
-                                {myLocked
-                                    ? 'Locked in ✓'
-                                    : pin
-                                      ? 'Lock in guess [space]'
-                                      : 'Click map to place pin'}
-                            </button>
+                                <MapPicker
+                                    key={round.id}
+                                    onPin={(coords) => {
+                                        setPin(coords);
+                                        void updateGuess(coords);
+                                    }}
+                                    pinColor={
+                                        isPlayerOne ? '#60a5fa' : '#f87171'
+                                    }
+                                    disabled={myLocked || gameOver}
+                                />
+                                <div className="absolute right-2 bottom-2 left-2 font-mono">
+                                    <button
+                                        onClick={guess}
+                                        disabled={!pin || myLocked || gameOver}
+                                        className="w-full rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm enabled:hover:bg-black/80 disabled:opacity-30"
+                                    >
+                                        {myLocked
+                                            ? 'Locked in ✓'
+                                            : pin
+                                              ? 'Lock in guess [space]'
+                                              : 'Click map to place pin'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Fade to black overlay */}
+                        <div
+                            className={`pointer-events-none absolute inset-0 z-40 bg-black transition-opacity duration-500 ${blackoutVisible ? 'opacity-100' : 'opacity-0'}`}
+                        />
+
+                        {/* Winner overlay */}
+                        <div
+                            className={`pointer-events-none absolute inset-0 z-50 flex flex-col items-center justify-center transition-opacity duration-500 ${winnerOverlayVisible ? 'opacity-100' : 'opacity-0'}`}
+                        >
+                            <div className="font-mono text-6xl font-bold tracking-wide text-white">
+                                {winnerId === null
+                                    ? 'Draw'
+                                    : winnerId === player.id
+                                      ? 'you won'
+                                      : 'you lost'}
+                            </div>
+                            {winnerId !== null && winnerName && (
+                                <div className="mt-3 font-mono text-xs text-white/40">
+                                    winner: {winnerName}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
-
-                {/* Winner overlay */}
-                <div
-                    className={`pointer-events-none absolute inset-0 z-50 flex flex-col items-center justify-center bg-black transition-opacity duration-500 ${winnerOverlayVisible ? 'opacity-100' : 'opacity-0'}`}
-                >
-                    <div className="mb-3 font-mono text-xs text-white/40">
-                        winner
-                    </div>
-                    <div className="font-mono text-4xl text-white">
-                        {winnerName ?? 'draw'}
-                    </div>
-                </div>
-            </div>
-            )}
             </div>
         </>
     );
