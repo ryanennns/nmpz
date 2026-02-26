@@ -23,22 +23,102 @@ function short(uuid: unknown) {
     return typeof uuid === 'string' ? uuid.slice(0, 8) : '?';
 }
 
+setOptions({
+    key: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
+    v: 'weekly',
+});
+
+// --- Street View ---
+
+function StreetViewPanel({ location }: { location: Location }) {
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function init() {
+            const { StreetViewPanorama } = await importLibrary('streetView');
+            if (cancelled || !containerRef.current) return;
+            new StreetViewPanorama(containerRef.current, {
+                position: { lat: location.lat, lng: location.lng },
+                pov: { heading: location.heading, pitch: 0 },
+                disableDefaultUI: true,
+                clickToGo: false,
+                disableDoubleClickZoom: false,
+                scrollwheel: true,
+                showRoadLabels: false,
+                motionTracking: false,
+                motionTrackingControl: false,
+            });
+        }
+
+        init().catch(console.error);
+        return () => { cancelled = true; };
+    }, []);
+
+    return <div ref={containerRef} className="absolute inset-0" />;
+}
+
+// --- Map picker ---
+
+type LatLng = { lat: number; lng: number };
+
+function MapPicker({ onPin }: { onPin: (coords: LatLng) => void }) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const markerRef = useRef<google.maps.Marker | null>(null);
+
+    useEffect(() => {
+        let map: google.maps.Map;
+        let cancelled = false;
+
+        async function init() {
+            await importLibrary('maps');
+            if (cancelled || !containerRef.current) return;
+            map = new google.maps.Map(containerRef.current, {
+                center: { lat: 20, lng: 0 },
+                zoom: 1,
+                disableDefaultUI: true,
+                clickableIcons: false,
+            });
+            map.addListener('click', (e: google.maps.MapMouseEvent) => {
+                if (!e.latLng) return;
+                const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+                if (markerRef.current) {
+                    markerRef.current.setPosition(e.latLng);
+                } else {
+                    markerRef.current = new google.maps.Marker({ position: e.latLng, map });
+                }
+                onPin(coords);
+            });
+        }
+
+        init().catch(console.error);
+        return () => { cancelled = true; };
+    }, []);
+
+    return <div ref={containerRef} className="h-40 w-64 rounded" />;
+}
+
+// --- Health bar ---
+
 function HealthBar({ name, health }: { name: string; health: number }) {
     const filled = Math.round(Math.max(0, Math.min(5000, health)) / 250);
     const empty = 20 - filled;
     return (
-        <div className="flex gap-3">
-            <span className="w-28 truncate">{name}</span>
+        <div className="flex gap-2 text-xs">
+            <span className="w-20 truncate opacity-60">{name}</span>
             <span>{'█'.repeat(filled)}{'░'.repeat(empty)}</span>
-            <span className="w-12 text-right">{health}hp</span>
+            <span className="w-12 text-right opacity-60">{health}hp</span>
         </div>
     );
 }
 
+// --- Event feed ---
+
 function EventFields({ name, data }: { name: GameEvent['name']; data: Record<string, unknown> }) {
     const row = (label: string, value: unknown) => (
-        <div key={label} className="flex">
-            <span className="w-32 opacity-50">{label}</span>
+        <div key={label} className="flex gap-2">
+            <span className="w-24 opacity-40">{label}</span>
             <span>{String(value)}</span>
         </div>
     );
@@ -74,87 +154,10 @@ function EventFields({ name, data }: { name: GameEvent['name']; data: Record<str
         )
         : null;
 
-    return <div className="border-l-2 border-neutral-500 pl-3">{common}{extra}</div>;
+    return <div className="border-l border-white/20 pl-2">{common}{extra}</div>;
 }
 
-type LatLng = { lat: number; lng: number };
-
-setOptions({
-    key: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
-    v: 'weekly',
-});
-
-function MapPicker({ onPin }: { onPin: (coords: LatLng) => void }) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const markerRef = useRef<google.maps.Marker | null>(null);
-
-    useEffect(() => {
-        let map: google.maps.Map;
-        let cancelled = false;
-
-        async function init() {
-            await importLibrary('maps');
-            await importLibrary('marker');
-            if (cancelled || !containerRef.current) return;
-            map = new google.maps.Map(containerRef.current, {
-                center: { lat: 20, lng: 0 },
-                zoom: 1,
-                disableDefaultUI: true,
-                clickableIcons: false,
-            });
-            map.addListener('click', (e: google.maps.MapMouseEvent) => {
-                if (!e.latLng) return;
-                const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-                if (markerRef.current) {
-                    markerRef.current.setPosition(e.latLng);
-                } else {
-                    markerRef.current = new google.maps.Marker({ position: e.latLng, map });
-                }
-                onPin(coords);
-            });
-        }
-
-        init().catch((err) => {
-            console.error('Failed to load Google Maps', err);
-        });
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    return <div ref={containerRef} className="h-40 w-64 rounded border border-neutral-600" />;
-}
-
-function StreetViewPanel({ location }: { location: Location }) {
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        async function init() {
-            await importLibrary('maps');
-            if (cancelled || !containerRef.current) return;
-            new google.maps.StreetViewPanorama(containerRef.current, {
-                position: { lat: location.lat, lng: location.lng },
-                pov: { heading: location.heading, pitch: 0 },
-                disableDefaultUI: true,
-                clickToGo: false,
-                disableDoubleClickZoom: false,
-                scrollwheel: true,
-                showRoadLabels: false,
-                motionTracking: false,
-                motionTrackingControl: false,
-            });
-        }
-
-        init().catch(console.error);
-
-        return () => { cancelled = true; };
-    }, []);
-
-    return <div ref={containerRef} className="absolute inset-0 h-full w-full" />;
-}
+// --- Helpers ---
 
 function getCsrfToken() {
     const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
@@ -170,32 +173,56 @@ function deriveGameState(round: Round, gameOver: boolean): GameState {
 
 let eventSeq = 0;
 
-export default function Welcome({ game }: { game: Game }) {
+const panel = 'rounded border border-white/10 bg-black/60 p-3 backdrop-blur-sm';
+
+// --- Page ---
+
+export default function Welcome({ player, game: initialGame }: { player: Player; game: Game | null }) {
+    const [game, setGame] = useState<Game | null>(initialGame);
     const [round, setRound] = useState<Round | null>(null);
     const [location, setLocation] = useState<Location | null>(null);
-    const [health, setHealth] = useState({ p1: game.player_one_health, p2: game.player_two_health });
+    const [health, setHealth] = useState({ p1: initialGame?.player_one_health ?? 5000, p2: initialGame?.player_two_health ?? 5000 });
     const [gameOver, setGameOver] = useState(false);
     const [events, setEvents] = useState<GameEvent[]>([]);
     const [countdown, setCountdown] = useState<number | null>(null);
-    const [p1Pin, setP1Pin] = useState<LatLng | null>(null);
-    const [p2Pin, setP2Pin] = useState<LatLng | null>(null);
+    const [pin, setPin] = useState<LatLng | null>(null);
 
+    const isPlayerOne = game ? player.id === game.player_one.id : false;
+    const myLocked = round ? (isPlayerOne ? round.player_one_locked_in : round.player_two_locked_in) : false;
     const gameState = round ? deriveGameState(round, gameOver) : 'waiting';
 
     function pushEvent(name: GameEvent['name'], data: Record<string, unknown>) {
-        setEvents((prev) => [
+        setEvents(prev => [
             { id: eventSeq++, name, ts: new Date().toISOString().substring(11, 23), data },
             ...prev.slice(0, MAX_EVENTS - 1),
         ]);
     }
 
+    // Countdown tick
     useEffect(() => {
         if (countdown === null || countdown <= 0) return;
-        const t = setTimeout(() => setCountdown((c) => (c ?? 1) - 1), 1000);
+        const t = setTimeout(() => setCountdown(c => (c ?? 1) - 1), 1000);
         return () => clearTimeout(t);
     }, [countdown]);
 
+    // Matchmaking channel — only when waiting for a game
     useEffect(() => {
+        if (game) return;
+
+        const channel = echo.channel(`player.${player.id}`);
+
+        channel.listen('.GameReady', (data: { game: Game }) => {
+            setGame(data.game);
+            setHealth({ p1: data.game.player_one_health, p2: data.game.player_two_health });
+        });
+
+        return () => { echo.leaveChannel(`player.${player.id}`); };
+    }, [game?.id, player.id]);
+
+    // Game channel — once we have a game
+    useEffect(() => {
+        if (!game) return;
+
         const channel = echo.channel(`game.${game.id}`);
 
         channel.listen('.PlayerGuessed', (data: Record<string, unknown>) => {
@@ -222,8 +249,7 @@ export default function Welcome({ game }: { game: Game }) {
                 player_one_locked_in: false,
                 player_two_locked_in: false,
             });
-            setP1Pin(null);
-            setP2Pin(null);
+            setPin(null);
         });
 
         channel.listen('.GameFinished', (data: Record<string, unknown>) => {
@@ -233,16 +259,12 @@ export default function Welcome({ game }: { game: Game }) {
             setGameOver(true);
         });
 
-        return () => {
-            echo.leaveChannel(`game.${game.id}`);
-        };
-    }, [game.id]);
+        return () => { echo.leaveChannel(`game.${game.id}`); };
+    }, [game?.id]);
 
-    async function guess(player: Player, pin: LatLng | null) {
-        if (!pin || !round) return;
-        const { lat, lng } = pin;
+    async function guess() {
+        if (!pin || !round || !game) return;
         const url = `/players/${player.id}/games/${game.id}/rounds/${round.id}/guess`;
-
         const res = await fetch(url, {
             method: 'POST',
             headers: {
@@ -250,87 +272,85 @@ export default function Welcome({ game }: { game: Game }) {
                 Accept: 'application/json',
                 'X-XSRF-TOKEN': getCsrfToken(),
             },
-            body: JSON.stringify({ lat, lng }),
+            body: JSON.stringify(pin),
         });
-
-        if (res.ok) {
-            setRound(await res.json());
-        }
+        if (res.ok) setRound(await res.json());
     }
 
     const stateLabel: Record<GameState, string> = {
         waiting: 'Waiting for guesses',
-        one_guessed: 'Waiting for second player',
-        finished: countdown !== null ? `Round finished — next round in ${countdown}s` : 'Round finished',
+        one_guessed: 'Waiting for opponent',
+        finished: countdown !== null ? `Next round in ${countdown}s` : 'Round finished',
         game_over: 'Game over',
     };
 
+    if (!game) {
+        return (
+            <>
+                <Head title="nmpz" />
+                <div className="flex h-screen items-center justify-center bg-neutral-900 font-mono text-neutral-400 text-sm">
+                    Waiting for opponent...
+                </div>
+            </>
+        );
+    }
+
     return (
         <>
-            <Head title="Test UI" />
-            <div className="relative h-screen w-screen overflow-hidden font-mono text-neutral-100">
-                {location ? (
-                    <StreetViewPanel key={`${location.lat},${location.lng}`} location={location} />
-                ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
-                        <p className="text-sm opacity-60">Waiting for round to start...</p>
+            <Head title="nmpz" />
+            <div className="relative h-screen w-screen overflow-hidden font-mono text-white">
+
+                {/* Panorama or loading state */}
+                {location
+                    ? <StreetViewPanel key={`${location.lat},${location.lng}`} location={location} />
+                    : <div className="absolute inset-0 bg-neutral-900 flex items-center justify-center text-neutral-500 text-sm">
+                        Waiting for round to start...
+                      </div>
+                }
+
+                {/* Bottom-left: event feed */}
+                <div className={`absolute bottom-4 left-4 z-10 w-80 space-y-2 text-xs ${panel}`}>
+                    {round && (
+                        <>
+                            <div className="flex justify-between opacity-70 text-xs">
+                                <span>Round {round.round_number}</span>
+                                <span>{stateLabel[gameState]}</span>
+                            </div>
+                            <div className="space-y-1">
+                                <HealthBar name={game.player_one.user.name} health={health.p1} />
+                                <HealthBar name={game.player_two.user.name} health={health.p2} />
+                            </div>
+                            {events.length > 0 && <div className="border-t border-white/10" />}
+                        </>
+                    )}
+                    {events.length === 0
+                        ? <p className="opacity-30">no events yet</p>
+                        : events.map(e => (
+                            <div key={e.id}>
+                                <div className="mb-0.5 flex gap-2 opacity-40">
+                                    <span>{e.ts}</span>
+                                    <span className="text-white/70">{e.name}</span>
+                                </div>
+                                <EventFields name={e.name} data={e.data} />
+                            </div>
+                        ))
+                    }
+                </div>
+
+                {/* Bottom-right: guess map for current player */}
+                {round && (
+                    <div className={`absolute bottom-4 right-4 z-10 space-y-2 ${panel}`}>
+                        <p className="text-xs opacity-60">{player.user.name}</p>
+                        <MapPicker key={round.id} onPin={setPin} />
+                        <button
+                            onClick={guess}
+                            disabled={!pin || myLocked || gameOver}
+                            className="w-full rounded border border-white/20 px-2 py-1 text-xs disabled:opacity-30 enabled:hover:bg-white/10"
+                        >
+                            {myLocked ? 'Locked in ✓' : 'Lock in guess'}
+                        </button>
                     </div>
                 )}
-
-                <div className="absolute bottom-6 left-6 z-10 w-112 rounded border border-neutral-700 bg-neutral-950/80 p-4">
-                    <p className="mb-2 text-sm opacity-70">Events</p>
-                    {events.length === 0 && (
-                        <p className="text-xs opacity-40">none yet</p>
-                    )}
-                    {events.map((e) => (
-                        <div key={e.id} className="mb-3 text-xs">
-                            <div className="mb-1">
-                                <span className="inline-block w-28 opacity-50">{e.ts}</span>
-                                <strong>{e.name}</strong>
-                            </div>
-                            <EventFields name={e.name} data={e.data} />
-                        </div>
-                    ))}
-                </div>
-
-                <div className="absolute right-6 top-6 z-10 w-72 space-y-6">
-                    <div className="rounded border border-neutral-700 bg-neutral-950/80 p-3">
-                        <p className="mb-3 text-sm opacity-70">
-                            {round ? `Round ${round.round_number}` : 'Round pending'}
-                        </p>
-                        <div className="mb-3 space-y-1 text-xs">
-                            <HealthBar name={game.player_one.user.name} health={health.p1} />
-                            <HealthBar name={game.player_two.user.name} health={health.p2} />
-                        </div>
-                        <p className="text-xs opacity-60">{stateLabel[gameState]}</p>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="rounded border border-neutral-700 bg-neutral-950/80 p-3">
-                            <p className="mb-2 text-xs opacity-70">{game.player_one.user.name}</p>
-                            <MapPicker onPin={setP1Pin} />
-                            <button
-                                className="mt-2 w-full rounded border border-neutral-600 px-2 py-1 text-xs disabled:opacity-40"
-                                onClick={() => guess(game.player_one, p1Pin)}
-                                disabled={!p1Pin || !round || round.player_one_locked_in || gameOver}
-                            >
-                                Make guess{round?.player_one_locked_in ? ' ✓' : ''}
-                            </button>
-                        </div>
-
-                        <div className="rounded border border-neutral-700 bg-neutral-950/80 p-3">
-                            <p className="mb-2 text-xs opacity-70">{game.player_two.user.name}</p>
-                            <MapPicker onPin={setP2Pin} />
-                            <button
-                                className="mt-2 w-full rounded border border-neutral-600 px-2 py-1 text-xs disabled:opacity-40"
-                                onClick={() => guess(game.player_two, p2Pin)}
-                                disabled={!p2Pin || !round || round.player_two_locked_in || gameOver}
-                            >
-                                Make guess{round?.player_two_locked_in ? ' ✓' : ''}
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
         </>
     );
