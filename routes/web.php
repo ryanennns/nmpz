@@ -5,6 +5,7 @@ use App\Events\RoundStarted;
 use App\Http\Controllers\PlayerLeavesQueue;
 use App\Http\Controllers\PlayerMakesGuess;
 use App\Http\Controllers\PlayerUpdatesGuess;
+use App\Http\Controllers\SendMessage;
 use App\Jobs\ForceEndRound;
 use App\Models\Game;
 use App\Models\Location;
@@ -89,5 +90,7 @@ Route::post('players/{player}/games/{game}/rounds/{round}/guess', PlayerMakesGue
     ->name('games.rounds.guess');
 Route::post('players/{player}/games/{game}/rounds/{round}/guess-preview', PlayerUpdatesGuess::class)
     ->name('games.rounds.guess-preview');
+Route::post('players/{player}/games/{game}/send-message', SendMessage::class)
+    ->name('games.send-message');
 
 require __DIR__.'/settings.php';

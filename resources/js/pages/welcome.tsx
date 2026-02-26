@@ -28,12 +28,18 @@ type GameState = 'waiting' | 'one_guessed' | 'finished' | 'game_over';
 
 type GameEvent = {
     id: number;
-    name: 'PlayerGuessed' | 'RoundFinished' | 'RoundStarted' | 'GameFinished';
+    name:
+        | 'PlayerGuessed'
+        | 'RoundFinished'
+        | 'RoundStarted'
+        | 'GameFinished'
+        | 'GameMessage';
     ts: string;
     data: Record<string, unknown>;
 };
 
 const MAX_EVENTS = 5;
+const MAX_MESSAGES = 6;
 
 function short(uuid: unknown) {
     return typeof uuid === 'string' ? uuid.slice(0, 8) : '?';
@@ -450,6 +456,9 @@ export default function Welcome({
     });
     const [gameOver, setGameOver] = useState(false);
     const [events, setEvents] = useState<GameEvent[]>([]);
+    const [messages, setMessages] = useState<
+        { id: number; name: string; text: string; ts: string }[]
+    >([]);
     const [countdown, setCountdown] = useState<number | null>(null);
     const [urgentCountdown, setUrgentCountdown] = useState<number | null>(null);
     const [pin, setPin] = useState<LatLng | null>(null);
@@ -463,6 +472,9 @@ export default function Welcome({
     }>({ p1: null, p2: null });
     const guessRef = useRef<() => void>(() => {});
     const roundStartedAtRef = useRef<Date | null>(null);
+    const [chatOpen, setChatOpen] = useState(false);
+    const [chatText, setChatText] = useState('');
+    const chatInputRef = useRef<HTMLInputElement | null>(null);
 
     const isPlayerOne = game ? player.id === game.player_one.id : false;
     const myLocked = round
@@ -637,6 +649,19 @@ export default function Welcome({
             setPin(null);
         });
 
+        channel.listen('.GameMessage', (data: Record<string, unknown>) => {
+            pushEvent('GameMessage', data);
+            setMessages((prev) => [
+                {
+                    id: eventSeq++,
+                    name: (data.player_name as string) ?? 'Player',
+                    text: (data.message as string) ?? '',
+                    ts: new Date().toISOString().substring(11, 19),
+                },
+                ...prev.slice(0, MAX_MESSAGES - 1),
+            ]);
+        });
+
         channel.listen('.GameFinished', (data: Record<string, unknown>) => {
             pushEvent('GameFinished', data);
             setCountdown(null);
@@ -686,18 +711,69 @@ export default function Welcome({
         if (res.ok) setRound(await res.json());
     }
 
+    async function sendMessage() {
+        if (!game || !chatText.trim()) return;
+        const url = `/players/${player.id}/games/${game.id}/send-message`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ message: chatText.trim() }),
+        });
+        if (res.ok) {
+            setChatText('');
+            setChatOpen(false);
+        }
+    }
+
     guessRef.current = guess;
 
     useEffect(() => {
         function onKeyDown(e: KeyboardEvent) {
+            const target = e.target as HTMLElement | null;
+            if (
+                target &&
+                (target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.isContentEditable)
+            ) {
+                return;
+            }
+
             if (e.code === 'Space' && !e.repeat) {
                 e.preventDefault();
                 guessRef.current();
+                return;
+            }
+
+            if (e.code === 'Enter' && !e.repeat) {
+                if (chatOpen) {
+                    e.preventDefault();
+                } else {
+                    e.preventDefault();
+                    setChatOpen(true);
+                }
+                return;
+            }
+
+            if (e.code === 'Escape' && chatOpen) {
+                e.preventDefault();
+                setChatOpen(false);
+                setChatText('');
             }
         }
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, []);
+    }, [chatOpen, chatText, game?.id]);
+
+    useEffect(() => {
+        if (!chatOpen) return;
+        const t = setTimeout(() => chatInputRef.current?.focus(), 0);
+        return () => clearTimeout(t);
+    }, [chatOpen]);
 
     const stateLabel: Record<GameState, React.ReactNode> = {
         waiting:
@@ -856,6 +932,54 @@ export default function Welcome({
                         </>
                     );
                 })()}
+
+                {/* Top-left: chat */}
+                {game && (
+                    <div className="pointer-events-none absolute top-24 left-8 z-20 w-72 space-y-2">
+                        {messages.length > 0 && (
+                            <div className="rounded border border-white/10 bg-black/50 p-2 text-xs text-white/80 backdrop-blur-sm">
+                                {messages.map((m) => (
+                                    <div key={m.id} className="mb-1 last:mb-0">
+                                        <span className="text-white/40">
+                                            {m.ts}
+                                        </span>{' '}
+                                        <span className="text-white/70">
+                                            {m.name}:
+                                        </span>{' '}
+                                        <span>{m.text}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <div
+                            className={`pointer-events-auto rounded border border-white/10 bg-black/60 p-2 text-xs backdrop-blur-sm ${chatOpen ? '' : 'opacity-70'}`}
+                        >
+                            {chatOpen ? (
+                                <input
+                                    ref={chatInputRef}
+                                    value={chatText}
+                                    maxLength={255}
+                                    onChange={(e) =>
+                                        setChatText(e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            void sendMessage();
+                                        }
+                                    }}
+                                    placeholder="Type a message…"
+                                    className="w-full bg-transparent text-white outline-none placeholder:text-white/30"
+                                />
+                            ) : (
+                                <div className="text-white/40">
+                                    Press Enter to chat
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* Bottom-left: event feed */}
                 <div
