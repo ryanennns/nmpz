@@ -297,6 +297,7 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
     const [roundFinished, setRoundFinished] = useState(false);
     const [mapHovered, setMapHovered] = useState(false);
     const [roundResult, setRoundResult] = useState<RoundResult | null>(null);
+    const [roundScores, setRoundScores] = useState<{ p1: number | null; p2: number | null }>({ p1: null, p2: null });
     const guessRef = useRef<() => void>(() => {});
 
     const isPlayerOne = game ? player.id === game.player_one.id : false;
@@ -350,6 +351,7 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
             pushEvent('RoundFinished', data);
             setRoundFinished(true);
             setCountdown(6);
+            setRoundScores({ p1: data.player_one_score as number ?? null, p2: data.player_two_score as number ?? null });
             const locLat = Number(data.location_lat);
             const locLng = Number(data.location_lng);
             if (!Number.isFinite(locLat) || !Number.isFinite(locLng)) {
@@ -372,6 +374,7 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
             setCountdown(null);
             setRoundFinished(false);
             setRoundResult(null);
+            setRoundScores({ p1: null, p2: null });
             setHealth({ p1: data.player_one_health as number, p2: data.player_two_health as number });
             setLocation({
                 lat: data.location_lat as number,
@@ -459,6 +462,39 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
                         Waiting for round to start...
                     </div>
                 )}
+
+                {/* Round scores between rounds */}
+                {roundFinished && (roundScores.p1 !== null || roundScores.p2 !== null) && (() => {
+                    const myScore = isPlayerOne ? roundScores.p1 : roundScores.p2;
+                    const myColor = isPlayerOne ? 'text-blue-400' : 'text-red-400';
+                    const myColorDim = isPlayerOne ? 'text-blue-400/60' : 'text-red-400/60';
+                    const oppScore = isPlayerOne ? roundScores.p2 : roundScores.p1;
+                    const oppColor = isPlayerOne ? 'text-red-400' : 'text-blue-400';
+                    const oppColorDim = isPlayerOne ? 'text-red-400/60' : 'text-blue-400/60';
+                    const oppName = isPlayerOne ? game.player_two.user.name : game.player_one.user.name;
+                    return (
+                        <>
+                            <div className="absolute top-6 left-8 z-20 pointer-events-none rounded px-4 py-3 bg-black/50 backdrop-blur-sm">
+                                <div className={`${myColor} text-6xl font-mono font-bold tabular-nums`}>
+                                    {myScore?.toLocaleString() ?? '—'}
+                                </div>
+                                <div className={`${myColorDim} text-sm font-mono mt-1`}>You</div>
+                            </div>
+                            {countdown !== null && (
+                                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none rounded px-4 py-3 bg-black/50 backdrop-blur-sm text-center">
+                                    <div className="text-white text-6xl font-mono font-bold tabular-nums">{countdown}</div>
+                                    <div className="text-white/40 text-sm font-mono mt-1">next round</div>
+                                </div>
+                            )}
+                            <div className="absolute top-6 right-8 z-20 pointer-events-none text-right rounded px-4 py-3 bg-black/50 backdrop-blur-sm">
+                                <div className={`${oppColor} text-6xl font-mono font-bold tabular-nums`}>
+                                    {oppScore?.toLocaleString() ?? '—'}
+                                </div>
+                                <div className={`${oppColorDim} text-sm font-mono mt-1`}>{oppName}</div>
+                            </div>
+                        </>
+                    );
+                })()}
 
                 {/* Bottom-left: event feed */}
                 <div className={`absolute bottom-4 left-4 z-10 w-80 space-y-2 text-xs ${panel}`}>
