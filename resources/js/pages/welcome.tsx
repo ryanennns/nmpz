@@ -82,6 +82,7 @@ export default function Welcome({
     );
     const [round, setRound] = useState<Round | null>(null);
     const [location, setLocation] = useState<Location | null>(null);
+    const [heading, setHeading] = useState<number | null>(null);
     const [health, setHealth] = useState({
         p1: initialGame?.player_one_health ?? 5000,
         p2: initialGame?.player_two_health ?? 5000,
@@ -231,6 +232,7 @@ export default function Welcome({
             lng: data.location_lng as number,
             heading: data.location_heading as number,
         });
+        setHeading(data.location_heading as number);
         setRound({
             id: data.round_id as string,
             round_number: data.round_number as number,
@@ -403,6 +405,7 @@ export default function Welcome({
                 setGame(null);
                 setRound(null);
                 setLocation(null);
+                setHeading(null);
                 setHealth({ p1: 5000, p2: 5000 });
                 setGameOver(false);
                 setEvents([]);
@@ -628,6 +631,9 @@ export default function Welcome({
                             <StreetViewPanel
                                 key={`${location.lat},${location.lng}`}
                                 location={location}
+                                onHeadingChange={(nextHeading) =>
+                                    setHeading(nextHeading)
+                                }
                             />
                         ) : (
                             <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 text-sm text-neutral-500">
@@ -826,6 +832,40 @@ export default function Welcome({
                                 ))
                             )}
                         </div>
+
+                        {/* Bottom-center: compass */}
+                        {location && heading !== null && (
+                            <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center justify-center">
+                                <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/30 bg-black/60 backdrop-blur-sm">
+                                    <div className="absolute inset-2 rounded-full border border-white/15" />
+                                    <div className="absolute top-1 left-1/2 -translate-x-1/2 text-xs font-semibold text-white">
+                                        N
+                                    </div>
+                                    <div className="absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-white/50">
+                                        E
+                                    </div>
+                                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-white/50">
+                                        S
+                                    </div>
+                                    <div className="absolute top-1/2 left-2 -translate-y-1/2 text-[10px] text-white/50">
+                                        W
+                                    </div>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div
+                                            className="relative h-14 w-2.5"
+                                            style={{
+                                                transform: `rotate(${heading}deg)`,
+                                                transformOrigin: '50% 50%',
+                                            }}
+                                        >
+                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 border-r-[4px] border-b-[22px] border-l-[4px] border-r-transparent border-b-red-500/90 border-l-transparent" />
+                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 border-t-[22px] border-r-[4px] border-l-[4px] border-t-slate-300/80 border-r-transparent border-l-transparent" />
+                                        </div>
+                                    </div>
+                                    <div className="h-2 w-2 rounded-full bg-white/60" />
+                                </div>
+                            </div>
+                        )}
 
                         {/* Bottom-right: guess map for current player */}
                         {round && !roundFinished && (

@@ -2,8 +2,19 @@ import { importLibrary } from '@googlemaps/js-api-loader';
 import { useEffect, useRef } from 'react';
 import type { Location } from '@/components/welcome/types';
 
-export default function StreetViewPanel({ location }: { location: Location }) {
+export default function StreetViewPanel({
+    location,
+    onHeadingChange,
+}: {
+    location: Location;
+    onHeadingChange?: (heading: number) => void;
+}) {
     const containerRef = useRef<HTMLDivElement>(null);
+    const panoramaRef = useRef<google.maps.StreetViewPanorama | null>(null);
+    const lastViewToggleRef = useRef<'north' | 'ground' | null>(null);
+    const lastPovRef = useRef<{ heading: number; pitch: number } | null>(null);
+    const ignoreNextPovRef = useRef(false);
+    const userMovedSinceToggleRef = useRef(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -28,18 +39,25 @@ export default function StreetViewPanel({ location }: { location: Location }) {
                 fullscreenControl: false,
             });
 
-            const baseHeading = location.heading;
-            const basePitch = 0;
+            panoramaRef.current = panorama;
+
             panorama.addListener('pov_changed', () => {
                 const pov = panorama.getPov();
-                if (
-                    Math.abs(pov.heading - baseHeading) > 0.01 ||
-                    Math.abs(pov.pitch - basePitch) > 0.01
-                ) {
-                    panorama.setPov({
-                        heading: baseHeading,
-                        pitch: basePitch,
-                    });
+                if (ignoreNextPovRef.current) {
+                    ignoreNextPovRef.current = false;
+                } else {
+                    const last = lastPovRef.current;
+                    if (
+                        last &&
+                        (Math.abs(pov.heading - last.heading) > 0.5 ||
+                            Math.abs(pov.pitch - last.pitch) > 0.5)
+                    ) {
+                        userMovedSinceToggleRef.current = true;
+                    }
+                }
+                lastPovRef.current = { heading: pov.heading, pitch: pov.pitch };
+                if (typeof onHeadingChange === 'function') {
+                    onHeadingChange(pov.heading);
                 }
             });
         }
@@ -48,6 +66,44 @@ export default function StreetViewPanel({ location }: { location: Location }) {
         return () => {
             cancelled = true;
         };
+    }, []);
+
+    useEffect(() => {
+        function onKeyDown(e: KeyboardEvent) {
+            if (e.code !== 'KeyN' || e.repeat) return;
+            const target = e.target as HTMLElement | null;
+            if (
+                target &&
+                (target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.isContentEditable)
+            ) {
+                return;
+            }
+
+            const panorama = panoramaRef.current;
+            if (!panorama) return;
+
+            if (
+                lastViewToggleRef.current === 'north' &&
+                !userMovedSinceToggleRef.current
+            ) {
+                ignoreNextPovRef.current = true;
+                panorama.setPov({ heading: 0, pitch: -90 });
+                panorama.setZoom(0);
+                lastViewToggleRef.current = 'ground';
+                return;
+            }
+
+            ignoreNextPovRef.current = true;
+            panorama.setPov({ heading: 0, pitch: 0 });
+            panorama.setZoom(0);
+            lastViewToggleRef.current = 'north';
+            userMovedSinceToggleRef.current = false;
+        }
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
     }, []);
 
     return <div ref={containerRef} className="absolute inset-0" />;
