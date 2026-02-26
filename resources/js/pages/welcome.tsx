@@ -209,9 +209,11 @@ type LatLng = { lat: number; lng: number };
 function MapPicker({
     onPin,
     pinColor,
+    disabled,
 }: {
     onPin: (coords: LatLng) => void;
     pinColor: string;
+    disabled: boolean;
 }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const markerRef = useRef<google.maps.Marker | null>(null);
@@ -234,6 +236,7 @@ function MapPicker({
             mapRef.current = map;
 
             map.addListener('click', (e: google.maps.MapMouseEvent) => {
+                if (disabled) return;
                 if (!e.latLng) return;
                 const coords = { lat: e.latLng.lat(), lng: e.latLng.lng() };
                 if (markerRef.current) {
@@ -263,7 +266,10 @@ function MapPicker({
     }, []);
 
     return (
-        <div ref={containerRef} className="h-full w-full cursor-crosshair" />
+        <div
+            ref={containerRef}
+            className={`h-full w-full ${disabled ? 'cursor-not-allowed' : 'cursor-crosshair'}`}
+        />
     );
 }
 
@@ -663,6 +669,21 @@ export default function Welcome({
         if (res.ok) setRound(await res.json());
     }
 
+    async function updateGuess(coords: LatLng) {
+        if (!round || !game || myLocked || gameOver) return;
+        const url = `/players/${player.id}/games/${game.id}/rounds/${round.id}/guess-preview`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify(coords),
+        });
+        if (res.ok) setRound(await res.json());
+    }
+
     guessRef.current = guess;
 
     useEffect(() => {
@@ -872,8 +893,12 @@ export default function Welcome({
                     >
                         <MapPicker
                             key={round.id}
-                            onPin={setPin}
+                            onPin={(coords) => {
+                                setPin(coords);
+                                void updateGuess(coords);
+                            }}
                             pinColor={isPlayerOne ? '#60a5fa' : '#f87171'}
+                            disabled={myLocked || gameOver}
                         />
                         <div className="absolute right-2 bottom-2 left-2 font-mono">
                             <button
