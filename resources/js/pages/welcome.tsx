@@ -172,7 +172,9 @@ function ResultsMap({ result }: { result: RoundResult }) {
         };
     }, [result]);
 
-    return <div ref={containerRef} className="absolute inset-0" />;
+    return (
+        <div ref={containerRef} className="streetview-lock absolute inset-0" />
+    );
 }
 
 // --- Street View ---
@@ -186,16 +188,38 @@ function StreetViewPanel({ location }: { location: Location }) {
         async function init() {
             const { StreetViewPanorama } = await importLibrary('streetView');
             if (cancelled || !containerRef.current) return;
-            new StreetViewPanorama(containerRef.current, {
+            const panorama = new StreetViewPanorama(containerRef.current, {
                 position: { lat: location.lat, lng: location.lng },
                 pov: { heading: location.heading, pitch: 0 },
                 disableDefaultUI: true,
                 clickToGo: false,
-                disableDoubleClickZoom: false,
+                disableDoubleClickZoom: true,
                 scrollwheel: true,
                 showRoadLabels: false,
                 motionTracking: false,
                 motionTrackingControl: false,
+                keyboardShortcuts: false,
+                linksControl: false,
+                panControl: false,
+                zoomControl: true,
+                addressControl: false,
+                fullscreenControl: false,
+            });
+
+            const baseHeading = location.heading;
+            const basePitch = 0;
+            panorama.addListener('pov_changed', () => {
+                const pov = panorama.getPov();
+                if (
+                    Math.abs(pov.heading - baseHeading) > 0.01 ||
+                    Math.abs(pov.pitch - basePitch) > 0.01
+                ) {
+                    panorama.setPov({
+                        heading: baseHeading,
+                        pitch: basePitch,
+                        zoom: pov.zoom,
+                    });
+                }
             });
         }
 
@@ -274,7 +298,7 @@ function MapPicker({
     return (
         <div
             ref={containerRef}
-            className={`h-full w-full ${disabled ? 'cursor-not-allowed' : 'cursor-crosshair'}`}
+            className={`map-lock h-full w-full ${disabled ? 'cursor-not-allowed' : 'cursor-crosshair'}`}
         />
     );
 }
@@ -694,15 +718,17 @@ export default function Welcome({
 
         channel.listen('.GameMessage', (data: Record<string, unknown>) => {
             pushEvent('GameMessage', data);
-            setMessages((prev) => [
-                {
-                    id: eventSeq++,
-                    name: (data.player_name as string) ?? 'Player',
-                    text: (data.message as string) ?? '',
-                    ts: new Date().toISOString().substring(11, 19),
-                },
-                ...prev.slice(0, MAX_MESSAGES - 1),
-            ]);
+            setMessages((prev) =>
+                [
+                    ...prev,
+                    {
+                        id: eventSeq++,
+                        name: (data.player_name as string) ?? 'Player',
+                        text: (data.message as string) ?? '',
+                        ts: new Date().toISOString().substring(11, 19),
+                    },
+                ].slice(-MAX_MESSAGES),
+            );
         });
 
         channel.listen('.GameFinished', (data: Record<string, unknown>) => {
@@ -802,6 +828,23 @@ export default function Welcome({
                 return;
             }
 
+            if (
+                location &&
+                [
+                    'KeyW',
+                    'KeyA',
+                    'KeyS',
+                    'KeyD',
+                    'ArrowUp',
+                    'ArrowDown',
+                    'ArrowLeft',
+                    'ArrowRight',
+                ].includes(e.code)
+            ) {
+                e.preventDefault();
+                return;
+            }
+
             if (e.code === 'Space' && !e.repeat) {
                 e.preventDefault();
                 guessRef.current();
@@ -826,7 +869,46 @@ export default function Welcome({
         }
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [chatOpen, chatText, game?.id]);
+    }, [chatOpen, chatText, game?.id, location]);
+
+    useEffect(() => {
+        if (!location) return;
+        const blockKeys = new Set([
+            'KeyW',
+            'KeyA',
+            'KeyS',
+            'KeyD',
+            'ArrowUp',
+            'ArrowDown',
+            'ArrowLeft',
+            'ArrowRight',
+        ]);
+
+        function onMoveKey(e: KeyboardEvent) {
+            if (!blockKeys.has(e.code)) return;
+            const target = e.target as HTMLElement | null;
+            if (
+                target &&
+                (target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.isContentEditable)
+            ) {
+                return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            // @ts-expect-error - stop immediate propagation is needed to block StreetView handlers
+            e.stopImmediatePropagation?.();
+        }
+
+        window.addEventListener('keydown', onMoveKey, true);
+        window.addEventListener('keyup', onMoveKey, true);
+
+        return () => {
+            window.removeEventListener('keydown', onMoveKey, true);
+            window.removeEventListener('keyup', onMoveKey, true);
+        };
+    }, [location]);
 
     useEffect(() => {
         if (!chatOpen) return;
@@ -939,23 +1021,72 @@ export default function Welcome({
                         : game.player_one.user.name;
                     return (
                         <>
-                            <div className="pointer-events-none absolute top-6 left-8 z-20 rounded bg-black/50 px-4 py-3 backdrop-blur-sm">
-                                {roundFinished && myScore !== null && (
+                            <div className="pointer-events-none absolute top-6 left-8 z-20 flex w-72 flex-col gap-3">
+                                <div className="rounded bg-black/50 px-4 py-3 backdrop-blur-sm">
+                                    {roundFinished && myScore !== null && (
+                                        <div
+                                            className={`${myColor} mb-3 font-mono text-6xl font-bold tabular-nums`}
+                                        >
+                                            {myScore.toLocaleString()}
+                                        </div>
+                                    )}
                                     <div
-                                        className={`${myColor} mb-3 font-mono text-6xl font-bold tabular-nums`}
+                                        className={`${myColorDim} mb-1 font-mono text-xs`}
                                     >
-                                        {myScore.toLocaleString()}
+                                        You
                                     </div>
-                                )}
-                                <div
-                                    className={`${myColorDim} mb-1 font-mono text-xs`}
-                                >
-                                    You
+                                    <HealthBar
+                                        health={myHealth}
+                                        color={isPlayerOne ? 'blue' : 'red'}
+                                    />
                                 </div>
-                                <HealthBar
-                                    health={myHealth}
-                                    color={isPlayerOne ? 'blue' : 'red'}
-                                />
+                                <div className="pointer-events-none space-y-2">
+                                    {messages.length > 0 && (
+                                        <div className="rounded border border-white/10 bg-black/50 p-2 text-xs text-white/80 backdrop-blur-sm">
+                                            {messages.map((m) => (
+                                                <div
+                                                    key={m.id}
+                                                    className="mb-1 last:mb-0"
+                                                >
+                                                    <span className="text-white/40">
+                                                        {m.ts}
+                                                    </span>{' '}
+                                                    <span className="text-white/70">
+                                                        {m.name}:
+                                                    </span>{' '}
+                                                    <span>{m.text}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div
+                                        className={`pointer-events-auto rounded border border-white/10 bg-black/60 p-2 text-xs backdrop-blur-sm ${chatOpen ? '' : 'opacity-70'}`}
+                                    >
+                                        {chatOpen ? (
+                                            <input
+                                                ref={chatInputRef}
+                                                value={chatText}
+                                                maxLength={255}
+                                                onChange={(e) =>
+                                                    setChatText(e.target.value)
+                                                }
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        void sendMessage();
+                                                    }
+                                                }}
+                                                placeholder="Type a message…"
+                                                className="w-full bg-transparent text-white outline-none placeholder:text-white/30"
+                                            />
+                                        ) : (
+                                            <div className="text-white/40">
+                                                Press Enter to chat
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                             {roundFinished && countdown !== null && (
                                 <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-4 py-3 text-center backdrop-blur-sm">
@@ -1006,54 +1137,6 @@ export default function Welcome({
                         </>
                     );
                 })()}
-
-                {/* Top-left: chat */}
-                {game && (
-                    <div className="pointer-events-none absolute top-24 left-8 z-20 w-72 space-y-2">
-                        {messages.length > 0 && (
-                            <div className="rounded border border-white/10 bg-black/50 p-2 text-xs text-white/80 backdrop-blur-sm">
-                                {messages.map((m) => (
-                                    <div key={m.id} className="mb-1 last:mb-0">
-                                        <span className="text-white/40">
-                                            {m.ts}
-                                        </span>{' '}
-                                        <span className="text-white/70">
-                                            {m.name}:
-                                        </span>{' '}
-                                        <span>{m.text}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        <div
-                            className={`pointer-events-auto rounded border border-white/10 bg-black/60 p-2 text-xs backdrop-blur-sm ${chatOpen ? '' : 'opacity-70'}`}
-                        >
-                            {chatOpen ? (
-                                <input
-                                    ref={chatInputRef}
-                                    value={chatText}
-                                    maxLength={255}
-                                    onChange={(e) =>
-                                        setChatText(e.target.value)
-                                    }
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            void sendMessage();
-                                        }
-                                    }}
-                                    placeholder="Type a message…"
-                                    className="w-full bg-transparent text-white outline-none placeholder:text-white/30"
-                                />
-                            ) : (
-                                <div className="text-white/40">
-                                    Press Enter to chat
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
 
                 {/* Bottom-left: event feed */}
                 <div
