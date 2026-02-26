@@ -19,55 +19,54 @@ Route::get('/', function () {
         ->for(User::factory()->create(['name' => 'Player ' . strtoupper(substr(md5(uniqid()), 0, 4))]))
         ->create();
 
-    $queuedPlayerId = Cache::get('matchmaking_queue');
+    $queue = Cache::get('matchmaking_queue', []);
+    $queuedPlayerId = array_shift($queue);
+    $queuedPlayer = $queuedPlayerId ? Player::query()->find($queuedPlayerId) : null;
 
-    if ($queuedPlayerId) {
-        $queuedPlayer = Player::query()->find($queuedPlayerId);
+    if ($queuedPlayer) {
+        Cache::put('matchmaking_queue', $queue, now()->addMinutes(5));
 
-        if ($queuedPlayer) {
-            Cache::forget('matchmaking_queue');
+        $map = Map::query()->firstOrFail();
+        $locationCount = Location::query()->where('map_id', $map->getKey())->count();
+        $seed = random_int(0, $locationCount - 1);
 
-            $map = Map::query()->firstOrFail();
-            $locationCount = Location::query()->where('map_id', $map->getKey())->count();
-            $seed = random_int(0, $locationCount - 1);
+        $game = Game::factory()->inProgress()->create([
+            'player_one_id' => $queuedPlayer->getKey(),
+            'player_two_id' => $player->getKey(),
+            'map_id' => $map->getKey(),
+            'seed' => $seed,
+        ]);
 
-            $game = Game::factory()->inProgress()->create([
-                'player_one_id' => $queuedPlayer->getKey(),
-                'player_two_id' => $player->getKey(),
-                'map_id' => $map->getKey(),
-                'seed' => $seed,
-            ]);
+        $location = Location::query()->where('map_id', $map->getKey())
+            ->orderBy('id')
+            ->offset($seed % $locationCount)
+            ->firstOrFail();
 
-            $location = Location::query()->where('map_id', $map->getKey())
-                ->orderBy('id')
-                ->offset($seed % $locationCount)
-                ->firstOrFail();
+        $round = Round::factory()->for($game)->create([
+            'round_number' => 1,
+            'location_lat' => $location->lat,
+            'location_lng' => $location->lng,
+            'location_heading' => $location->heading,
+        ]);
 
-            $round = Round::factory()->for($game)->create([
-                'round_number' => 1,
-                'location_lat' => $location->lat,
-                'location_lng' => $location->lng,
-                'location_heading' => $location->heading,
-            ]);
+        $game->load(['playerOne.user', 'playerTwo.user']);
 
-            $game->load(['playerOne.user', 'playerTwo.user']);
+        GameReady::dispatch($game, $queuedPlayer);
 
-            GameReady::dispatch($game, $queuedPlayer);
+        $p1Health = $game->player_one_health;
+        $p2Health = $game->player_two_health;
+        dispatch(function () use ($round, $p1Health, $p2Health) {
+            RoundStarted::dispatch($round, $p1Health, $p2Health);
+        })->delay(now()->addSeconds(2));
 
-            $p1Health = $game->player_one_health;
-            $p2Health = $game->player_two_health;
-            dispatch(function () use ($round, $p1Health, $p2Health) {
-                RoundStarted::dispatch($round, $p1Health, $p2Health);
-            })->delay(now()->addSeconds(2));
-
-            return Inertia::render('welcome', [
-                'player' => $player->load('user'),
-                'game' => $game,
-            ]);
-        }
+        return Inertia::render('welcome', [
+            'player' => $player->load('user'),
+            'game' => $game,
+        ]);
     }
 
-    Cache::put('matchmaking_queue', $player->getKey(), now()->addMinutes(5));
+    $queue[] = $player->getKey();
+    Cache::put('matchmaking_queue', $queue, now()->addMinutes(5));
 
     return Inertia::render('welcome', [
         'player' => $player->load('user'),

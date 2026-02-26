@@ -10,9 +10,9 @@ class PlayerLeavesQueue extends Controller
 {
     public function __invoke(Player $player): Response
     {
-        if (Cache::get('matchmaking_queue') === $player->getKey()) {
-            Cache::forget('matchmaking_queue');
-        }
+        $queue = Cache::get('matchmaking_queue', []);
+        $updated = array_values(array_filter($queue, fn ($id) => $id !== $player->getKey()));
+        Cache::put('matchmaking_queue', $updated, now()->addMinutes(5));
 
         return response()->noContent();
     }
