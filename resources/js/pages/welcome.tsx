@@ -6,12 +6,16 @@ type Player = { id: string; user: { name: string } };
 type Round = { id: string; round_number: number; player_one_locked_in: boolean; player_two_locked_in: boolean };
 type Game = { id: string; player_one: Player; player_two: Player };
 
+type GameState = 'waiting' | 'one_guessed' | 'finished';
+
 type GameEvent = {
     id: number;
     name: 'PlayerGuessed' | 'RoundFinished' | 'RoundStarted';
     ts: string;
     data: Record<string, unknown>;
 };
+
+const MAX_EVENTS = 5;
 
 function getCsrfToken() {
     const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
@@ -25,26 +29,50 @@ function randomCoords() {
     };
 }
 
+function deriveGameState(round: Round): GameState {
+    if (round.player_one_locked_in && round.player_two_locked_in) return 'finished';
+    if (round.player_one_locked_in || round.player_two_locked_in) return 'one_guessed';
+    return 'waiting';
+}
+
 let eventSeq = 0;
 
 export default function Welcome({ game, round: initial }: { game: Game; round: Round }) {
     const [round, setRound] = useState(initial);
     const [events, setEvents] = useState<GameEvent[]>([]);
+    const [countdown, setCountdown] = useState<number | null>(null);
+
+    const gameState = deriveGameState(round);
 
     function pushEvent(name: GameEvent['name'], data: Record<string, unknown>) {
         setEvents((prev) => [
             { id: eventSeq++, name, ts: new Date().toISOString().substring(11, 23), data },
-            ...prev,
+            ...prev.slice(0, MAX_EVENTS - 1),
         ]);
     }
+
+    // Tick the countdown down every second.
+    useEffect(() => {
+        if (countdown === null || countdown <= 0) return;
+        const t = setTimeout(() => setCountdown((c) => (c ?? 1) - 1), 1000);
+        return () => clearTimeout(t);
+    }, [countdown]);
 
     useEffect(() => {
         const channel = echo.channel(`game.${game.id}`);
 
-        channel.listen('.PlayerGuessed', (data: Record<string, unknown>) => pushEvent('PlayerGuessed', data));
-        channel.listen('.RoundFinished', (data: Record<string, unknown>) => pushEvent('RoundFinished', data));
+        channel.listen('.PlayerGuessed', (data: Record<string, unknown>) => {
+            pushEvent('PlayerGuessed', data);
+        });
+
+        channel.listen('.RoundFinished', (data: Record<string, unknown>) => {
+            pushEvent('RoundFinished', data);
+            setCountdown(3);
+        });
+
         channel.listen('.RoundStarted', (data: Record<string, unknown>) => {
             pushEvent('RoundStarted', data);
+            setCountdown(null);
             setRound((prev) => ({
                 ...prev,
                 id: data.round_id as string,
@@ -74,12 +102,15 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
         });
 
         if (res.ok) {
-            const data = await res.json();
-            setRound(data);
+            setRound(await res.json());
         }
     }
 
-    const bothLockedIn = round.player_one_locked_in && round.player_two_locked_in;
+    const stateLabel: Record<GameState, string> = {
+        waiting: 'Waiting for guesses',
+        one_guessed: 'Waiting for second player',
+        finished: `Round finished — next round in ${countdown ?? 3}s`,
+    };
 
     return (
         <>
@@ -106,7 +137,7 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
                         </button>
                     </div>
 
-                    {bothLockedIn && <p>Waiting for next round...</p>}
+                    <p style={{ opacity: 0.6 }}>{stateLabel[gameState]}</p>
                 </div>
 
                 <div style={{ flex: 1 }}>
