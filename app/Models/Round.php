@@ -25,6 +25,8 @@ class Round extends Model
             'player_two_guess_lng' => 'float',
             'player_one_score' => 'integer',
             'player_two_score' => 'integer',
+            'player_one_locked_in' => 'boolean',
+            'player_two_locked_in' => 'boolean',
         ];
     }
 

@@ -20,6 +20,8 @@ return new class extends Migration
             $table->decimal('player_two_guess_lng', 10, 7)->nullable();
             $table->unsignedSmallInteger('player_one_score')->nullable();
             $table->unsignedSmallInteger('player_two_score')->nullable();
+            $table->boolean('player_one_locked_in')->default(false);
+            $table->boolean('player_two_locked_in')->default(false);
             $table->timestamps();
 
             $table->unique(['game_id', 'round_number']);
