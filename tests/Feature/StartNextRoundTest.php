@@ -185,6 +185,32 @@ class StartNextRoundTest extends TestCase
         Date::setTestNow();
     }
 
+    public function test_game_finishes_after_three_no_guess_rounds(): void
+    {
+        Event::fake();
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+            'no_guess_rounds' => 2,
+        ]);
+
+        $round = Round::factory()->for($game)->create([
+            'round_number' => 1,
+            'player_one_guess_lat' => null,
+            'player_one_guess_lng' => null,
+            'player_two_guess_lat' => null,
+            'player_two_guess_lng' => null,
+        ]);
+
+        $this->handle($round);
+
+        Event::assertDispatched(GameFinished::class, fn (GameFinished $e) => $e->game->getKey() === $game->getKey());
+        Event::assertNotDispatched(RoundStarted::class);
+        $this->assertSame(3, $game->fresh()->no_guess_rounds);
+        $this->assertSame(GameStatus::Completed, $game->fresh()->status);
+    }
+
     // --- Game over ---
 
     public function test_game_finished_event_is_dispatched_when_player_health_reaches_zero(): void

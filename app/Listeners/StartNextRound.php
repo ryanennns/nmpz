@@ -36,6 +36,30 @@ class StartNextRound implements ShouldQueue
             return;
         }
 
+        $noGuesses =
+            $finished->player_one_guess_lat === null &&
+            $finished->player_one_guess_lng === null &&
+            $finished->player_two_guess_lat === null &&
+            $finished->player_two_guess_lng === null;
+
+        if ($noGuesses) {
+            $game->increment('no_guess_rounds');
+            $game->refresh();
+        } elseif ($game->no_guess_rounds > 0) {
+            $game->update(['no_guess_rounds' => 0]);
+        }
+
+        if ($game->no_guess_rounds >= 3) {
+            $game->update([
+                'status' => GameStatus::Completed,
+                'winner_id' => null,
+            ]);
+
+            GameFinished::dispatch($game);
+
+            return;
+        }
+
         $nextRoundNumber = $finished->round_number + 1;
         $location = $this->pickLocation($game, $nextRoundNumber);
 
