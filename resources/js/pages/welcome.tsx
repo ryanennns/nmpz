@@ -2,7 +2,6 @@ import { setOptions } from '@googlemaps/js-api-loader';
 import { Head } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import EventFields from '@/components/welcome/EventFields';
 import HealthBar from '@/components/welcome/HealthBar';
 import Lobby from '@/components/welcome/Lobby';
 import MapPicker from '@/components/welcome/MapPicker';
@@ -659,14 +658,11 @@ export default function Welcome({
                         <p className="opacity-30">no events yet</p>
                     ) : (
                         events.map((e) => (
-                            <div key={e.id}>
-                                <div className="mb-0.5 flex gap-2 opacity-40">
-                                    <span>{e.ts}</span>
-                                    <span className="text-white/70">
-                                        {e.name}
-                                    </span>
-                                </div>
-                                <EventFields name={e.name} data={e.data} />
+                            <div key={e.id} className="flex gap-2 opacity-40">
+                                <span>{e.ts}</span>
+                                <span className="truncate text-white/70">
+                                    {e.name}
+                                </span>
                             </div>
                         ))
                     )}
