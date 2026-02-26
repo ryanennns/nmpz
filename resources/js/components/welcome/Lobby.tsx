@@ -11,13 +11,14 @@ function getCsrfToken() {
 export default function Lobby({
     player,
     initialQueueCount,
+    playerName,
+    onNameChange,
 }: {
     player: Player;
     initialQueueCount: number;
+    playerName: string | null;
+    onNameChange: (name: string) => void;
 }) {
-    const [playerName, setPlayerName] = useState<string | null>(
-        player.name ?? null,
-    );
     const [queueCount, setQueueCount] = useState(initialQueueCount);
     const [queued, setQueued] = useState(false);
     const [panelVisible, setPanelVisible] = useState(true);
@@ -131,7 +132,7 @@ export default function Lobby({
                 setQueueCount(payload.queue_count);
             }
             await fadeTransition(() => {
-                if (name) setPlayerName(name);
+                if (name) onNameChange(name);
                 setQueued(true);
             });
         }

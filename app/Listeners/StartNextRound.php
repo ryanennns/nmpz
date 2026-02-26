@@ -14,8 +14,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 
 class StartNextRound implements ShouldQueue
 {
-    public int $delay = 6;
-
     public function handle(RoundFinished $event): void
     {
         $finished = $event->round;

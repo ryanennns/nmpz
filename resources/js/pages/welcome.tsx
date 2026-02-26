@@ -73,6 +73,9 @@ export default function Welcome({
     queue_count: number;
 }) {
     const [game, setGame] = useState<Game | null>(initialGame);
+    const [playerName, setPlayerName] = useState<string | null>(
+        player.name ?? null,
+    );
     const [round, setRound] = useState<Round | null>(null);
     const [location, setLocation] = useState<Location | null>(null);
     const [health, setHealth] = useState({
@@ -86,6 +89,7 @@ export default function Welcome({
     >([]);
     const [countdown, setCountdown] = useState<number | null>(null);
     const [urgentCountdown, setUrgentCountdown] = useState<number | null>(null);
+    const [pendingRoundData, setPendingRoundData] = useState<Record<string, unknown> | null>(null);
     const [pin, setPin] = useState<LatLng | null>(null);
     const [roundFinished, setRoundFinished] = useState(false);
     const [mapHovered, setMapHovered] = useState(false);
@@ -94,6 +98,9 @@ export default function Welcome({
         p1: number | null;
         p2: number | null;
     }>({ p1: null, p2: null });
+    const [winnerName, setWinnerName] = useState<string | null>(null);
+    const [winnerOverlayVisible, setWinnerOverlayVisible] = useState(false);
+    const [pageVisible, setPageVisible] = useState(true);
     const guessRef = useRef<() => void>(() => {});
     const roundStartedAtRef = useRef<Date | null>(null);
     const [chatOpen, setChatOpen] = useState(false);
@@ -128,6 +135,39 @@ export default function Welcome({
         const t = setTimeout(() => setCountdown((c) => (c ?? 1) - 1), 1000);
         return () => clearTimeout(t);
     }, [countdown]);
+
+    // Apply buffered RoundStarted data once countdown expires
+    useEffect(() => {
+        if (pendingRoundData === null) return;
+        if (countdown !== null && countdown > 0) return;
+
+        const data = pendingRoundData;
+        setPendingRoundData(null);
+        setCountdown(null);
+        const startedAtRaw = data.started_at as string | undefined;
+        const startedAt = startedAtRaw ? new Date(startedAtRaw) : null;
+        roundStartedAtRef.current = startedAt;
+        setUrgentCountdown(roundRemainingSeconds(startedAt));
+        setRoundFinished(false);
+        setRoundResult(null);
+        setRoundScores({ p1: null, p2: null });
+        setHealth({
+            p1: data.player_one_health as number,
+            p2: data.player_two_health as number,
+        });
+        setLocation({
+            lat: data.location_lat as number,
+            lng: data.location_lng as number,
+            heading: data.location_heading as number,
+        });
+        setRound({
+            id: data.round_id as string,
+            round_number: data.round_number as number,
+            player_one_locked_in: false,
+            player_two_locked_in: false,
+        });
+        setPin(null);
+    }, [countdown, pendingRoundData]);
 
     // Countdown tick (15s guess deadline)
     useEffect(() => {
@@ -234,30 +274,7 @@ export default function Welcome({
 
         channel.listen('.RoundStarted', (data: Record<string, unknown>) => {
             pushEvent('RoundStarted', data);
-            setCountdown(null);
-            const startedAtRaw = data.started_at as string | undefined;
-            const startedAt = startedAtRaw ? new Date(startedAtRaw) : null;
-            roundStartedAtRef.current = startedAt;
-            setUrgentCountdown(roundRemainingSeconds(startedAt));
-            setRoundFinished(false);
-            setRoundResult(null);
-            setRoundScores({ p1: null, p2: null });
-            setHealth({
-                p1: data.player_one_health as number,
-                p2: data.player_two_health as number,
-            });
-            setLocation({
-                lat: data.location_lat as number,
-                lng: data.location_lng as number,
-                heading: data.location_heading as number,
-            });
-            setRound({
-                id: data.round_id as string,
-                round_number: data.round_number as number,
-                player_one_locked_in: false,
-                player_two_locked_in: false,
-            });
-            setPin(null);
+            setPendingRoundData(data);
         });
 
         channel.listen('.GameMessage', (data: Record<string, unknown>) => {
@@ -286,6 +303,44 @@ export default function Welcome({
                 p2: data.player_two_health as number,
             });
             setGameOver(true);
+
+            const winnerId = data.winner_id as string | null;
+            const name =
+                winnerId === game.player_one.id
+                    ? game.player_one.user.name
+                    : winnerId === game.player_two.id
+                      ? game.player_two.user.name
+                      : null;
+            setWinnerName(name);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => setWinnerOverlayVisible(true));
+            });
+            setTimeout(() => {
+                setPageVisible(false);
+                setTimeout(() => {
+                    setGame(null);
+                    setRound(null);
+                    setLocation(null);
+                    setHealth({ p1: 5000, p2: 5000 });
+                    setGameOver(false);
+                    setEvents([]);
+                    setMessages([]);
+                    setCountdown(null);
+                    setUrgentCountdown(null);
+                    setPin(null);
+                    setRoundFinished(false);
+                    setMapHovered(false);
+                    setRoundResult(null);
+                    setRoundScores({ p1: null, p2: null });
+                    setChatOpen(false);
+                    setChatText('');
+                    setWinnerName(null);
+                    setWinnerOverlayVisible(false);
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => setPageVisible(true));
+                    });
+                }, 500);
+            }, 4000);
         });
 
         return () => {
@@ -462,18 +517,18 @@ export default function Welcome({
         game_over: 'Game over',
     };
 
-    if (!game) {
-        return (
-            <>
-                <Head title="nmpz" />
-                <Lobby player={player} initialQueueCount={initialQueueCount} />
-            </>
-        );
-    }
-
     return (
         <>
             <Head title="nmpz" />
+            <div className={`transition-opacity duration-500 ${pageVisible ? 'opacity-100' : 'opacity-0'}`}>
+            {!game ? (
+                <Lobby
+                    player={player}
+                    initialQueueCount={initialQueueCount}
+                    playerName={playerName}
+                    onNameChange={setPlayerName}
+                />
+            ) : (
             <div className="relative h-screen w-screen overflow-hidden font-mono text-white">
                 {urgentCountdown !== null && urgentCountdown <= 15 && (
                     <div className="urgent-screen-halo pointer-events-none absolute inset-0 z-10" />
@@ -699,6 +754,20 @@ export default function Welcome({
                         </div>
                     </div>
                 )}
+
+                {/* Winner overlay */}
+                <div
+                    className={`pointer-events-none absolute inset-0 z-50 flex flex-col items-center justify-center bg-black transition-opacity duration-500 ${winnerOverlayVisible ? 'opacity-100' : 'opacity-0'}`}
+                >
+                    <div className="mb-3 font-mono text-xs text-white/40">
+                        winner
+                    </div>
+                    <div className="font-mono text-4xl text-white">
+                        {winnerName ?? 'draw'}
+                    </div>
+                </div>
+            </div>
+            )}
             </div>
         </>
     );
