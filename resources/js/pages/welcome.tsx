@@ -513,6 +513,13 @@ export default function Welcome({
         player.name ?? null,
     );
     const [queueCount, setQueueCount] = useState<number>(initialQueueCount);
+    const [stats, setStats] = useState<{
+        games_in_progress: number;
+        rounds_played: number;
+        total_players: number;
+    } | null>(null);
+    const [statText, setStatText] = useState('');
+    const statCycleRef = useRef(0);
     const [round, setRound] = useState<Round | null>(null);
     const [location, setLocation] = useState<Location | null>(null);
     const [health, setHealth] = useState({
@@ -918,6 +925,67 @@ export default function Welcome({
         return () => clearTimeout(t);
     }, [chatOpen]);
 
+    useEffect(() => {
+        if (!playerName || game || !stats) return;
+        const messages = [
+            `${stats.games_in_progress} games in progress`,
+            `${stats.rounds_played} rounds played`,
+            `${stats.total_players} total players`,
+        ];
+
+        let cancelled = false;
+        let timeout: ReturnType<typeof setTimeout> | null = null;
+
+        const typeIn = (text: string, i = 0) => {
+            if (cancelled) return;
+            setStatText(text.slice(0, i));
+            if (i < text.length) {
+                timeout = setTimeout(() => typeIn(text, i + 1), 45);
+            } else {
+                timeout = setTimeout(() => typeOut(text, text.length), 3000);
+            }
+        };
+
+        const typeOut = (text: string, i: number) => {
+            if (cancelled) return;
+            setStatText(text.slice(0, i));
+            if (i > 0) {
+                timeout = setTimeout(() => typeOut(text, i - 1), 30);
+            } else {
+                statCycleRef.current =
+                    (statCycleRef.current + 1) % messages.length;
+                timeout = setTimeout(
+                    () => typeIn(messages[statCycleRef.current], 1),
+                    250,
+                );
+            }
+        };
+
+        statCycleRef.current = statCycleRef.current % messages.length;
+        typeIn(messages[statCycleRef.current], 1);
+
+        return () => {
+            cancelled = true;
+            if (timeout) clearTimeout(timeout);
+        };
+    }, [playerName, game, stats]);
+
+    useEffect(() => {
+        if (!playerName || game) return;
+        const t = setInterval(async () => {
+            const res = await fetch('/stats', { headers: { Accept: 'application/json' } });
+            if (res.ok) {
+                const data = (await res.json()) as {
+                    games_in_progress: number;
+                    rounds_played: number;
+                    total_players: number;
+                };
+                setStats(data);
+            }
+        }, 5000);
+        return () => clearInterval(t);
+    }, [playerName, game]);
+
     const stateLabel: Record<GameState, React.ReactNode> = {
         waiting:
             urgentCountdown !== null ? (
@@ -944,7 +1012,17 @@ export default function Welcome({
                 <Head title="nmpz" />
                 <div className="relative flex h-screen items-center justify-center bg-neutral-900 font-mono text-sm text-neutral-400">
                     {playerName ? (
-                        <ShimmerText>Waiting for opponent</ShimmerText>
+                        <div className="text-center">
+                            <div className="mb-2 text-xs text-white/50">
+                                {playerName}
+                            </div>
+                            <ShimmerText>Waiting for opponent</ShimmerText>
+                            {stats && (
+                                <div className="mt-2 min-h-[1.25rem] text-xs text-white/40">
+                                    {statText}
+                                </div>
+                            )}
+                        </div>
                     ) : (
                         <div className="w-full max-w-sm rounded border border-white/10 bg-black/60 p-4 text-xs text-white/80 backdrop-blur-sm">
                             <div className="mb-2 text-sm text-white">

@@ -9,6 +9,8 @@ use App\Models\Player;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Models\Game;
+use App\Models\Round;
 
 Route::get('/', function () {
     $player = Player::factory()
@@ -37,5 +39,13 @@ Route::post('players/{player}/games/{game}/rounds/{round}/guess-preview', Player
     ->name('games.rounds.guess-preview');
 Route::post('players/{player}/games/{game}/send-message', SendMessage::class)
     ->name('games.send-message');
+
+Route::get('stats', function () {
+    return response()->json([
+        'games_in_progress' => Game::query()->where('status', 'in_progress')->count(),
+        'rounds_played' => Round::query()->whereNotNull('finished_at')->count(),
+        'total_players' => Player::query()->count(),
+    ]);
+});
 
 require __DIR__.'/settings.php';
