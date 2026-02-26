@@ -27,6 +27,7 @@ class Round extends Model
             'player_two_score' => 'integer',
             'player_one_locked_in' => 'boolean',
             'player_two_locked_in' => 'boolean',
+            'finished_at' => 'datetime',
         ];
     }
 

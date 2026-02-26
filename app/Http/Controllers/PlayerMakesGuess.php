@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\PlayerGuessed;
 use App\Events\RoundFinished;
+use App\Jobs\ForceEndRound;
 use App\Models\Game;
 use App\Models\Player;
 use App\Models\Round;
@@ -44,8 +45,16 @@ class PlayerMakesGuess extends Controller
         PlayerGuessed::dispatch($round, $player);
 
         if ($round->player_one_locked_in && $round->player_two_locked_in) {
-            $round->evaluateScores();
-            RoundFinished::dispatch($round);
+            $updated = Round::query()->where('id', $round->getKey())
+                ->whereNull('finished_at')
+                ->update(['finished_at' => now()]);
+
+            if ($updated) {
+                $round->evaluateScores();
+                RoundFinished::dispatch($round);
+            }
+        } else {
+            ForceEndRound::dispatch($round->getKey())->delay(now()->addSeconds(15));
         }
 
         return response()->json($round);

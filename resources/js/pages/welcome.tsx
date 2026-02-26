@@ -331,6 +331,7 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
     const [gameOver, setGameOver] = useState(false);
     const [events, setEvents] = useState<GameEvent[]>([]);
     const [countdown, setCountdown] = useState<number | null>(null);
+    const [urgentCountdown, setUrgentCountdown] = useState<number | null>(null);
     const [pin, setPin] = useState<LatLng | null>(null);
     const [roundFinished, setRoundFinished] = useState(false);
     const [mapHovered, setMapHovered] = useState(false);
@@ -349,12 +350,19 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
         ]);
     }
 
-    // Countdown tick
+    // Countdown tick (next round)
     useEffect(() => {
         if (countdown === null || countdown <= 0) return;
         const t = setTimeout(() => setCountdown(c => (c ?? 1) - 1), 1000);
         return () => clearTimeout(t);
     }, [countdown]);
+
+    // Countdown tick (15s guess deadline)
+    useEffect(() => {
+        if (urgentCountdown === null || urgentCountdown <= 0) return;
+        const t = setTimeout(() => setUrgentCountdown(c => (c ?? 1) - 1), 1000);
+        return () => clearTimeout(t);
+    }, [urgentCountdown]);
 
     // Matchmaking channel — only when waiting for a game
     useEffect(() => {
@@ -383,11 +391,17 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
                 player_one_locked_in: data.player_one_locked_in as boolean,
                 player_two_locked_in: data.player_two_locked_in as boolean,
             } : null);
+            const p1 = data.player_one_locked_in as boolean;
+            const p2 = data.player_two_locked_in as boolean;
+            if (p1 !== p2) {
+                setUrgentCountdown(15);
+            }
         });
 
         channel.listen('.RoundFinished', (data: Record<string, unknown>) => {
             pushEvent('RoundFinished', data);
             setRoundFinished(true);
+            setUrgentCountdown(null);
             setCountdown(6);
             const p1Score = (data.player_one_score as number) ?? 0;
             const p2Score = (data.player_two_score as number) ?? 0;
@@ -404,20 +418,21 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
                 setRoundResult(null);
                 return;
             }
-            const p1Lat = Number(data.player_one_guess_lat);
-            const p1Lng = Number(data.player_one_guess_lng);
-            const p2Lat = Number(data.player_two_guess_lat);
-            const p2Lng = Number(data.player_two_guess_lng);
             setRoundResult({
                 location: { lat: locLat, lng: locLng },
-                p1Guess: Number.isFinite(p1Lat) && Number.isFinite(p1Lng) ? { lat: p1Lat, lng: p1Lng } : null,
-                p2Guess: Number.isFinite(p2Lat) && Number.isFinite(p2Lng) ? { lat: p2Lat, lng: p2Lng } : null,
+                p1Guess: data.player_one_guess_lat != null && data.player_one_guess_lng != null
+                    ? { lat: Number(data.player_one_guess_lat), lng: Number(data.player_one_guess_lng) }
+                    : null,
+                p2Guess: data.player_two_guess_lat != null && data.player_two_guess_lng != null
+                    ? { lat: Number(data.player_two_guess_lat), lng: Number(data.player_two_guess_lng) }
+                    : null,
             });
         });
 
         channel.listen('.RoundStarted', (data: Record<string, unknown>) => {
             pushEvent('RoundStarted', data);
             setCountdown(null);
+            setUrgentCountdown(null);
             setRoundFinished(false);
             setRoundResult(null);
             setRoundScores({ p1: null, p2: null });
@@ -477,7 +492,7 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
 
     const stateLabel: Record<GameState, string> = {
         waiting: 'Waiting for guesses',
-        one_guessed: 'Waiting for opponent',
+        one_guessed: urgentCountdown !== null ? `${urgentCountdown}s to guess` : 'Waiting for opponent',
         finished: countdown !== null ? `Next round in ${countdown}s` : 'Round finished',
         game_over: 'Game over',
     };
@@ -535,6 +550,16 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
                                 <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none rounded px-4 py-3 bg-black/50 backdrop-blur-sm text-center">
                                     <div className="text-white text-6xl font-mono font-bold tabular-nums">{countdown}</div>
                                     <div className="text-white/40 text-sm font-mono mt-1">next round</div>
+                                </div>
+                            )}
+                            {gameState === 'one_guessed' && urgentCountdown !== null && (
+                                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none rounded px-4 py-3 bg-black/50 backdrop-blur-sm text-center">
+                                    <div className={`text-6xl font-mono font-bold tabular-nums ${urgentCountdown <= 5 ? 'text-red-400' : 'text-amber-400'}`}>
+                                        {urgentCountdown}
+                                    </div>
+                                    <div className="text-white/40 text-sm font-mono mt-1">
+                                        {myLocked ? 'waiting for opponent' : 'time to guess'}
+                                    </div>
                                 </div>
                             )}
                             <div className="absolute top-6 right-8 z-20 pointer-events-none text-right rounded px-4 py-3 bg-black/50 backdrop-blur-sm">

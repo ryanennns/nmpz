@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Events\PlayerGuessed;
 use App\Events\RoundFinished;
+use App\Jobs\ForceEndRound;
 use App\Models\Game;
 use App\Models\Player;
 use App\Models\Round;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
@@ -102,11 +104,40 @@ class PlayerMakesGuessTest extends TestCase
     public function test_round_finished_event_is_not_fired_when_only_one_player_has_locked_in(): void
     {
         Event::fake();
+        Bus::fake();
         [$player, $game, $round] = $this->makeScenario('player_one_id');
 
         $this->postJson($this->url($player, $game, $round), $this->validPayload());
 
         Event::assertNotDispatched(RoundFinished::class);
+    }
+
+    public function test_force_end_round_job_is_dispatched_when_only_one_player_has_locked_in(): void
+    {
+        Event::fake();
+        Bus::fake();
+        [$player, $game, $round] = $this->makeScenario('player_one_id');
+
+        $this->postJson($this->url($player, $game, $round), $this->validPayload());
+
+        Bus::assertDispatched(ForceEndRound::class, fn (ForceEndRound $job) => $job->roundId === $round->getKey());
+    }
+
+    public function test_force_end_round_job_is_not_dispatched_when_both_players_lock_in(): void
+    {
+        Event::fake();
+        Bus::fake();
+        $player = Player::factory()->create();
+        $game = Game::factory()->create(['player_one_id' => $player->getKey()]);
+        $round = Round::factory()->for($game)->create([
+            'player_two_guess_lat' => 51.5074,
+            'player_two_guess_lng' => -0.1278,
+            'player_two_locked_in' => true,
+        ]);
+
+        $this->postJson($this->url($player, $game, $round), $this->validPayload());
+
+        Bus::assertNotDispatched(ForceEndRound::class);
     }
 
     public function test_scores_are_evaluated_when_both_players_lock_in(): void
