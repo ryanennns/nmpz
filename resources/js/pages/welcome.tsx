@@ -5,6 +5,7 @@ import echo from '@/echo';
 
 type Player = { id: string; user: { name: string } };
 type Round = { id: string; round_number: number; player_one_locked_in: boolean; player_two_locked_in: boolean };
+type Location = { lat: number; lng: number; heading: number };
 type Game = { id: string; player_one: Player; player_two: Player; player_one_health: number; player_two_health: number };
 
 type GameState = 'waiting' | 'one_guessed' | 'finished' | 'game_over';
@@ -125,6 +126,36 @@ function MapPicker({ onPin }: { onPin: (coords: LatLng) => void }) {
     return <div ref={containerRef} className="h-40 w-64 rounded border border-neutral-600" />;
 }
 
+function StreetViewPanel({ location }: { location: Location }) {
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function init() {
+            await importLibrary('maps');
+            if (cancelled || !containerRef.current) return;
+            new google.maps.StreetViewPanorama(containerRef.current, {
+                position: { lat: location.lat, lng: location.lng },
+                pov: { heading: location.heading, pitch: 0 },
+                disableDefaultUI: true,
+                clickToGo: false,
+                disableDoubleClickZoom: true,
+                scrollwheel: false,
+                showRoadLabels: false,
+                motionTracking: false,
+                motionTrackingControl: false,
+            });
+        }
+
+        init().catch(console.error);
+
+        return () => { cancelled = true; };
+    }, []);
+
+    return <div ref={containerRef} className="h-96 grow rounded" />;
+}
+
 function getCsrfToken() {
     const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : '';
@@ -139,8 +170,9 @@ function deriveGameState(round: Round, gameOver: boolean): GameState {
 
 let eventSeq = 0;
 
-export default function Welcome({ game, round: initial }: { game: Game; round: Round }) {
-    const [round, setRound] = useState(initial);
+export default function Welcome({ game }: { game: Game }) {
+    const [round, setRound] = useState<Round | null>(null);
+    const [location, setLocation] = useState<Location | null>(null);
     const [health, setHealth] = useState({ p1: game.player_one_health, p2: game.player_two_health });
     const [gameOver, setGameOver] = useState(false);
     const [events, setEvents] = useState<GameEvent[]>([]);
@@ -148,7 +180,7 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
     const [p1Pin, setP1Pin] = useState<LatLng | null>(null);
     const [p2Pin, setP2Pin] = useState<LatLng | null>(null);
 
-    const gameState = deriveGameState(round, gameOver);
+    const gameState = round ? deriveGameState(round, gameOver) : 'waiting';
 
     function pushEvent(name: GameEvent['name'], data: Record<string, unknown>) {
         setEvents((prev) => [
@@ -179,13 +211,19 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
             pushEvent('RoundStarted', data);
             setCountdown(null);
             setHealth({ p1: data.player_one_health as number, p2: data.player_two_health as number });
-            setRound((prev) => ({
-                ...prev,
+            setLocation({
+                lat: data.location_lat as number,
+                lng: data.location_lng as number,
+                heading: data.location_heading as number,
+            });
+            setRound({
                 id: data.round_id as string,
                 round_number: data.round_number as number,
                 player_one_locked_in: false,
                 player_two_locked_in: false,
-            }));
+            });
+            setP1Pin(null);
+            setP2Pin(null);
         });
 
         channel.listen('.GameFinished', (data: Record<string, unknown>) => {
@@ -201,7 +239,7 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
     }, [game.id]);
 
     async function guess(player: Player, pin: LatLng | null) {
-        if (!pin) return;
+        if (!pin || !round) return;
         const { lat, lng } = pin;
         const url = `/players/${player.id}/games/${game.id}/rounds/${round.id}/guess`;
 
@@ -232,38 +270,44 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
             <Head title="Test UI" />
             <div className="flex gap-12 p-8 font-mono">
                 <div className="w-64 shrink-0">
-                    <p className="mb-4">Round {round.round_number}</p>
+                    {!round || !location ? (
+                        <p className="opacity-60">Waiting for round to start...</p>
+                    ) : (
+                        <>
+                            <p className="mb-4">Round {round.round_number}</p>
 
-                    <div className="mb-4 space-y-1 text-sm">
-                        <HealthBar name={game.player_one.user.name} health={health.p1} />
-                        <HealthBar name={game.player_two.user.name} health={health.p2} />
-                    </div>
+                            <div className="mb-4 space-y-1 text-sm">
+                                <HealthBar name={game.player_one.user.name} health={health.p1} />
+                                <HealthBar name={game.player_two.user.name} health={health.p2} />
+                            </div>
 
-                    <div className="mb-6 space-y-4">
-                        <div className="space-y-2">
-                            <MapPicker onPin={setP1Pin} />
-                            <button
-                                onClick={() => guess(game.player_one, p1Pin)}
-                                disabled={!p1Pin || round.player_one_locked_in || gameOver}
-                            >
-                                {game.player_one.user.name}
-                                {round.player_one_locked_in ? ' ✓' : ''}
-                            </button>
-                        </div>
+                            <div className="mb-6 space-y-4">
+                                <div className="space-y-2">
+                                    <MapPicker onPin={setP1Pin} />
+                                    <button
+                                        onClick={() => guess(game.player_one, p1Pin)}
+                                        disabled={!p1Pin || round.player_one_locked_in || gameOver}
+                                    >
+                                        {game.player_one.user.name}
+                                        {round.player_one_locked_in ? ' ✓' : ''}
+                                    </button>
+                                </div>
 
-                        <div className="space-y-2">
-                            <MapPicker onPin={setP2Pin} />
-                            <button
-                                onClick={() => guess(game.player_two, p2Pin)}
-                                disabled={!p2Pin || round.player_two_locked_in || gameOver}
-                            >
-                                {game.player_two.user.name}
-                                {round.player_two_locked_in ? ' ✓' : ''}
-                            </button>
-                        </div>
-                    </div>
+                                <div className="space-y-2">
+                                    <MapPicker onPin={setP2Pin} />
+                                    <button
+                                        onClick={() => guess(game.player_two, p2Pin)}
+                                        disabled={!p2Pin || round.player_two_locked_in || gameOver}
+                                    >
+                                        {game.player_two.user.name}
+                                        {round.player_two_locked_in ? ' ✓' : ''}
+                                    </button>
+                                </div>
+                            </div>
 
-                    <p className="opacity-60">{stateLabel[gameState]}</p>
+                            <p className="opacity-60">{stateLabel[gameState]}</p>
+                        </>
+                    )}
                 </div>
 
                 <div className="w-112 shrink-0">
@@ -281,6 +325,10 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
                         </div>
                     ))}
                 </div>
+
+                {location && (
+                    <StreetViewPanel key={`${location.lat},${location.lng}`} location={location} />
+                )}
             </div>
         </>
     );

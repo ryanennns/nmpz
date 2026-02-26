@@ -36,6 +36,9 @@ class RoundStarted implements ShouldBroadcast
             'round_number' => $this->round->round_number,
             'player_one_health' => $this->playerOneHealth,
             'player_two_health' => $this->playerTwoHealth,
+            'location_lat' => $this->round->location_lat,
+            'location_lng' => $this->round->location_lng,
+            'location_heading' => $this->round->location_heading,
         ];
     }
 }

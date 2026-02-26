@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\RoundStarted;
 use App\Http\Controllers\PlayerMakesGuess;
 use App\Models\Game;
 use App\Models\Location;
@@ -35,18 +36,19 @@ Route::get('/', function () {
         ->offset($seed % $locationCount)
         ->firstOrFail();
 
-    Round::factory()->for($game)->create([
+    $round = Round::factory()->for($game)->create([
         'round_number' => 1,
         'location_lat' => $location->lat,
         'location_lng' => $location->lng,
         'location_heading' => $location->heading,
     ]);
 
+    RoundStarted::dispatch($round, $game->player_one_health, $game->player_two_health);
+
     $game->load(['playerOne.user', 'playerTwo.user']);
 
     return Inertia::render('welcome', [
         'game' => $game,
-        'round' => $game->rounds()->first(),
     ]);
 })->name('home');
 
