@@ -164,9 +164,9 @@ function getCsrfToken() {
     return match ? decodeURIComponent(match[1]) : '';
 }
 
-function deriveGameState(round: Round, gameOver: boolean): GameState {
+function deriveGameState(round: Round, gameOver: boolean, roundFinished: boolean): GameState {
     if (gameOver) return 'game_over';
-    if (round.player_one_locked_in && round.player_two_locked_in) return 'finished';
+    if (roundFinished || (round.player_one_locked_in && round.player_two_locked_in)) return 'finished';
     if (round.player_one_locked_in || round.player_two_locked_in) return 'one_guessed';
     return 'waiting';
 }
@@ -186,10 +186,11 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
     const [events, setEvents] = useState<GameEvent[]>([]);
     const [countdown, setCountdown] = useState<number | null>(null);
     const [pin, setPin] = useState<LatLng | null>(null);
+    const [roundFinished, setRoundFinished] = useState(false);
 
     const isPlayerOne = game ? player.id === game.player_one.id : false;
     const myLocked = round ? (isPlayerOne ? round.player_one_locked_in : round.player_two_locked_in) : false;
-    const gameState = round ? deriveGameState(round, gameOver) : 'waiting';
+    const gameState = round ? deriveGameState(round, gameOver, roundFinished) : 'waiting';
 
     function pushEvent(name: GameEvent['name'], data: Record<string, unknown>) {
         setEvents(prev => [
@@ -231,12 +232,14 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
 
         channel.listen('.RoundFinished', (data: Record<string, unknown>) => {
             pushEvent('RoundFinished', data);
+            setRoundFinished(true);
             setCountdown(3);
         });
 
         channel.listen('.RoundStarted', (data: Record<string, unknown>) => {
             pushEvent('RoundStarted', data);
             setCountdown(null);
+            setRoundFinished(false);
             setHealth({ p1: data.player_one_health as number, p2: data.player_two_health as number });
             setLocation({
                 lat: data.location_lat as number,
