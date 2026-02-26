@@ -5,18 +5,15 @@ namespace App\Http\Controllers;
 use App\Events\PlayerGuessed;
 use App\Events\RoundFinished;
 use App\Models\Game;
+use App\Models\Player;
 use App\Models\Round;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PlayerMakesGuess extends Controller
 {
-    public function __invoke(Request $request, User $user, Game $game, Round $round): JsonResponse
+    public function __invoke(Request $request, Player $player, Game $game, Round $round): JsonResponse
     {
-        $player = $user->player;
-
-        abort_if($player === null, 403);
         abort_if(
             ! in_array($player->getKey(), [$game->player_one_id, $game->player_two_id]),
             403,
