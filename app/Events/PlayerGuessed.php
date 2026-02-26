@@ -35,6 +35,8 @@ class PlayerGuessed implements ShouldBroadcast
             'round_id' => $this->round->getKey(),
             'round_number' => $this->round->round_number,
             'player_id' => $this->player->getKey(),
+            'player_one_locked_in' => $this->round->player_one_locked_in,
+            'player_two_locked_in' => $this->round->player_two_locked_in,
         ];
     }
 }

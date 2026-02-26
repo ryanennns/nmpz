@@ -44,6 +44,20 @@ function svgDot(color: string) {
     };
 }
 
+function svgFlagDot(circleColor: string) {
+    const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+  <circle cx="18" cy="18" r="16" fill="${circleColor}" stroke="white" stroke-width="2.5"/>
+  <path d="M16 9v18" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M16 9h12l-3 4 3 4H16" fill="white"/>
+</svg>`;
+    return {
+        url: 'data:image/svg+xml,' + encodeURIComponent(svg),
+        scaledSize: new google.maps.Size(36, 36),
+        anchor: new google.maps.Point(18, 18),
+    };
+}
+
 function ResultsMap({ result }: { result: RoundResult }) {
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -64,31 +78,30 @@ function ResultsMap({ result }: { result: RoundResult }) {
 
             const bounds = new google.maps.LatLngBounds();
 
-            new google.maps.Marker({ position: result.location, map, icon: svgDot('#facc15') });
+            new google.maps.Marker({ position: result.location, map, icon: svgFlagDot('#facc15') });
             bounds.extend(result.location);
+
+            const dashedLine = {
+                strokeColor: '#000000',
+                strokeOpacity: 0,
+                strokeWeight: 0,
+                icons: [{
+                    icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.6, strokeWeight: 2, scale: 3 },
+                    offset: '0',
+                    repeat: '12px',
+                }],
+            };
 
             if (result.p1Guess) {
                 new google.maps.Marker({ position: result.p1Guess, map, icon: svgDot('#60a5fa') });
                 bounds.extend(result.p1Guess);
-                new google.maps.Polyline({
-                    path: [result.location, result.p1Guess],
-                    map,
-                    strokeColor: '#60a5fa',
-                    strokeOpacity: 0.8,
-                    strokeWeight: 2,
-                });
+                new google.maps.Polyline({ path: [result.location, result.p1Guess], map, ...dashedLine });
             }
 
             if (result.p2Guess) {
                 new google.maps.Marker({ position: result.p2Guess, map, icon: svgDot('#f87171') });
                 bounds.extend(result.p2Guess);
-                new google.maps.Polyline({
-                    path: [result.location, result.p2Guess],
-                    map,
-                    strokeColor: '#f87171',
-                    strokeOpacity: 0.8,
-                    strokeWeight: 2,
-                });
+                new google.maps.Polyline({ path: [result.location, result.p2Guess], map, ...dashedLine });
             }
 
             requestAnimationFrame(() => google.maps.event.trigger(map, 'resize'));
@@ -154,6 +167,7 @@ function MapPicker({ onPin }: { onPin: (coords: LatLng) => void }) {
                 zoom: 1,
                 disableDefaultUI: true,
                 clickableIcons: false,
+                draggableCursor: 'crosshair',
             });
             mapRef.current = map;
 
@@ -179,19 +193,30 @@ function MapPicker({ onPin }: { onPin: (coords: LatLng) => void }) {
         return () => { cancelled = true; };
     }, []);
 
-    return <div ref={containerRef} className="h-full w-full" />;
+    return <div ref={containerRef} className="h-full w-full cursor-crosshair" />;
 }
 
 // --- Health bar ---
 
-function HealthBar({ name, health }: { name: string; health: number }) {
+function HealthBar({
+    name,
+    health,
+    color,
+    isYou,
+}: {
+    name: string;
+    health: number;
+    color: 'blue' | 'red';
+    isYou?: boolean;
+}) {
     const filled = Math.round(Math.max(0, Math.min(5000, health)) / 250);
     const empty = 20 - filled;
+    const colorClass = color === 'blue' ? 'text-blue-400' : 'text-red-400';
     return (
         <div className="flex gap-2 text-xs">
-            <span className="w-20 truncate opacity-60">{name}</span>
-            <span>{'█'.repeat(filled)}{'░'.repeat(empty)}</span>
-            <span className="w-12 text-right opacity-60">{health}hp</span>
+            <span className="w-20 truncate opacity-60">{isYou ? 'You' : name}</span>
+            <span className={colorClass}>{'█'.repeat(filled)}{'░'.repeat(empty)}</span>
+            <span className={`w-12 text-right opacity-60 ${colorClass}`}>{health}hp</span>
         </div>
     );
 }
@@ -314,6 +339,11 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
 
         channel.listen('.PlayerGuessed', (data: Record<string, unknown>) => {
             pushEvent('PlayerGuessed', data);
+            setRound(prev => prev ? {
+                ...prev,
+                player_one_locked_in: data.player_one_locked_in as boolean,
+                player_two_locked_in: data.player_two_locked_in as boolean,
+            } : null);
         });
 
         channel.listen('.RoundFinished', (data: Record<string, unknown>) => {
@@ -439,8 +469,18 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
                                 <span>{stateLabel[gameState]}</span>
                             </div>
                             <div className="space-y-1">
-                                <HealthBar name={game.player_one.user.name} health={health.p1} />
-                                <HealthBar name={game.player_two.user.name} health={health.p2} />
+                                <HealthBar
+                                    name={game.player_one.user.name}
+                                    health={health.p1}
+                                    color="blue"
+                                    isYou={player.id === game.player_one.id}
+                                />
+                                <HealthBar
+                                    name={game.player_two.user.name}
+                                    health={health.p2}
+                                    color="red"
+                                    isYou={player.id === game.player_two.id}
+                                />
                             </div>
                             {events.length > 0 && <div className="border-t border-white/10" />}
                         </>
@@ -462,7 +502,7 @@ export default function Welcome({ player, game: initialGame }: { player: Player;
                 {/* Bottom-right: guess map for current player */}
                 {round && !roundFinished && (
                     <div
-                        className={`absolute bottom-4 right-4 z-10 overflow-hidden rounded transition-all duration-300 ${mapHovered ? 'h-[70vh] w-[55vw]' : 'h-40 w-64'}`}
+                        className={`absolute bottom-4 right-4 z-10 overflow-hidden rounded transition-all duration-150 ${mapHovered ? 'h-[70vh] w-[55vw]' : 'h-40 w-64'}`}
                         onMouseEnter={() => setMapHovered(true)}
                         onMouseLeave={() => setMapHovered(false)}
                     >
