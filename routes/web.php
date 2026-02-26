@@ -50,6 +50,7 @@ Route::get('stats', function () {
         'games_in_progress' => Game::query()->where('status', 'in_progress')->count(),
         'rounds_played' => Round::query()->whereNotNull('finished_at')->count(),
         'total_players' => Player::query()->count(),
+        'queue_count' => count(Cache::get('matchmaking_queue', [])),
     ]);
 });
 

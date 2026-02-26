@@ -554,8 +554,10 @@ export default function Welcome({
                     games_in_progress: number;
                     rounds_played: number;
                     total_players: number;
+                    queue_count: number;
                 };
                 setStats(data);
+                setQueueCount(data.queue_count);
             }
         }, 5000);
         return () => clearInterval(t);
