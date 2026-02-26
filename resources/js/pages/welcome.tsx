@@ -3,7 +3,7 @@ import { Head } from '@inertiajs/react';
 import React, { useEffect, useRef, useState } from 'react';
 import echo from '@/echo';
 
-type Player = { id: string; user: { name: string } };
+type Player = { id: string; name?: string | null; user: { name: string } };
 type Round = {
     id: string;
     round_number: number;
@@ -438,6 +438,46 @@ function roundRemainingSeconds(startedAt: Date | null) {
     return Math.max(0, 60 - elapsed);
 }
 
+function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
+    const [name, setName] = useState('');
+    const inputRef = useRef<HTMLInputElement | null>(null);
+
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, []);
+
+    function submit() {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        onSubmit(trimmed.slice(0, 50));
+    }
+
+    return (
+        <div>
+            <input
+                ref={inputRef}
+                value={name}
+                maxLength={50}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submit();
+                    }
+                }}
+                placeholder="Your name"
+                className="w-full rounded border border-white/10 bg-black/40 px-2 py-1 text-white outline-none placeholder:text-white/30"
+            />
+            <button
+                onClick={submit}
+                className="mt-2 w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
+            >
+                Join queue
+            </button>
+        </div>
+    );
+}
+
 // --- Page ---
 
 export default function Welcome({
@@ -448,6 +488,9 @@ export default function Welcome({
     game: Game | null;
 }) {
     const [game, setGame] = useState<Game | null>(initialGame);
+    const [playerName, setPlayerName] = useState<string | null>(
+        player.name ?? null,
+    );
     const [round, setRound] = useState<Round | null>(null);
     const [location, setLocation] = useState<Location | null>(null);
     const [health, setHealth] = useState({
@@ -729,6 +772,22 @@ export default function Welcome({
         }
     }
 
+    async function joinQueue(name: string) {
+        const url = `/players/${player.id}/join-queue`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ name }),
+        });
+        if (res.ok) {
+            setPlayerName(name);
+        }
+    }
+
     guessRef.current = guess;
 
     useEffect(() => {
@@ -805,9 +864,24 @@ export default function Welcome({
         return (
             <>
                 <Head title="nmpz" />
-                <div className="flex h-screen items-center justify-center bg-neutral-900 font-mono text-sm text-neutral-400">
-                    Waiting for opponent
-                    <Dots />
+                <div className="relative flex h-screen items-center justify-center bg-neutral-900 font-mono text-sm text-neutral-400">
+                    {playerName ? (
+                        <>
+                            Waiting for opponent
+                            <Dots />
+                        </>
+                    ) : (
+                        <div className="w-full max-w-sm rounded border border-white/10 bg-black/60 p-4 text-xs text-white/80 backdrop-blur-sm">
+                            <div className="mb-2 text-sm text-white">
+                                Enter your name
+                            </div>
+                            <NamePrompt
+                                onSubmit={(name) => {
+                                    void joinQueue(name);
+                                }}
+                            />
+                        </div>
+                    )}
                 </div>
             </>
         );

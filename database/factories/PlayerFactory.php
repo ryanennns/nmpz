@@ -17,6 +17,7 @@ class PlayerFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
+            'name' => $this->faker->name(),
             'elo_rating' => $this->faker->numberBetween(800, 1200),
         ];
     }
