@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('games', function (Blueprint $table) {
-            $table->unsignedSmallInteger('player_one_health')->default(5000);
-            $table->unsignedSmallInteger('player_two_health')->default(5000);
+            $table->smallInteger('player_one_health')->default(5000);
+            $table->smallInteger('player_two_health')->default(5000);
         });
     }
 

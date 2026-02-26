@@ -51,9 +51,9 @@ class StartNextRound implements ShouldQueue
         $damage = abs($p1 - $p2);
 
         if ($p1 < $p2) {
-            $game->player_one_health = max(0, $game->player_one_health - $damage);
+            $game->player_one_health -= $damage;
         } elseif ($p2 < $p1) {
-            $game->player_two_health = max(0, $game->player_two_health - $damage);
+            $game->player_two_health -= $damage;
         }
 
         $game->save();

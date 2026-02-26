@@ -88,17 +88,17 @@ class StartNextRoundTest extends TestCase
         $this->assertSame(0, $game->player_two_health);
     }
 
-    public function test_health_is_capped_at_zero(): void
+    public function test_health_can_go_negative(): void
     {
         $game = Game::factory()->inProgress()->create([
             'player_one_health' => 5000,
-            'player_two_health' => 500,
+            'player_two_health' => 50,
         ]);
 
-        $this->handle($this->roundFor($game, 5000, 0));
+        $this->handle($this->roundFor($game, 500, 50));
 
         $game->refresh();
-        $this->assertSame(0, $game->player_two_health);
+        $this->assertSame(-400, $game->player_two_health); // 50 - (500 - 50) = 50 - 450 = -400
     }
 
     public function test_null_scores_are_treated_as_zero(): void
@@ -247,6 +247,6 @@ class StartNextRoundTest extends TestCase
         $this->handle($this->roundFor($game, 4000, 0));
 
         Event::assertDispatched(GameFinished::class);
-        $this->assertSame(0, $game->fresh()->player_two_health);
+        $this->assertSame(-3000, $game->fresh()->player_two_health); // 1000 - 4000
     }
 }
