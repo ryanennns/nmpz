@@ -23,8 +23,8 @@ function short(uuid: unknown) {
 
 function EventFields({ name, data }: { name: GameEvent['name']; data: Record<string, unknown> }) {
     const row = (label: string, value: unknown) => (
-        <div key={label}>
-            <span style={{ opacity: 0.5, display: 'inline-block', width: '8rem' }}>{label}</span>
+        <div key={label} className="flex">
+            <span className="w-32 opacity-50">{label}</span>
             <span>{String(value)}</span>
         </div>
     );
@@ -47,7 +47,7 @@ function EventFields({ name, data }: { name: GameEvent['name']; data: Record<str
         )
         : null;
 
-    return <div style={{ paddingLeft: '0.75rem', borderLeft: '2px solid #555' }}>{common}{extra}</div>;
+    return <div className="border-l-2 border-neutral-500 pl-3">{common}{extra}</div>;
 }
 
 function getCsrfToken() {
@@ -84,7 +84,6 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
         ]);
     }
 
-    // Tick the countdown down every second.
     useEffect(() => {
         if (countdown === null || countdown <= 0) return;
         const t = setTimeout(() => setCountdown((c) => (c ?? 1) - 1), 1000);
@@ -142,17 +141,17 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
     const stateLabel: Record<GameState, string> = {
         waiting: 'Waiting for guesses',
         one_guessed: 'Waiting for second player',
-        finished: `Round finished — next round in ${countdown ?? 3}s`,
+        finished: countdown !== null ? `Round finished — next round in ${countdown}s` : 'Round finished',
     };
 
     return (
         <>
             <Head title="Test UI" />
-            <div style={{ padding: '2rem', fontFamily: 'monospace', display: 'flex', gap: '3rem' }}>
-                <div>
+            <div className="flex gap-12 p-8 font-mono">
+                <div className="w-64 shrink-0">
                     <p>Round {round.round_number}</p>
 
-                    <div style={{ display: 'flex', gap: '1rem', margin: '1rem 0' }}>
+                    <div className="my-4 flex gap-4">
                         <button
                             onClick={() => guess(game.player_one)}
                             disabled={round.player_one_locked_in}
@@ -170,18 +169,18 @@ export default function Welcome({ game, round: initial }: { game: Game; round: R
                         </button>
                     </div>
 
-                    <p style={{ opacity: 0.6 }}>{stateLabel[gameState]}</p>
+                    <p className="opacity-60">{stateLabel[gameState]}</p>
                 </div>
 
-                <div style={{ flex: 1 }}>
-                    <p style={{ marginBottom: '0.5rem' }}>Events</p>
+                <div className="w-112 shrink-0">
+                    <p className="mb-2">Events</p>
                     {events.length === 0 && (
-                        <p style={{ opacity: 0.4, fontSize: '0.85rem' }}>none yet</p>
+                        <p className="text-sm opacity-40">none yet</p>
                     )}
                     {events.map((e) => (
-                        <div key={e.id} style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>
-                            <div style={{ marginBottom: '0.2rem' }}>
-                                <span style={{ opacity: 0.5 }}>{e.ts}</span>{' '}
+                        <div key={e.id} className="mb-4 text-sm">
+                            <div className="mb-1">
+                                <span className="inline-block w-32 opacity-50">{e.ts}</span>
                                 <strong>{e.name}</strong>
                             </div>
                             <EventFields name={e.name} data={e.data} />
