@@ -4,6 +4,7 @@ use App\Events\GameReady;
 use App\Events\RoundStarted;
 use App\Http\Controllers\PlayerLeavesQueue;
 use App\Http\Controllers\PlayerMakesGuess;
+use App\Jobs\ForceEndRound;
 use App\Models\Game;
 use App\Models\Location;
 use App\Models\Map;
@@ -56,7 +57,9 @@ Route::get('/', function () {
         $p1Health = $game->player_one_health;
         $p2Health = $game->player_two_health;
         dispatch(function () use ($round, $p1Health, $p2Health) {
+            $round->forceFill(['started_at' => now()])->save();
             RoundStarted::dispatch($round, $p1Health, $p2Health);
+            ForceEndRound::dispatch($round->getKey())->delay(now()->addSeconds(60));
         })->delay(now()->addSeconds(2));
 
         return Inertia::render('welcome', [

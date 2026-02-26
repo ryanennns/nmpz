@@ -52,9 +52,20 @@ class PlayerMakesGuess extends Controller
             if ($updated) {
                 $round->evaluateScores();
                 RoundFinished::dispatch($round);
+                ForceEndRound::cancelPending($round->getKey());
             }
         } else {
-            ForceEndRound::dispatch($round->getKey())->delay(now()->addSeconds(15));
+            $startedAt = $round->started_at ?? now();
+            if ($round->started_at === null) {
+                $round->forceFill(['started_at' => $startedAt])->save();
+            }
+
+            $deadline = $startedAt->addSeconds(60);
+            $remaining = max(0, now()->diffInSeconds($deadline, false));
+            $delaySeconds = min($remaining, 15);
+
+            ForceEndRound::cancelPending($round->getKey());
+            ForceEndRound::dispatch($round->getKey())->delay(now()->addSeconds($delaySeconds));
         }
 
         return response()->json($round);

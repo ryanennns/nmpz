@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 
 class ForceEndRound implements ShouldQueue
 {
@@ -17,6 +18,14 @@ class ForceEndRound implements ShouldQueue
     public function __construct(
         public readonly string $roundId,
     ) {}
+
+    public static function cancelPending(string $roundId): void
+    {
+        DB::table('jobs')
+            ->where('payload', 'like', '%ForceEndRound%')
+            ->where('payload', 'like', '%' . $roundId . '%')
+            ->delete();
+    }
 
     public function handle(): void
     {

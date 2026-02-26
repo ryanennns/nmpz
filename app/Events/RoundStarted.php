@@ -40,6 +40,7 @@ class RoundStarted implements ShouldBroadcastNow
             'location_lat' => $this->round->location_lat,
             'location_lng' => $this->round->location_lng,
             'location_heading' => $this->round->location_heading,
+            'started_at' => optional($this->round->started_at)->toISOString(),
         ];
     }
 }

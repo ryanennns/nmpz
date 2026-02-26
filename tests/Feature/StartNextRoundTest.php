@@ -6,10 +6,13 @@ use App\Enums\GameStatus;
 use App\Events\GameFinished;
 use App\Events\RoundFinished;
 use App\Events\RoundStarted;
+use App\Jobs\ForceEndRound;
 use App\Listeners\StartNextRound;
 use App\Models\Game;
 use App\Models\Round;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
@@ -19,6 +22,7 @@ class StartNextRoundTest extends TestCase
 
     private function handle(Round $round): void
     {
+        Bus::fake();
         (new StartNextRound)->handle(new RoundFinished($round));
     }
 
@@ -157,6 +161,28 @@ class StartNextRoundTest extends TestCase
                 && $event->playerOneHealth === 5000
                 && $event->playerTwoHealth === 2000;
         });
+    }
+
+    public function test_force_end_round_is_scheduled_sixty_seconds_after_round_start(): void
+    {
+        Bus::fake();
+        $now = now();
+        Date::setTestNow($now);
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+        ]);
+
+        $this->handle($this->roundFor($game, 4000, 1000, roundNumber: 1));
+
+        $expected = $now->addSeconds(60);
+        Bus::assertDispatched(ForceEndRound::class, function (ForceEndRound $job) use ($expected) {
+            return $job->delay instanceof \DateTimeInterface
+                && $job->delay->getTimestamp() === $expected->getTimestamp();
+        });
+
+        Date::setTestNow();
     }
 
     // --- Game over ---

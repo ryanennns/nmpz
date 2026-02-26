@@ -10,6 +10,7 @@ use App\Models\Player;
 use App\Models\Round;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
@@ -121,6 +122,30 @@ class PlayerMakesGuessTest extends TestCase
         $this->postJson($this->url($player, $game, $round), $this->validPayload());
 
         Bus::assertDispatched(ForceEndRound::class, fn (ForceEndRound $job) => $job->roundId === $round->getKey());
+    }
+
+    public function test_force_end_round_delay_is_min_remaining_or_fifteen_seconds(): void
+    {
+        Event::fake();
+        Bus::fake();
+        $now = now();
+        Date::setTestNow($now);
+
+        $player = Player::factory()->create();
+        $game = Game::factory()->create(['player_one_id' => $player->getKey()]);
+        $round = Round::factory()->for($game)->create([
+            'started_at' => $now->subSeconds(55),
+        ]);
+
+        $this->postJson($this->url($player, $game, $round), $this->validPayload());
+
+        $expected = $now->addSeconds(5);
+        Bus::assertDispatched(ForceEndRound::class, function (ForceEndRound $job) use ($expected) {
+            return $job->delay instanceof \DateTimeInterface
+                && $job->delay->getTimestamp() === $expected->getTimestamp();
+        });
+
+        Date::setTestNow();
     }
 
     public function test_force_end_round_job_is_not_dispatched_when_both_players_lock_in(): void

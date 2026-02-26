@@ -420,6 +420,12 @@ let eventSeq = 0;
 
 const panel = 'rounded border border-white/10 bg-black/60 p-3 backdrop-blur-sm';
 
+function roundRemainingSeconds(startedAt: Date | null) {
+    if (!startedAt || Number.isNaN(startedAt.getTime())) return null;
+    const elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+    return Math.max(0, 60 - elapsed);
+}
+
 // --- Page ---
 
 export default function Welcome({
@@ -443,12 +449,14 @@ export default function Welcome({
     const [pin, setPin] = useState<LatLng | null>(null);
     const [roundFinished, setRoundFinished] = useState(false);
     const [mapHovered, setMapHovered] = useState(false);
+    const [roundStartedAt, setRoundStartedAt] = useState<Date | null>(null);
     const [roundResult, setRoundResult] = useState<RoundResult | null>(null);
     const [roundScores, setRoundScores] = useState<{
         p1: number | null;
         p2: number | null;
     }>({ p1: null, p2: null });
     const guessRef = useRef<() => void>(() => {});
+    const roundStartedAtRef = useRef<Date | null>(null);
 
     const isPlayerOne = game ? player.id === game.player_one.id : false;
     const myLocked = round
@@ -541,7 +549,10 @@ export default function Welcome({
             const p1 = data.player_one_locked_in as boolean;
             const p2 = data.player_two_locked_in as boolean;
             if (p1 !== p2) {
-                setUrgentCountdown(15);
+                const remaining = roundRemainingSeconds(roundStartedAtRef.current);
+                setUrgentCountdown(
+                    remaining === null ? 15 : Math.min(remaining, 15),
+                );
             }
         });
 
@@ -549,6 +560,7 @@ export default function Welcome({
             pushEvent('RoundFinished', data);
             setRoundFinished(true);
             setUrgentCountdown(null);
+            setRoundStartedAt(null);
             setCountdown(6);
             const p1Score = (data.player_one_score as number) ?? 0;
             const p2Score = (data.player_two_score as number) ?? 0;
@@ -591,7 +603,11 @@ export default function Welcome({
         channel.listen('.RoundStarted', (data: Record<string, unknown>) => {
             pushEvent('RoundStarted', data);
             setCountdown(null);
-            setUrgentCountdown(null);
+            const startedAtRaw = data.started_at as string | undefined;
+            const startedAt = startedAtRaw ? new Date(startedAtRaw) : null;
+            setRoundStartedAt(startedAt);
+            roundStartedAtRef.current = startedAt;
+            setUrgentCountdown(roundRemainingSeconds(startedAt));
             setRoundFinished(false);
             setRoundResult(null);
             setRoundScores({ p1: null, p2: null });
@@ -616,6 +632,9 @@ export default function Welcome({
         channel.listen('.GameFinished', (data: Record<string, unknown>) => {
             pushEvent('GameFinished', data);
             setCountdown(null);
+            setUrgentCountdown(null);
+            setRoundStartedAt(null);
+            roundStartedAtRef.current = null;
             setRoundResult(null);
             setHealth({
                 p1: data.player_one_health as number,
@@ -658,12 +677,15 @@ export default function Welcome({
     }, []);
 
     const stateLabel: Record<GameState, React.ReactNode> = {
-        waiting: (
-            <span>
-                Waiting for guesses
-                <Dots />
-            </span>
-        ),
+        waiting:
+            urgentCountdown !== null ? (
+                `${urgentCountdown}s to guess`
+            ) : (
+                <span>
+                    Waiting for guesses
+                    <Dots />
+                </span>
+            ),
         one_guessed:
             urgentCountdown !== null ? (
                 `${urgentCountdown}s to guess`
@@ -769,18 +791,21 @@ export default function Welcome({
                                     </div>
                                 </div>
                             )}
-                            {gameState === 'one_guessed' &&
+                            {(gameState === 'one_guessed' ||
+                                gameState === 'waiting') &&
                                 urgentCountdown !== null && (
                                     <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-4 py-3 text-center backdrop-blur-sm">
                                         <div
-                                            className={`font-mono text-6xl font-bold tabular-nums ${urgentCountdown <= 5 ? 'text-red-400' : 'text-amber-400'}`}
+                                            className={`font-mono text-6xl font-bold tabular-nums ${urgentCountdown <= 15 ? 'text-red-400' : 'text-amber-400'}`}
                                         >
                                             {urgentCountdown}
                                         </div>
                                         <div className="mt-1 font-mono text-sm text-white/40">
-                                            {myLocked
-                                                ? 'waiting for opponent'
-                                                : 'time to guess'}
+                                            {gameState === 'waiting'
+                                                ? 'time to guess'
+                                                : myLocked
+                                                  ? 'waiting for opponent'
+                                                  : 'time to guess'}
                                         </div>
                                     </div>
                                 )}

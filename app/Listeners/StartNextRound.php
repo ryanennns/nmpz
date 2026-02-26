@@ -6,6 +6,7 @@ use App\Enums\GameStatus;
 use App\Events\GameFinished;
 use App\Events\RoundFinished;
 use App\Events\RoundStarted;
+use App\Jobs\ForceEndRound;
 use App\Models\Game;
 use App\Models\Location;
 use App\Models\Round;
@@ -44,9 +45,11 @@ class StartNextRound implements ShouldQueue
             'location_lat' => $location->lat,
             'location_lng' => $location->lng,
             'location_heading' => $location->heading,
+            'started_at' => now(),
         ]);
 
         RoundStarted::dispatch($next, $game->player_one_health, $game->player_two_health);
+        ForceEndRound::dispatch($next->getKey())->delay(now()->addSeconds(60));
     }
 
     private function deductHealth(Game $game, Round $round): void
