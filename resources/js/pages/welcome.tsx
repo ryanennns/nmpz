@@ -11,7 +11,10 @@ import MapillaryImagePanel from '@/components/welcome/MapillaryImagePanel';
 import MapPicker from '@/components/welcome/MapPicker';
 import ResultsMap from '@/components/welcome/ResultsMap';
 import ShimmerText from '@/components/welcome/ShimmerText';
+import SpectatorMap from '@/components/welcome/SpectatorMap';
 import { StandardCompass } from '@/components/welcome/StandardCompass';
+
+import RoundSummaryPanel from '@/components/welcome/RoundSummaryPanel';
 
 import type {
     GameEvent,
@@ -20,10 +23,13 @@ import type {
     Location,
     Message,
     Player,
+    RematchState,
     Round,
     RoundData,
     RoundResult,
+    RoundSummary,
 } from '@/components/welcome/types';
+import { SoundContext, useSoundContext } from '@/components/welcome/SoundContext';
 import { WinnerOverlay } from '@/components/welcome/WinnerOverlay';
 import { useApiClient } from '@/hooks/useApiClient';
 import { useCountdown } from '@/hooks/useCountdown';
@@ -32,6 +38,7 @@ import { useEndSequence } from '@/hooks/useEndSequence';
 import { useGameChannel } from '@/hooks/useGameChannel';
 import { useKeyBindings } from '@/hooks/useKeyBindings';
 import { useMatchmakingChannel } from '@/hooks/useMatchmakingChannel';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { cn } from '@/lib/utils';
 
 setOptions({
@@ -74,14 +81,18 @@ export default function Welcome({
     queue_count: number;
     round_data?: RoundData | null;
 }) {
+    const soundEffects = useSoundEffects();
+
     return (
-        <GameProvider initialGame={initialGame}>
-            <WelcomePage
-                player={player}
-                queue_count={initialQueueCount}
-                round_data={initialRoundData}
-            />
-        </GameProvider>
+        <SoundContext.Provider value={soundEffects}>
+            <GameProvider initialGame={initialGame}>
+                <WelcomePage
+                    player={player}
+                    queue_count={initialQueueCount}
+                    round_data={initialRoundData}
+                />
+            </GameProvider>
+        </SoundContext.Provider>
     );
 }
 
@@ -95,6 +106,7 @@ function WelcomePage({
     round_data?: RoundData | null;
 }) {
     const { game, setGame } = useGameContext();
+    const { play: playSound, muted, setMuted } = useSoundContext();
     const [playerName, setPlayerName] = useState<string | null>(
         player.name ?? null,
     );
@@ -119,6 +131,13 @@ function WelcomePage({
         p1: number | null;
         p2: number | null;
     }>({ p1: null, p2: null });
+    const [roundDistances, setRoundDistances] = useState<{
+        p1: number | null;
+        p2: number | null;
+    }>({ p1: null, p2: null });
+    const [rematchState, setRematchState] = useState<RematchState>('none');
+    const [lastGameId, setLastGameId] = useState<string | null>(null);
+    const [opponentLiveGuess, setOpponentLiveGuess] = useState<{ lat: number; lng: number } | null>(null);
     const [chatOpen, setChatOpen] = useState(false);
     const [chatText, setChatText] = useState('');
     const guessRef = useRef<() => void>(() => {});
@@ -127,7 +146,7 @@ function WelcomePage({
 
     // --- Hooks ---
     const { countdown, setCountdown, urgentCountdown, setUrgentCountdown } =
-        useCountdown();
+        useCountdown(playSound);
 
     const endSequence = useEndSequence();
 
@@ -136,6 +155,7 @@ function WelcomePage({
     const { myDamageKey, gameContainerRef } = useDamageEffect(
         myHealth,
         !!game,
+        playSound,
     );
 
     useKeyBindings(
@@ -155,6 +175,7 @@ function WelcomePage({
         endSequence.clearEndSequenceTimers,
         endSequence.setBlackoutVisible,
         endSequence.setWinnerOverlayVisible,
+        playSound,
     );
 
     const resetGameState = useCallback(() => {
@@ -173,20 +194,26 @@ function WelcomePage({
         setMapHovered(false);
         setRoundResult(null);
         setRoundScores({ p1: null, p2: null });
+        setRoundDistances({ p1: null, p2: null });
         setChatOpen(false);
         setChatText('');
+        setRematchState('none');
+        setOpponentLiveGuess(null);
         endSequence.setWinnerId(null);
         endSequence.setWinnerName(null);
         endSequence.setWinnerOverlayVisible(false);
+        endSequence.setPostGameButtonsVisible(false);
     }, []);
 
     const { roundStartedAtRef } = useGameChannel({
         game,
+        setGame,
         setRound,
         setRoundFinished,
         setCountdown,
         setUrgentCountdown,
         setRoundScores,
+        setRoundDistances,
         setHealth,
         setRoundResult,
         setPendingRoundData,
@@ -197,9 +224,14 @@ function WelcomePage({
         setWinnerName: endSequence.setWinnerName,
         setLocation,
         setHeading,
+        setRematchState,
+        setOpponentLiveGuess,
         scheduleEndSequence: endSequence.scheduleEndSequence,
+        dismissEndSequence: endSequence.dismissEndSequence,
         clearEndSequenceTimers: endSequence.clearEndSequenceTimers,
         resetGameState,
+        playerId: player.id,
+        playSound,
     });
 
     // Apply buffered RoundStarted data once countdown expires
@@ -218,6 +250,8 @@ function WelcomePage({
         setRoundFinished(false);
         setRoundResult(null);
         setRoundScores({ p1: null, p2: null });
+        setRoundDistances({ p1: null, p2: null });
+        setOpponentLiveGuess(null);
         setHealth({
             p1: data.player_one_health,
             p2: data.player_two_health,
@@ -288,6 +322,13 @@ function WelcomePage({
         void api.rememberGame(true).catch(() => {});
     }, [game?.id, player.id]);
 
+    // Track lastGameId for rematch
+    useEffect(() => {
+        if (game && gameOver) {
+            setLastGameId(game.id);
+        }
+    }, [game?.id, gameOver]);
+
     // --- Actions ---
     const myLocked = round
         ? isPlayerOne
@@ -298,6 +339,7 @@ function WelcomePage({
     async function guess() {
         if (!pin || !round || !game || myLocked || gameOver) return;
         setMapHovered(false);
+        playSound('lock-in');
         const res = await api.guess(round.id, pin, true);
         if (res?.data) setRound(res.data as Round);
     }
@@ -318,6 +360,40 @@ function WelcomePage({
     }
 
     guessRef.current = guess;
+
+    function handleRematch() {
+        const gid = lastGameId ?? game?.id;
+        if (!gid) return;
+        void api.requestRematch(gid);
+        setRematchState('sent');
+    }
+
+    function handleRequeue() {
+        endSequence.dismissEndSequence(resetGameState);
+        void api.joinQueue(playerName ?? undefined);
+    }
+
+    function handleExit() {
+        if (rematchState === 'received') {
+            const gid = lastGameId ?? game?.id;
+            if (gid) void api.declineRematch(gid);
+        }
+        endSequence.dismissEndSequence(resetGameState);
+    }
+
+    function handleAcceptRematch() {
+        const gid = lastGameId ?? game?.id;
+        if (!gid) return;
+        void api.requestRematch(gid);
+        setRematchState('sent');
+    }
+
+    function handleDeclineRematch() {
+        const gid = lastGameId ?? game?.id;
+        if (!gid) return;
+        void api.declineRematch(gid);
+        setRematchState('declined');
+    }
 
     // --- Derived state ---
     type PlayerColour = 'blue' | 'red';
@@ -350,6 +426,25 @@ function WelcomePage({
     const gameState = round
         ? deriveGameState(round, gameOver, roundFinished)
         : 'waiting';
+
+    const roundSummary: RoundSummary | null =
+        roundFinished && roundScores.p1 !== null && roundScores.p2 !== null
+            ? (() => {
+                  const myScore = isPlayerOne ? roundScores.p1! : roundScores.p2!;
+                  const opponentScore = isPlayerOne ? roundScores.p2! : roundScores.p1!;
+                  const damage = Math.abs(myScore - opponentScore);
+                  return {
+                      myScore,
+                      opponentScore,
+                      myDistanceKm: isPlayerOne ? roundDistances.p1 : roundDistances.p2,
+                      opponentDistanceKm: isPlayerOne ? roundDistances.p2 : roundDistances.p1,
+                      myDamage: myScore > opponentScore ? damage : 0,
+                      opponentDamage: opponentScore > myScore ? damage : 0,
+                      myHealth: isPlayerOne ? health.p1 : health.p2,
+                      opponentHealth: isPlayerOne ? health.p2 : health.p1,
+                  };
+              })()
+            : null;
 
     const hasRoundCountdown = roundFinished && countdown !== null;
     const hasUrgentCountdown =
@@ -426,10 +521,20 @@ function WelcomePage({
                             />
                         )}
                         {roundFinished && roundResult ? (
-                            <ResultsMap
-                                key={`result-${round?.id ?? 'pending'}`}
-                                result={roundResult}
-                            />
+                            <>
+                                <ResultsMap
+                                    key={`result-${round?.id ?? 'pending'}`}
+                                    result={roundResult}
+                                />
+                                {roundSummary && playerConfig && (
+                                    <RoundSummaryPanel
+                                        summary={roundSummary}
+                                        myColor={playerConfig.me.color}
+                                        opponentColor={playerConfig.opponent.color}
+                                        opponentName={playerConfig.opponent.name}
+                                    />
+                                )}
+                            </>
                         ) : location ? (
                             <MapillaryImagePanel
                                 key={`${location.lat},${location.lng}`}
@@ -547,32 +652,48 @@ function WelcomePage({
                                 onMouseEnter={() => setMapHovered(true)}
                                 onMouseLeave={() => setMapHovered(false)}
                             >
-                                <MapPicker
-                                    key={round.id}
-                                    onPin={(coords) => {
-                                        setPin(coords);
-                                        void updateGuess(coords);
-                                    }}
-                                    pinColor={
-                                        isPlayerOne ? '#60a5fa' : '#f87171'
-                                    }
-                                    disabled={myLocked || gameOver}
-                                />
-                                <div className="absolute right-2 bottom-2 left-2 font-mono">
-                                    <button
-                                        onClick={guess}
-                                        disabled={!pin || myLocked || gameOver}
-                                        className="w-full rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm enabled:hover:bg-black/80 disabled:opacity-30"
-                                    >
-                                        {myLocked
-                                            ? 'Locked in ✓'
-                                            : pin
-                                              ? 'Lock in guess [space]'
-                                              : 'Click map to place pin'}
-                                    </button>
-                                </div>
+                                {myLocked && !gameOver ? (
+                                    <SpectatorMap
+                                        key={`spectator-${round.id}`}
+                                        opponentGuess={opponentLiveGuess}
+                                    />
+                                ) : (
+                                    <>
+                                        <MapPicker
+                                            key={round.id}
+                                            onPin={(coords) => {
+                                                setPin(coords);
+                                                void updateGuess(coords);
+                                            }}
+                                            pinColor={
+                                                isPlayerOne ? '#60a5fa' : '#f87171'
+                                            }
+                                            disabled={myLocked || gameOver}
+                                        />
+                                        <div className="absolute right-2 bottom-2 left-2 font-mono">
+                                            <button
+                                                onClick={guess}
+                                                disabled={!pin || myLocked || gameOver}
+                                                className="w-full rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm enabled:hover:bg-black/80 disabled:opacity-30"
+                                            >
+                                                {pin
+                                                    ? 'Lock in guess [space]'
+                                                    : 'Click map to place pin'}
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
+
+                        <button
+                            type="button"
+                            onClick={() => setMuted(!muted)}
+                            className="absolute top-6 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-3 py-1.5 font-mono text-xs text-white/50 backdrop-blur-sm transition hover:text-white/80"
+                            title={muted ? 'Unmute' : 'Mute'}
+                        >
+                            {muted ? 'Sound Off' : 'Sound On'}
+                        </button>
 
                         <div
                             className={`pointer-events-none absolute inset-0 z-40 bg-black transition-opacity duration-500 ${endSequence.blackoutVisible ? 'opacity-100' : 'opacity-0'}`}
@@ -582,6 +703,13 @@ function WelcomePage({
                             winnerId={endSequence.winnerId}
                             id={player.id}
                             winnerName={endSequence.winnerName}
+                            postGameButtonsVisible={endSequence.postGameButtonsVisible}
+                            rematchState={rematchState}
+                            onRematch={handleRematch}
+                            onRequeue={handleRequeue}
+                            onExit={handleExit}
+                            onAcceptRematch={handleAcceptRematch}
+                            onDeclineRematch={handleDeclineRematch}
                         />
                     </div>
                 )}

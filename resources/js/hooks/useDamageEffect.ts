@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import type { SoundName } from '@/hooks/useSoundEffects';
 
 export function useDamageEffect(
     myHealth: number,
     hasGame: boolean,
+    playSound?: (name: SoundName) => void,
 ) {
     const [myDamageKey, setMyDamageKey] = useState(0);
     const prevMyHealthRef = useRef<number | null>(null);
@@ -18,6 +20,7 @@ export function useDamageEffect(
             myHealth < prevMyHealthRef.current
         ) {
             setMyDamageKey((k) => k + 1);
+            playSound?.('damage-taken');
             const el = gameContainerRef.current;
             if (el) {
                 el.classList.remove('screen-shake');

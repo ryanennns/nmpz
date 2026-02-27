@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 
 const END_MAP_HOLD_MS = 3000;
 const END_FADE_MS = 500;
-const END_WINNER_HOLD_MS = 2500;
 
 export function useEndSequence() {
     const [blackoutVisible, setBlackoutVisible] = useState(false);
     const [winnerOverlayVisible, setWinnerOverlayVisible] = useState(false);
+    const [postGameButtonsVisible, setPostGameButtonsVisible] = useState(false);
     const [pageVisible, setPageVisible] = useState(true);
     const [winnerId, setWinnerId] = useState<string | null>(null);
     const [winnerName, setWinnerName] = useState<string | null>(null);
@@ -17,10 +17,11 @@ export function useEndSequence() {
         endTimersRef.current = [];
     }
 
-    function scheduleEndSequence(resetGame: () => void) {
+    function scheduleEndSequence(_resetGame: () => void) {
         clearEndSequenceTimers();
         setBlackoutVisible(false);
         setWinnerOverlayVisible(false);
+        setPostGameButtonsVisible(false);
         setPageVisible(true);
 
         const t1 = window.setTimeout(() => {
@@ -30,37 +31,41 @@ export function useEndSequence() {
                 setWinnerOverlayVisible(true);
 
                 const t3 = window.setTimeout(() => {
-                    setWinnerOverlayVisible(false);
-
-                    const t4 = window.setTimeout(() => {
-                        setPageVisible(false);
-
-                        const t5 = window.setTimeout(() => {
-                            resetGame();
-                            requestAnimationFrame(() => {
-                                requestAnimationFrame(() =>
-                                    setPageVisible(true),
-                                );
-                            });
-
-                            const t6 = window.setTimeout(() => {
-                                setBlackoutVisible(false);
-                            }, END_FADE_MS);
-
-                            endTimersRef.current.push(t6);
-                        }, END_FADE_MS);
-
-                        endTimersRef.current.push(t5);
-                    }, END_FADE_MS);
-
-                    endTimersRef.current.push(t4);
-                }, END_WINNER_HOLD_MS);
+                    setPostGameButtonsVisible(true);
+                }, 1500);
 
                 endTimersRef.current.push(t3);
             }, END_FADE_MS);
 
             endTimersRef.current.push(t2);
         }, END_MAP_HOLD_MS);
+
+        endTimersRef.current.push(t1);
+    }
+
+    function dismissEndSequence(resetGame: () => void) {
+        clearEndSequenceTimers();
+        setPostGameButtonsVisible(false);
+        setWinnerOverlayVisible(false);
+
+        const t1 = window.setTimeout(() => {
+            setPageVisible(false);
+
+            const t2 = window.setTimeout(() => {
+                resetGame();
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => setPageVisible(true));
+                });
+
+                const t3 = window.setTimeout(() => {
+                    setBlackoutVisible(false);
+                }, END_FADE_MS);
+
+                endTimersRef.current.push(t3);
+            }, END_FADE_MS);
+
+            endTimersRef.current.push(t2);
+        }, END_FADE_MS);
 
         endTimersRef.current.push(t1);
     }
@@ -72,6 +77,8 @@ export function useEndSequence() {
         setBlackoutVisible,
         winnerOverlayVisible,
         setWinnerOverlayVisible,
+        postGameButtonsVisible,
+        setPostGameButtonsVisible,
         pageVisible,
         setPageVisible,
         winnerId,
@@ -79,6 +86,7 @@ export function useEndSequence() {
         winnerName,
         setWinnerName,
         scheduleEndSequence,
+        dismissEndSequence,
         clearEndSequenceTimers,
     };
 }

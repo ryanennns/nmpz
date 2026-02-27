@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Player extends Model
 {
@@ -40,6 +41,11 @@ class Player extends Model
     {
         return Game::where('player_one_id', $this->getKey())
             ->orWhere('player_two_id', $this->getKey());
+    }
+
+    public function stats(): HasOne
+    {
+        return $this->hasOne(PlayerStats::class);
     }
 
     public function hasActiveGame(): bool

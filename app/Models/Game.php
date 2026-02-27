@@ -23,6 +23,8 @@ class Game extends Model
             'player_one_health' => 'integer',
             'player_two_health' => 'integer',
             'no_guess_rounds' => 'integer',
+            'player_one_rematch_requested' => 'boolean',
+            'player_two_rematch_requested' => 'boolean',
         ];
     }
 

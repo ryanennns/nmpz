@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\DeclineRematch;
 use App\Http\Controllers\JoinQueue;
 use App\Http\Controllers\PlayerLeavesQueue;
 use App\Http\Controllers\PlayerMakesGuess;
 use App\Http\Controllers\RememberGameSession;
+use App\Http\Controllers\RequestRematch;
 use App\Http\Controllers\SendMessage;
 use App\Enums\GameStatus;
 use App\Models\Game;
@@ -102,6 +104,51 @@ Route::post('players/{player}/games/{game}/send-message', SendMessage::class)
     ->name('games.send-message');
 Route::post('players/{player}/games/{game}/remember', RememberGameSession::class)
     ->name('games.remember');
+Route::post('players/{player}/games/{game}/rematch', RequestRematch::class)
+    ->name('games.rematch');
+Route::post('players/{player}/games/{game}/decline-rematch', DeclineRematch::class)
+    ->name('games.decline-rematch');
+
+Route::get('leaderboard', function () {
+    $entries = \App\Models\PlayerStats::query()
+        ->where('games_played', '>=', 3)
+        ->orderByDesc('games_won')
+        ->limit(50)
+        ->with('player.user')
+        ->get()
+        ->map(fn ($s) => [
+            'player_id' => $s->player_id,
+            'player_name' => $s->player?->user?->name ?? $s->player?->name ?? 'Unknown',
+            'games_won' => $s->games_won,
+            'games_played' => $s->games_played,
+            'win_rate' => $s->win_rate,
+            'best_win_streak' => $s->best_win_streak,
+        ]);
+
+    return response()->json($entries);
+});
+
+Route::get('players/{player}/stats', function (\App\Models\Player $player) {
+    $stats = $player->stats;
+    if (! $stats) {
+        return response()->json([
+            'games_played' => 0, 'games_won' => 0, 'games_lost' => 0,
+            'total_rounds' => 0, 'total_score' => 0, 'best_round_score' => 0,
+            'total_damage_dealt' => 0, 'total_damage_taken' => 0,
+            'current_win_streak' => 0, 'best_win_streak' => 0,
+            'perfect_rounds' => 0, 'closest_guess_km' => null,
+            'total_distance_km' => 0, 'total_guesses_made' => 0,
+            'total_guesses_missed' => 0, 'win_rate' => 0,
+            'average_score' => 0, 'average_distance_km' => 0,
+        ]);
+    }
+
+    return response()->json(array_merge($stats->toArray(), [
+        'win_rate' => $stats->win_rate,
+        'average_score' => $stats->average_score,
+        'average_distance_km' => $stats->average_distance_km,
+    ]));
+});
 
 Route::get('stats', function () {
     return response()->json([

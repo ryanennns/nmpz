@@ -8,12 +8,18 @@ import type {
     Location,
     Message,
     PlayerGuessedData,
+    RematchAcceptedData,
+    RematchDeclinedData,
+    RematchRequestedData,
+    OpponentGuessUpdateData,
+    RematchState,
     Round,
     RoundData,
     RoundFinishedData,
     RoundResult,
 } from '@/components/welcome/types';
 import echo from '@/echo';
+import type { SoundName } from '@/hooks/useSoundEffects';
 
 const MAX_EVENTS = 5;
 const MAX_MESSAGES = 6;
@@ -45,11 +51,15 @@ function roundRemainingSeconds(startedAt: Date | null) {
 
 type GameChannelDeps = {
     game: Game | null;
+    setGame: (game: Game) => void;
     setRound: Dispatch<SetStateAction<Round | null>>;
     setRoundFinished: Dispatch<SetStateAction<boolean>>;
     setCountdown: Dispatch<SetStateAction<number | null>>;
     setUrgentCountdown: Dispatch<SetStateAction<number | null>>;
     setRoundScores: Dispatch<
+        SetStateAction<{ p1: number | null; p2: number | null }>
+    >;
+    setRoundDistances: Dispatch<
         SetStateAction<{ p1: number | null; p2: number | null }>
     >;
     setHealth: Dispatch<SetStateAction<{ p1: number; p2: number }>>;
@@ -62,19 +72,26 @@ type GameChannelDeps = {
     setWinnerName: (name: string | null) => void;
     setLocation: Dispatch<SetStateAction<Location | null>>;
     setHeading: Dispatch<SetStateAction<number | null>>;
+    setRematchState: Dispatch<SetStateAction<RematchState>>;
     scheduleEndSequence: (resetGame: () => void) => void;
+    dismissEndSequence: (resetGame: () => void) => void;
     clearEndSequenceTimers: () => void;
     resetGameState: () => void;
+    setOpponentLiveGuess: Dispatch<SetStateAction<{ lat: number; lng: number } | null>>;
+    playerId: string;
+    playSound: (name: SoundName) => void;
 };
 
 export function useGameChannel(deps: GameChannelDeps) {
     const {
         game,
+        setGame,
         setRound,
         setRoundFinished,
         setCountdown,
         setUrgentCountdown,
         setRoundScores,
+        setRoundDistances,
         setHealth,
         setRoundResult,
         setPendingRoundData,
@@ -83,9 +100,14 @@ export function useGameChannel(deps: GameChannelDeps) {
         setGameOver,
         setWinnerId,
         setWinnerName,
+        setRematchState,
         scheduleEndSequence,
+        dismissEndSequence,
         clearEndSequenceTimers,
+        setOpponentLiveGuess,
         resetGameState,
+        playerId,
+        playSound,
     } = deps;
 
     const roundStartedAtRef = useRef<Date | null>(null);
@@ -108,6 +130,9 @@ export function useGameChannel(deps: GameChannelDeps) {
                           }
                         : null,
                 );
+                if (data.player_id !== playerId) {
+                    playSound('opponent-locked');
+                }
                 if (data.player_one_locked_in !== data.player_two_locked_in) {
                     const remaining = roundRemainingSeconds(
                         roundStartedAtRef.current,
@@ -123,12 +148,18 @@ export function useGameChannel(deps: GameChannelDeps) {
             '.RoundFinished',
             (data: RoundFinishedData) => {
                 pushEvent(setEvents, 'RoundFinished', data as unknown as Record<string, unknown>);
+                playSound('round-end');
                 setRoundFinished(true);
+                setOpponentLiveGuess(null);
                 setUrgentCountdown(null);
                 setCountdown(6);
                 const p1Score = data.player_one_score ?? 0;
                 const p2Score = data.player_two_score ?? 0;
                 setRoundScores({ p1: p1Score, p2: p2Score });
+                setRoundDistances({
+                    p1: data.player_one_distance_km ?? null,
+                    p2: data.player_two_distance_km ?? null,
+                });
                 const damage = Math.abs(p1Score - p2Score);
                 window.setTimeout(() => {
                     setHealth((prev) => {
@@ -215,8 +246,52 @@ export function useGameChannel(deps: GameChannelDeps) {
                           ? game.player_two.user.name
                           : null;
                 setWinnerName(name);
+                playSound(wId === playerId ? 'win-jingle' : 'lose-sound');
 
                 scheduleEndSequence(resetGameState);
+            },
+        );
+
+        channel.listen(
+            '.OpponentGuessUpdate',
+            (data: OpponentGuessUpdateData) => {
+                if (data.player_id !== playerId) {
+                    setOpponentLiveGuess({ lat: data.lat, lng: data.lng });
+                }
+            },
+        );
+
+        channel.listen(
+            '.RematchRequested',
+            (data: RematchRequestedData) => {
+                if (data.player_id !== playerId) {
+                    setRematchState('received');
+                }
+            },
+        );
+
+        channel.listen(
+            '.RematchAccepted',
+            (data: RematchAcceptedData) => {
+                clearEndSequenceTimers();
+                setRematchState('none');
+                dismissEndSequence(() => {
+                    resetGameState();
+                    setGame(data.new_game);
+                    setHealth({
+                        p1: data.new_game.player_one_health,
+                        p2: data.new_game.player_two_health,
+                    });
+                });
+            },
+        );
+
+        channel.listen(
+            '.RematchDeclined',
+            (data: RematchDeclinedData) => {
+                if (data.player_id !== playerId) {
+                    setRematchState('declined');
+                }
             },
         );
 

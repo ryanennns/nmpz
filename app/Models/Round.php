@@ -71,7 +71,7 @@ class Round extends Model
         return (int) round(5000 * exp(-$distanceKm / 2000.0));
     }
 
-    private static function haversineDistanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    public static function haversineDistanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
     {
         $earthRadiusKm = 6371.0;
         $dLat = deg2rad($lat2 - $lat1);

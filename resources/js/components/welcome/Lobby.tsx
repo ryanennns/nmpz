@@ -2,7 +2,9 @@ import axios from 'axios';
 import { MessageCircleQuestion } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
+import Leaderboard from '@/components/welcome/Leaderboard';
 import NamePrompt from '@/components/welcome/NamePrompt';
+import PlayerStatsPanel from '@/components/welcome/PlayerStatsPanel';
 import type { Player } from '@/components/welcome/types';
 import { WaitingRoom } from '@/components/welcome/WaitingRoom';
 import { useApiClient } from '@/hooks/useApiClient';
@@ -34,6 +36,7 @@ export default function Lobby({
     const api = useApiClient(player.id);
     const [editingName, setEditingName] = useState(false);
     const [nameDraft, setNameDraft] = useState(playerName ?? '');
+    const [lobbyTab, setLobbyTab] = useState<'none' | 'stats' | 'leaderboard'>('none');
 
     useEffect(() => {
         function onBeforeUnload() {
@@ -271,6 +274,28 @@ export default function Lobby({
                         </div>
                     )}
                 </div>
+                {!queued && (
+                    <div className="absolute bottom-8 left-1/2 flex w-full max-w-md -translate-x-1/2 flex-col items-center gap-3">
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setLobbyTab(lobbyTab === 'stats' ? 'none' : 'stats')}
+                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'stats' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
+                            >
+                                My Stats
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLobbyTab(lobbyTab === 'leaderboard' ? 'none' : 'leaderboard')}
+                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'leaderboard' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
+                            >
+                                Leaderboard
+                            </button>
+                        </div>
+                        {lobbyTab === 'stats' && <PlayerStatsPanel playerId={player.id} />}
+                        {lobbyTab === 'leaderboard' && <Leaderboard playerId={player.id} />}
+                    </div>
+                )}
             </div>
             <SimpleModal open={helpOpen} onClose={() => setHelpOpen(false)}>
                 <div className="mb-2 text-2xl text-white/50">
