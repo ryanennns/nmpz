@@ -143,6 +143,31 @@ export default function Lobby({
         }
     }
 
+    async function saveName(name: string) {
+        const trimmed = name.trim().slice(0, 32);
+        if (!trimmed) {
+            setJoinError('Name is required.');
+            return;
+        }
+        try {
+            const res = await api.updatePlayer(trimmed);
+            const payload = res.data as { name?: string };
+            const nextName = payload.name ?? trimmed;
+            onNameChange(nextName);
+            setEditingName(false);
+            setJoinError(null);
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                const message =
+                    (error.response?.data as { error?: string })?.error ??
+                    'Unable to update name.';
+                setJoinError(message);
+                return;
+            }
+            setJoinError('Unable to update name.');
+        }
+    }
+
     return (
         <>
             <div className="relative flex h-screen items-center justify-center bg-neutral-900 font-mono text-sm text-neutral-400">
@@ -190,7 +215,7 @@ export default function Lobby({
                                                 <div className="mt-2 flex gap-2">
                                                     <button
                                                         onClick={() =>
-                                                            void joinQueue(
+                                                            void saveName(
                                                                 nameDraft,
                                                             )
                                                         }
@@ -241,9 +266,7 @@ export default function Lobby({
                                         )}
                                         {!editingName && (
                                             <button
-                                                onClick={() =>
-                                                    void joinQueue()
-                                                }
+                                                onClick={() => void joinQueue()}
                                                 className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
                                             >
                                                 Join queue

@@ -146,6 +146,8 @@ function WelcomePage({
     const guessRef = useRef<() => void>(() => {});
     const lastRememberedGameId = useRef<string | null>(null);
     const api = useApiClient(player.id);
+    const damageTimerRef = useRef<number | null>(null);
+    const gameOverRef = useRef(gameOver);
 
     // --- Hooks ---
     const { countdown, setCountdown, urgentCountdown, setUrgentCountdown } =
