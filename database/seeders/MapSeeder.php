@@ -12,7 +12,7 @@ class MapSeeder extends Seeder
     public function run(): void
     {
         $mapName = 'likeacw-mapillary';
-        $filePath = base_path('likeacw-mapillary.jsonl');
+        $filePath = base_path('mapillary-balanced.jsonl');
 
         if (! file_exists($filePath)) {
             throw new \RuntimeException("Seed file not found: {$filePath}");
