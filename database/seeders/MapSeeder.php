@@ -11,16 +11,38 @@ class MapSeeder extends Seeder
 {
     public function run(): void
     {
-        $map = Map::query()->create(['name' => 'Like ACW']);
+        $mapName = 'likeacw-mapillary';
+        $filePath = base_path('likeacw-mapillary.jsonl');
 
-        $json = json_decode(file_get_contents(base_path('likeacw.json')), true);
+        if (! file_exists($filePath)) {
+            throw new \RuntimeException("Seed file not found: {$filePath}");
+        }
+
+        $existing = Map::query()->where('name', $mapName)->first();
+        if ($existing) {
+            $existing->delete();
+        }
+
+        $map = Map::query()->create(['name' => $mapName]);
 
         $now = now()->toDateTimeString();
 
-        $chunks = array_chunk($json, 1000);
+        $handle = fopen($filePath, 'rb');
+        if (! $handle) {
+            throw new \RuntimeException("Unable to open seed file: {$filePath}");
+        }
 
-        foreach ($chunks as $chunk) {
-            DB::table('locations')->insert(array_map(fn ($row) => [
+        $batch = [];
+        while (($line = fgets($handle)) !== false) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            $row = json_decode($line, true);
+            if (! is_array($row)) {
+                continue;
+            }
+            $batch[] = [
                 'id' => Str::uuid()->toString(),
                 'map_id' => $map->getKey(),
                 'lat' => $row['lat'],
@@ -28,7 +50,18 @@ class MapSeeder extends Seeder
                 'heading' => $row['heading'],
                 'created_at' => $now,
                 'updated_at' => $now,
-            ], $chunk));
+            ];
+
+            if (count($batch) >= 1000) {
+                DB::table('locations')->insert($batch);
+                $batch = [];
+            }
         }
+
+        if (count($batch) > 0) {
+            DB::table('locations')->insert($batch);
+        }
+
+        fclose($handle);
     }
 }
