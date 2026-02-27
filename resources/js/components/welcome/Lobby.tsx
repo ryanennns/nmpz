@@ -148,7 +148,8 @@ export default function Lobby({
                     ) : (
                         <div className="flex w-full max-w-sm flex-col items-center gap-4">
                             <div className="relative text-center font-mono text-5xl text-white">
-                                nmpz.dev
+                                <span className="font-semibold">nmpz</span>
+                                <span className="text-white/50">.dev</span>
                                 <button
                                     type="button"
                                     onClick={() => setHelpOpen(true)}
@@ -204,7 +205,8 @@ export default function Lobby({
             </div>
             <SimpleModal open={helpOpen} onClose={() => setHelpOpen(false)}>
                 <div className="mb-2 text-2xl text-white/50">
-                    what is nmpz.dev?
+                    what is <span className="text-white/80">nmpz</span>
+                    <span className="text-white/40">.dev</span>?
                 </div>
                 <p className="mb-2 leading-relaxed">
                     nmpz.dev is my quick and dirty attempt creating the

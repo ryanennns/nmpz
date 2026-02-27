@@ -1,0 +1,571 @@
+Mapillary API
+The Mapillary API provides two surfaces for interacting with Mapillary data: vector tiles and entity endpoints. Vector tiles provide a fast and easy way to render positions and encode filterable metadata, while entity endpoints provide additional metadata which is not present in the tiles.
+
+With API v4 we aim for a balanced optimization for the most common use-cases (rendering a lot of spatial data with basic filtering), practical tile sizes, and access to detailed properties through additional API endpoints.
+
+Please keep in mind that entity endpoints do not provide any spatial filtering capabilities beyond a very limited bounding box search, and it is expected that clients use vector tiles for such use-cases at scale.
+
+Have a question? Take a look at the .
+
+At a glance
+Root endpoint for metadata - https://graph.mapillary.com
+Root endpoint for vector tiles - https://tiles.mapillary.com
+Coverage tiles - https://tiles.mapillary.com/maps/vtp/mly1_public/2/{z}/{x}/{y}
+Computed coverage tiles - https://tiles.mapillary.com/maps/vtp/mly1_computed_public/2/{z}/{x}/{y}
+Map features (points) tiles - https://tiles.mapillary.com/maps/vtp/mly_map_feature_point/2/{z}/{x}/{y}
+Map features (traffic signs) tiles - https://tiles.mapillary.com/maps/vtp/mly_map_feature_traffic_sign/2/{z}/{x}/{y}
+Authentication
+All requests against https://graph.mapillary.com and https://tiles.mapillary.com must be authorized. They require a client or user access tokens. Tokens can be sent in two ways
+
+using ?access_token=XXX query parameters. This is a preferred method for interacting with vector tiles. Using this method is STRONGLY discouraged for sending user access tokens.
+using a header such as Authorization: OAuth XXX, where XXX is the token obtained either through the OAuth flow that your application implements or a client token from https://mapillary.com/dashboard/developers
+This method works for the Entity API calls.
+OAuth 2.0
+Authorization Code Flow
+Our authentication endpoints follow the standard OAuth 2.0 authorization code flow, as per .
+
+The app initializes the authorization request by openning the authorization URL in the user’s browser. See the Authorization endpoint below for how to construct the URL.
+The authentication page asks the user to authorize the app
+When the app is authorized, the authentication page will redirect the user to the app’s callback URL with an authorization code
+The app calls the token endpoint with the authorization code to exchange for the user access token. See the Token Exchange endpoint.
+Authorization
+Endpoint: GET https://www.mapillary.com/connect
+
+URL Parameters:
+
+client_id - int: Your app's client ID
+redirect_uri - string (optional): Must be same as the callback URL of your app
+response_type - string (optional): Must be "code"
+scope - string (optional): Scope of the authorization. There are 3 possible scopes: read, write, or upload. The parameter must be subset of your app's scopes.
+state - string (optional): An arbitrary string that will be redirected back to your app
+Responses:
+
+When successful, the user’s browser is redirected back to the app's configured callback URL with the following query parameters:
+
+code - string: The authorization code. It's a temporary code that the app will exchange for the user access token later.
+state - string (optional): The state value passed from the authorization URL.
+In case of an error, the following parameters will be redirected:
+
+error - string: The error code. Possible error codes:
+user_denied: The user denied the authorization
+invalid_request: User session is invalid or expired
+invalid_scope: The requested scopes is out of the app's scopes
+server_error: Internal error
+state - string (optional): The state value passed from the authorization URL
+Examples:
+
+Assume your app's callback URL is "https://yourapp.com/callback". Open the following authorization link:
+
+https://www.mapillary.com/connect?client_id=12345&state=foo
+After the user authorizes the app, the app will receive:
+
+https://yourapp.com/callback?state=foo&code=LONG_AUTHORIZATION_CODE
+If the user denied the app, the app will receive:
+
+https://yourapp.com/callback?error=user_denied
+Token Exchange
+Endpoint: POST https://graph.mapillary.com/token
+
+This endpoints exchanges an authorization code or a refresh token for the user access token. Authorization is required, and the OAuth token must be the app's client secret.
+
+Parameters:
+
+grant_type - string: Specify the type of the token. Either "authorization_code" or "refresh_token".
+client_id - int: The app's client ID.
+refresh_token - string (optional): The current user access token can be used as the refresh token here (see Refresh Flow). When provided, grant_type must be "refresh_token".
+code - string (optional): The temporary authorization code from the authorization redirection. When provided, grant_type must be "authorization_code".
+redirect_uri - url (optional): The app's callback URL.
+When successful, the following properties will be returned in the JSON playload
+
+access_token - string: The user access token.
+expires_in - int: In how many seconds the access_token will be expired.
+token_type - string: Must be "bearer".
+Example:
+
+
+  curl https://graph.mapillary.com/token \
+      -H "Content-Type: application/json" \
+      -H "Authorization: OAuth CLIENT_SECRET" \
+      -d'
+  {
+      "grant_type": "authorization_code",
+      "code": "LONG_AUTHORIZATION_CODE",
+      "client_id": CLIENT_ID
+  }'
+
+Response:
+
+
+  {
+    "access_token": "USER_ACCESS_TOKEN",
+    "expires_in": 9000,
+    "token_type": "bearer"
+  }
+Refresh Flow
+Since the user access token returned from the Token Exchange endpoint will expire at some time, as developers you need to refresh the token before it gets expired.
+
+The recommended refresh flow:
+
+When the app receives an user access token, remember (access_token, request_timestamp + expires_in)
+Before calling Mapillary APIs with the user access token, check if the token has expired, i.e. check if request_timestamp + expires_in is less than currernt timestamp.
+If it's going to expire, send a POST request to the Token Exchange endpoint with the user access token as the refresh token. See the examples below.
+Examples:
+
+
+  curl https://graph.mapillary.com/token \
+      -H "Content-Type: application/json" \
+      -H "Authorization: OAuth CLIENT_SECERT" \
+      -d'
+  {
+      "grant_type": "refresh_token",
+      "refresh_token": "USER_ACCESS_TOKEN",
+      "client_id": 1234
+  }'
+
+  {
+    "access_token": "NEW_USER_ACCESS_TOKEN",
+    "expires_in": 9000,
+    "token_type": "bearer"
+  }
+Vector tiles
+Vector tiles provide an easy way to visualize vast amounts of data. Mapillary APIs are heavily based on vector tiles to provide the developers with flexibility to programmatically interact with the data they contain in custom ways. Vector tiles support filtering and querying rendered features. Mapillary vector tiles follow the .
+
+Coverage tiles
+Endpoint: https://tiles.mapillary.com/maps/vtp/mly1_public/2/{z}/{x}/{y}?access_token=XXX
+
+Contain positions of images and sequences with original geometries (not computed)
+
+layer name: overview
+zoom: 0 - 5 (inclusive)
+geometry: Point
+data source: images
+properties
+captured_at, int, timestamp in ms since epoch
+creator_id, int, unique user ID of the image owner (not username)
+id, int, ID of the image
+sequence_id, string, ID of the sequence this image belongs to
+is_pano, bool, if it is a panoramic image
+layer name: sequence
+zoom: 6-14 (inclusive)
+geometry: LineString
+data source: images captured in a single collection, sorted by captured_at
+properties
+captured_at, int, timestamp in ms since epoch
+creator_id, int, unique user ID of the image owner (not username)
+id, string, ID of the sequence (the legacy sequence key)
+image_id, int, ID of the "best" (first) image representing the sequence
+organization_id, int, ID of the organization this image belongs to. It can be absent
+is_pano, bool, if it is a panoramic sequence
+layer name: image
+zoom: 14
+geometry: Point
+data source: images
+properties
+captured_at, int, timestamp in ms since epoch
+compass_angle, int, the compass angle of the image
+creator_id, int, unique user ID of the image owner (not username)
+id, int, ID of the image
+sequence_id, string, ID of the sequence this image belongs to
+organization_id, int, ID of the organization this image belongs to. It can be absent
+is_pano, bool, if it is a panoramic image
+Coverage tiles (computed)
+Endpoint: https://tiles.mapillary.com/maps/vtp/mly1_computed_public/2/{z}/{x}/{y}?access_token=XXX
+
+Contain positions of images and sequences with computed geometries (not original)
+
+The tile metadata is exactly the same as Coverage tiles.
+Map feature tiles, points
+Endpoint: https://tiles.mapillary.com/maps/vtp/mly_map_feature_point/2/{z}/{x}/{y}?access_token=XXX
+
+These tiles represent positions of map features which are detected on the Mapillary platform and are not traffic signs.
+
+layer name: point
+zoom: 14
+geometry: Point
+data source: map features
+properties
+id, int, ID of the map feature
+value, string, name of the class which this object represent
+first_seen_at, int, timestamp in ms since epoch, capture time of the earliest image on which the detection contribute to this map feature
+last_seen_at, int, timestamp in ms since epoch, capture time of the latest image on which the detection contribute to this map feature
+.
+
+Map feature tiles, traffic signs
+Endpoint: https://tiles.mapillary.com/maps/vtp/mly_map_feature_traffic_sign/2/{z}/{x}/{y}?access_token=XXX
+
+These tiles represent positions of map features which are detected on the Mapillary platform and are traffic signs.
+
+The tile metadata is exactly the same as Map feature tiles, points, except that the layer name is traffic_sign.
+.
+
+Entities
+Each API call requires specifying the fields of the Entity you're interested in explicitly. A sample image by ID request which returns the id and a computed geometry could look as below. For each entity available fields are listed in the relevant sections. All IDs are unique and the underlying metadata for each entity is accessible at https://graph.mapillary.com/:id?fields=A,B,C. The responses are uniform and always return a single object, unless otherwise stated (collection endpoints). All collection endpoint metadata are wrapped in a {"data": [ {...}, ...]} JSON object.
+
+Image
+Endpoints
+https://graph.mapillary.com/:image_id
+https://graph.mapillary.com/images
+Represents the metadata of the image on the Mapillary platform with the following properties.
+
+Fields
+altitude - float, original altitude from camera Exif calculated from sea level.
+atomic_scale - float, scale of the SfM reconstruction around the image.
+camera_parameters - array of float, focal length, k1, k2. .
+camera_type - enum, type of camera projection: "perspective", "fisheye", "equirectangular" (or equivalently "spherical")
+captured_at - timestamp, capture time.
+compass_angle - float, original compass angle of the image.
+computed_altitude - float, altitude after running image processing, from sea level.
+computed_compass_angle - float, compass angle after running image processing.
+computed_geometry - GeoJSON Point, location after running image processing.
+computed_rotation - enum, corrected orientation of the image. .
+creator - { username: string, id: string }, the username and user ID who owns and uploaded the image.
+exif_orientation - enum, orientation of the camera as given by the Exif tag. .
+geometry - GeoJSON Point geometry.
+height - int, height of the original image uploaded.
+is_pano - boolean, a true or false indicator for whether an image is 360 degree panorama.
+make - string, the manufacturer name of the camera device.
+model - string, the model or product series name of the camera device.
+thumb_256_url - string, URL to the 256px wide thumbnail.
+thumb_1024_url - string, URL to the 1024px wide thumbnail.
+thumb_2048_url - string, URL to the 2048px wide thumbnail.
+thumb_original_url - string, URL to the original wide thumbnail.
+merge_cc - int, ID of the connected component of images that were aligned together.
+mesh - { id: string, url: string } - URL to the mesh.
+sequence - string, ID of the sequence, which is a group of images captured in succession.
+sfm_cluster - { id: string, url: string } - URL to the point cloud data in JSON and compressed by zlib. See the example below.
+width - int, width of the original image uploaded.
+detections - JSON object, detections from the image including base64 encoded string of the image segmentation coordinates.
+Sample image request:
+
+
+GET https://graph.mapillary.com/$IMAGE_ID?access_token=$TOKEN&fields=id,computed_geometry,detections.value
+
+  {
+    "id": "$IMAGE_ID",
+    "computed_geometry": {
+      "type": "Point",
+      "coordinates": [
+        0,
+        0
+      ]
+    },
+    "detections": {
+      "data": [
+        {
+          "value": "information--general-directions--g1",
+          "geometry": "GjgKBm1weS1vchIYEgIAABgDIhAJ4iDyJhq8AQAApAG7AQAPGgR0eXBlIgkKB3BvbHlnb24ogCB4AQ==",
+          "id": "34567"
+        }
+      ]
+    }
+  }
+To decode the sfm_cluster data:
+
+
+# Assume the sfm_cluster data is downloaded at /tmp/sfm_cluster
+curl "https://scontent-sjc3-1.xx.fbcdn.net/m1/v/CDN_IDENTIFIER" -o /tmp/sfm_cluster
+
+# A list of JSON object after decompressing it
+python3 -c 'import sys, zlib; print(zlib.decompress(sys.stdin.buffer.read()))' < /tmp/sfm_cluster
+Images
+Metadata of multiple images can be retrieved using the graph.mapillary.com/images endpoint and specifying fields as stated above. Additionally, the following parameters can be used for filtering:
+
+Note: Querying image data with the bbox parameter is suitable for relatively small area (must be smaller than 0.01 degrees square). If you're planning on querying and downloading data for larger areas, please use mapillary-python-sdk, which is optimized for that use case.
+bbox - float,float,float,float: filter images in the bounding box. Specify in this order: left, bottom, right, top (or minLon, minLat, maxLon, maxLat). NOTE: The bbox area must be smaller than 0.01 degrees square.
+creator_username - string, the username who owns and uploaded the image.
+is_pano - boolean, a true or false filter for whether an image is 360 degree panorama. Must be used with creator_username or bbox parameter.
+limit - int: the maximum number of image entities to return. Max and default is 2000.
+make - string, the manufacturer name of the camera device, can only be used when bbox parameter is used. Spaces are allowed.
+model - string, the model or product series name of the camera device, can only be used when bbox parameter is used. Spaces are allowed.
+organization_id - int: filter images contributed to the specified organization ID.
+sequence_ids - list of IDs: filter images in the given sequence IDs (separated by commas). For example /images?sequence_ids=123,456
+start_captured_at - string: filter images captured after. Specify in the  format. For example: "2022-08-16T16:42:46Z"
+end_captured_at - string: filter images captured before. Same format as "start_captured_at"
+In the case of more results than the limit, paging will be included in the API response. This will include the after cursor and the next url. Pagination is currently supported only in combination with creator_username parameter. See it in one of the examples below.
+
+Sample image search request:
+
+
+  GET https://graph.mapillary.com/images?access_token=$TOKEN&fields=id&bbox=12.967,55.597,13.008,55.607
+
+  {
+     "data": [
+        {
+          "id": "$IMAGE_ID_1"
+        },
+        {
+          "id": "$IMAGE_ID_2"
+        }
+      ]
+  }
+
+Sample image search request with creator username filter and returning creator information field:
+
+
+  GET https://graph.mapillary.com/images?access_token=$TOKEN&fields=id,creator&creator_username=larrymappengauer&limit=2
+    {
+      "data": [
+        {
+          "id": "$IMAGE_ID_1",
+          "creator": {
+            "username": "larrymappengauer",
+            "id": "100498008865694"
+          }
+        },
+        {
+          "id": "$IMAGE_ID_2",
+          "creator": {
+            "username": "larrymappengauer",
+            "id": "100498008865694"
+          }
+        }
+      ],
+      "paging": {
+        "cursors": {
+          "after": "$CURSOR"
+        },
+        "next": "https://graph.mapillary.com/images?access_token=$TOKEN&fields=id,creator&creator_username=larrymappengauer&limit=2&after=$CURSOR"
+      }
+    }
+
+Sample image search request with bbox filter, pano filter, and camer make filter, exposing id, is_pano, and make fields:
+
+
+  GET https://graph.mapillary.com/images?bbox=12.967,55.597,13.008,55.607&access_token=$TOKEN&make=GoPro&fields=id,make,captured_at
+
+  {
+     "data": [
+        {
+          "id": "$IMAGE_ID_1",
+	  "make":"GoPro",
+	  "captured_at":1477408139000
+        },
+        {
+          "id": "$IMAGE_ID_2",
+	  "make":"GoPro",
+	  "captured_at":1650802267000
+        }
+      ]
+  }
+
+Map feature
+These are objects with a location which have been derived from multiple detections in multiple images.
+
+You can see the full list of  and .
+
+Endpoints
+https://graph.mapillary.com/:map_feature_id
+Fields
+aligned_direction - float, compass angle that the object faces
+first_seen_at - timestamp, timestamp of the least recent detection contributing to this feature.
+last_seen_at - timestamp, timestamp of the most recent detection contributing to this feature.
+object_value - string, what kind of map feature it is.
+object_type - string, either a traffic_sign or point.
+geometry - GeoJSON Point geometry.
+images - list of IDs, which images this map feature was derived from.
+Sample map feature request:
+
+
+  GET https://graph.mapillary.com/$MAP_FEATURE_ID?access_token=$TOKEN&fields=id,geometry,object_value
+
+  {
+    "id": "$MAP_FEATURE_ID",
+    "geometry": {
+      "type": "Point",
+      "coordinates": [0, 0]
+    },
+  "object_value": "object--support--utility-pole"
+  }
+Map feature search
+Map feature search can be done using the graph.mapillary.com/map_features endpoint and specifying fields as stated above in addition to a filter:
+
+Note: Querying map feature data with the bbox parameter is suitable for relatively small area (must be smaller than 0.01 degrees square). If you're planning on querying and downloading data for larger areas, please use mapillary-python-sdk, which is optimized for that use case.
+start_first_seen_at - string, filter map features first seen in an image captured after. Specify in the  format. For example: "2022-08-16T16:42:46Z"
+end_first_seen_at - string, filter map features first seen in an image captured before. Same format as "start_first_seen_at"
+start_last_seen_at - string, filter map features last seen in an image captured after. Same format as "start_first_seen_at"
+end_last_seen_at - string, filter map features last seen in an image captured before. Same format as "start_first_seen_at"
+bbox - float,float,float,float, filter map features in the bounding box. Specify in this order: left, bottom, right, top (or minLon, minLat, maxLon, maxLat). NOTE: The bbox area must be smaller than 0.01 degrees square.
+object_values: string, filter map features of the specified object value. Wildcard is supported. May be multiple values separated by comma.
+limit - int, the maximum number of map feature entities to return. Max and default is 2000.
+Sample map feature search request:
+
+
+  GET https://graph.mapillary.com/map_features?access_token=$TOKEN&fields=id,object_value&bbox=12.967,55.597,13.008,55.607
+
+  {
+     "data": [
+        {
+          "object_value": "object--sign--advertisement",
+          "id": "$MAP_FEATURE_ID_1"
+        },
+        {
+          "object_value": "object--support--utility-pole",
+          "id": "$MAP_FEATUREE_ID_2"
+        }
+      ]
+  }
+
+Download map features
+You can download points and traffic signs from the . The data is in the GeoJSON format.
+
+To download data, zoom in on the map to the location you’re interested in and turn on the map data (points or traffic signs). Press the “Downlad” button to download all visible points or traffic signs in a JSON file.
+
+Detection
+Represent an object detected in a single image. For convenience this version of the API serves detections as collections. They can be requested as a collection on the resource (e.g. image or map feature) they contribute or belong to.
+
+Endpoints
+https://graph.mapillary.com/:image_id/detections - detections in the image with ID image_id
+https://graph.mapillary.com/:map_feature_id/detections - detections contributing to the map feature with ID map_feature_id
+https://graph.mapillary.com/images?fields=detections.id,detections.value - search image detections
+Fields
+created_at - timestamp, when was this detection created.
+geometry - string, base64 encoded polygon.
+image - object, image the detection belongs to.
+value - string, what kind of object the detection represents.
+Sample detection request:
+
+
+  GET https://graph.mapillary.com/$IMAGE_ID/detections?access_token=$TOKEN&fields=image,value,geometry
+
+  {
+    "image": {
+			"id": "$IMAGE_ID"
+      "geometry": {
+        "type": "Point",
+        "coordinates": [0, 0]
+    },
+    "id": "$DETECTION_ID"
+    },
+    "value": "information--highway-interchange--g1",
+    "geometry": "GjgKBm1weS1vchIYEgIAABgDIhAJnC3uFxroAwAA7AbnAwAPGgR0eXBlIgkKB3BvbHlnb24ogCB4AQ=="
+  }
+
+Segmentation
+The geometry field of a detection contains the segmentation data for each detection, but it must be decoded in order to get normalized coordinates for use with MapillaryJS or any image.
+
+Sample decoding
+
+In Python, segmentation can be decoded according to the following example:
+
+
+  import base64
+  import mapbox_vector_tile
+
+  base64_string = "GjgKBm1weS1vchIYEgIAABgDIhAJnC3uFxroAwAA7AbnAwAPGgR0eXBlIgkKB3BvbHlnb24ogCB4AQ=="
+
+  decoded_data = base64.decodebytes(base64_string.encode('utf-8'))
+
+  detection_geometry = mapbox_vector_tile.decode(decoded_data)
+
+  print(detection_geometry)
+The output of the decoding will not be normalized, but gives a series of coordinates:
+
+
+  detection_geometry = {'mpy-or': {'extent': 4096, 'version': 2, 'features': [{'geometry': {'type': 'Polygon', 'coordinates': [[[2402, 2776], [2408, 2776], [2413, 2762], [2413, 2746], [2409, 2736], [2404, 2732], [2363, 2734], [2357, 2747], [2359, 2771], [2363, 2776], [2377, 2779], [2383, 2789], [2389, 2788], [2392, 2783], [2396, 2783], [2402, 2776]]]}, 'properties': {}, 'id': 1, 'type': 3}]}}
+
+To normalize this, divide each x and y coordinate by the extent (4096). To get exact pixel coordinates, multiply the normalized x by the width of the image containing the detection, and the normalized y coordinate by the height, remembering that pixel coordinates start at the top left corner of the image when visualized. Retrieve the height and width by making an API request for the image key with the height and width fields.
+
+Detection search
+Detections are searchable through the graph.mapillary.com/images endpoint and specifying fields (prefixed with "deltections") as stated above in addition to a filter, e.g. bounding box. Note that filters are applied to images.
+
+Note: Querying detection data with the bbox parameter is suitable for relatively small area (must be smaller than 0.01 degrees square). If you're planning on querying and downloading data for larger areas, please use mapillary-python-sdk which is optimized for that use case.
+Query detections and images in a bounding box:
+
+
+  GET https://graph.mapillary.com/images?fields=captured_at,detections.id,detections.value&access_token=$TOKEN&limit=10&bbox=12.967,55.597,13.008,55.607
+
+{
+  "data": [
+    {
+      "captured_at": 1583494424000,
+      "detections": {
+        "data": [
+          {
+            "id": "$DETECTION_ID1",
+            "value": "object--sign--store"
+          },
+          {
+            "id": "$DETECTION_ID2",
+            "value": "marking--discrete--other-marking"
+          }
+        ]
+      },
+      "id": "$IMAGE_ID"
+    },
+    {
+      "captured_at": 1413500205000,
+      "id": "$IMAGE_ID2"
+    }
+  ]
+}
+
+Organization
+Represents an organization which can own the imagery if users upload to it.
+
+Endpoints
+https://graph.mapillary.com/:organization_id
+Fields
+slug - short name, used in URLs.
+name - nice name.
+description - public description of the organization.
+Sample organization request:
+
+GET https://graph.mapillary.com/$ORGANIZATION_ID?access_token=$TOKEN&fields=name
+
+  {
+    "id": "$ORGANIZATION_ID"
+    "name": "My Organization"
+  }
+
+Sequence
+Represents a sequence of Image IDs ordered by capture time.
+
+Endpoints
+https://graph.mapillary.com/image_ids?sequence_id=XXX
+Fields
+sequence_id - ID of the sequence.
+Multiple Entities
+Returns multiple entities based on their IDs.
+
+Endpoints
+https://graph.mapillary.com?ids=ID1,ID2,ID3
+Parameters
+ids - A list of entity IDs separated by comma. The provided IDs must be in the same type (e.g. all image IDs, or all detection IDs)
+Rate limits
+There are 3 tiers of rate limits applied to different APIs/tile endpoints:
+
+Requests to entity APIs, e.g. graph.mapillary.com/:image_id, are limited to 60,000 per minute per app.
+Requests to search APIs, e.g. graph.mapillary.com/images?bbox=minx,miny,maxx,maxy, are limited to 10,000 per minute per app.
+Requests to tiles.mapillary.com are limited to 50,000 per day (not per minute).
+Exceeding the Graph API rate limit your app will be throttled and users will receive "Application request limit reached" error. Here is a response example:
+
+{"error":{"message":"Application request limit reached","type":"OAuthException","is_transient":true,"code":4,"error_subcode":1349210,"error_user_title":"Rate Limit Exceeded","error_user_msg":"You are hitting rate-limits on the node that you are attempting to fetch. Please wait and try again later.","fbtrace_id":"A-ZiBnH0_13Dq2KIXeAkenU"}}
+
+
+Exceeding the Tile API rate limit your app will get status code 4xx.
+
+Embed images
+Add Mapillary images to a web site or app with the Mapillary embed in an iframe.
+
+The iframe tag below would show a 640x480px image with ID 550092599700936.
+
+ <iframe
+    src="https://www.mapillary.com/embed?image_key=550092599700936&style=photo"
+    height="480"
+    width="640"
+    frameborder="0">
+ </iframe>
+The URL has the following format:
+
+https://www.mapillary.com/embed?image_key=IMAGE_ID&style=STYLE
+Parameters:
+
+image_key (required) - Mapillary image ID
+style (optional) - determines the layout of the embed. Options are photo (only the image viewer is visible), split (image and map are visible, equal size) or classic (image and map are shown and visible, user can switch focus between map and image)
+Glossary
+Client access token
+Is a token required for all API calls, whether they're Entity API calls or vector tile requests. This token identifies the application used for generating it and enables making request on behalf of it. If a hacker steals it, they would be able to make a request on behalf of your application!
+
+User access token
+Is a token obtained by the user when authentication through the OAuth2 flow. It authenticates both the user and the application it used. It is preferred to send user tokens as the authorization header (see Authentication section). This token is equivalent to a user password, if a hacker steals it, they'll be able to call API on behalf of the user.
+

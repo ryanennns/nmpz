@@ -6,11 +6,11 @@ import ChatSidebar from '@/components/welcome/ChatSidebar';
 import { GameProvider, useGameContext } from '@/components/welcome/GameContext';
 import HealthBar from '@/components/welcome/HealthBar';
 import Lobby from '@/components/welcome/Lobby';
+import MapillaryImagePanel from '@/components/welcome/MapillaryImagePanel';
 import MapPicker from '@/components/welcome/MapPicker';
 import ResultsMap from '@/components/welcome/ResultsMap';
 import ShimmerText from '@/components/welcome/ShimmerText';
 import { StandardCompass } from '@/components/welcome/StandardCompass';
-import StreetViewPanel from '@/components/welcome/StreetViewPanel';
 
 import type {
     Game,
@@ -766,7 +766,7 @@ function WelcomePage({
 
     return (
         <>
-            <Head title="nmpz" />
+            <Head title="nmpz.dev" />
             <div
                 className={`transition-opacity duration-500 ${pageVisible ? 'opacity-100' : 'opacity-0'}`}
             >
@@ -799,12 +799,10 @@ function WelcomePage({
                                 result={roundResult}
                             />
                         ) : location ? (
-                            <StreetViewPanel
+                            <MapillaryImagePanel
                                 key={`${location.lat},${location.lng}`}
                                 location={location}
-                                onHeadingChange={(nextHeading) =>
-                                    setHeading(nextHeading)
-                                }
+                                onHeadingChange={setHeading}
                             />
                         ) : (
                             <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 text-sm text-neutral-500">

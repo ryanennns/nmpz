@@ -59,7 +59,7 @@ class MatchmakeQueue
 
     private function createMatch(Player $playerOne, Player $playerTwo): void
     {
-        $map = Map::query()->firstOrFail();
+        $map = Map::query()->where('name', 'likeacw-mapillary')->firstOrFail();
         $locationCount = Location::query()->where('map_id', $map->getKey())->count();
         if ($locationCount === 0) {
             return;
