@@ -343,7 +343,10 @@ function WelcomePage({
         endTimersRef.current.push(t1);
     }
 
-    function triggerGameOver(winnerId: string | null, winnerName: string | null) {
+    function triggerGameOver(
+        winnerId: string | null,
+        winnerName: string | null,
+    ) {
         if (damageTimerRef.current !== null) {
             window.clearTimeout(damageTimerRef.current);
             damageTimerRef.current = null;

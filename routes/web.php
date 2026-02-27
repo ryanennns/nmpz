@@ -5,6 +5,7 @@ use App\Http\Controllers\PlayerLeavesQueue;
 use App\Http\Controllers\PlayerMakesGuess;
 use App\Http\Controllers\RememberGameSession;
 use App\Http\Controllers\SendMessage;
+use App\Http\Controllers\UpdatePlayer;
 use App\Enums\GameStatus;
 use App\Models\Game;
 use App\Models\Player;
@@ -95,6 +96,8 @@ Route::post('players/{player}/leave-queue', PlayerLeavesQueue::class)
     ->name('players.leave-queue');
 Route::post('players/{player}/join-queue', JoinQueue::class)
     ->name('players.join-queue');
+Route::patch('players/{player}', UpdatePlayer::class)
+    ->name('players.update');
 
 Route::post('players/{player}/games/{game}/rounds/{round}/guess', PlayerMakesGuess::class)
     ->name('games.rounds.guess');

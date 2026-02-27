@@ -26,7 +26,7 @@ export default defineConfig({
     },
     server: {
         watch: {
-            ignored: ["**/likeacw-mapillary.jsonl"],
+            ignored: ['**/likeacw-mapillary.jsonl'],
         },
     },
 });

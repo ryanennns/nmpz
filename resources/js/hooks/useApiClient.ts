@@ -37,6 +37,8 @@ export function useApiClient(playerId: string) {
                 `/players/${playerId}/join-queue`,
                 name ? { name } : {},
             ),
+        updatePlayer: (name: string) =>
+            client.patch(`/players/${playerId}`, { name }),
         leaveQueue: () => client.post(`/players/${playerId}/leave-queue`),
         rememberGame: (active = true, gameId?: string) => {
             const id = gameId ?? game?.id;
