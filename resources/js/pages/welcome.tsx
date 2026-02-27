@@ -180,6 +180,8 @@ function WelcomePage({
     const [chatText, setChatText] = useState('');
     const lastRememberedGameId = useRef<string | null>(null);
     const api = useApiClient(player.id);
+    const damageTimerRef = useRef<number | null>(null);
+    const gameOverRef = useRef(gameOver);
 
     const isPlayerOne = game ? player.id === game.player_one.id : false;
     const myLocked = round
@@ -341,6 +343,42 @@ function WelcomePage({
         endTimersRef.current.push(t1);
     }
 
+    function triggerGameOver(winnerId: string | null, winnerName: string | null) {
+        if (damageTimerRef.current !== null) {
+            window.clearTimeout(damageTimerRef.current);
+            damageTimerRef.current = null;
+        }
+        setCountdown(null);
+        setUrgentCountdown(null);
+        roundStartedAtRef.current = null;
+        setGameOver(true);
+        setWinnerId(winnerId);
+        setWinnerName(winnerName);
+
+        scheduleEndSequence(() => {
+            setGame(null);
+            setRound(null);
+            setLocation(null);
+            setHeading(null);
+            setHealth({ p1: 5000, p2: 5000 });
+            setGameOver(false);
+            setEvents([]);
+            setMessages([]);
+            setCountdown(null);
+            setUrgentCountdown(null);
+            setPin(null);
+            setRoundFinished(false);
+            setMapHovered(false);
+            setRoundResult(null);
+            setRoundScores({ p1: null, p2: null });
+            setChatOpen(false);
+            setChatText('');
+            setWinnerId(null);
+            setWinnerName(null);
+            setWinnerOverlayVisible(false);
+        });
+    }
+
     // Countdown tick (next round)
     useEffect(() => {
         if (countdown === null || countdown <= 0) return;
@@ -489,7 +527,11 @@ function WelcomePage({
             const p2Score = (data.player_two_score as number) ?? 0;
             setRoundScores({ p1: p1Score, p2: p2Score });
             const damage = Math.abs(p1Score - p2Score);
-            window.setTimeout(() => {
+            if (damageTimerRef.current !== null) {
+                window.clearTimeout(damageTimerRef.current);
+            }
+            damageTimerRef.current = window.setTimeout(() => {
+                if (gameOverRef.current) return;
                 setHealth((prev) => {
                     if (p1Score < p2Score)
                         return { p1: prev.p1 - damage, p2: prev.p2 };
@@ -547,47 +589,18 @@ function WelcomePage({
 
         channel.listen('.GameFinished', (data: Record<string, unknown>) => {
             pushEvent('GameFinished', data);
-            setCountdown(null);
-            setUrgentCountdown(null);
-            roundStartedAtRef.current = null;
             setHealth({
                 p1: data.player_one_health as number,
                 p2: data.player_two_health as number,
             });
-            setGameOver(true);
-
             const winnerId = data.winner_id as string | null;
-            setWinnerId(winnerId);
             const name =
                 winnerId === game.player_one.id
                     ? game.player_one.user.name
                     : winnerId === game.player_two.id
                       ? game.player_two.user.name
                       : null;
-            setWinnerName(name);
-
-            scheduleEndSequence(() => {
-                setGame(null);
-                setRound(null);
-                setLocation(null);
-                setHeading(null);
-                setHealth({ p1: 5000, p2: 5000 });
-                setGameOver(false);
-                setEvents([]);
-                setMessages([]);
-                setCountdown(null);
-                setUrgentCountdown(null);
-                setPin(null);
-                setRoundFinished(false);
-                setMapHovered(false);
-                setRoundResult(null);
-                setRoundScores({ p1: null, p2: null });
-                setChatOpen(false);
-                setChatText('');
-                setWinnerId(null);
-                setWinnerName(null);
-                setWinnerOverlayVisible(false);
-            });
+            triggerGameOver(winnerId, name);
         });
 
         return () => {
@@ -597,6 +610,24 @@ function WelcomePage({
     }, [game?.id]);
 
     useEffect(() => () => clearEndSequenceTimers(), []);
+
+    useEffect(() => {
+        gameOverRef.current = gameOver;
+    }, [gameOver]);
+
+    useEffect(() => {
+        if (!game || gameOver) return;
+        if (health.p1 >= 0 && health.p2 >= 0) return;
+
+        const winnerId =
+            health.p1 < 0 ? game.player_two.id : game.player_one.id;
+        const winnerName =
+            winnerId === game.player_one.id
+                ? game.player_one.user.name
+                : game.player_two.user.name;
+
+        triggerGameOver(winnerId, winnerName);
+    }, [game?.id, gameOver, health.p1, health.p2]);
 
     // Detect when my health drops → screen vignette + shake
     useEffect(() => {
