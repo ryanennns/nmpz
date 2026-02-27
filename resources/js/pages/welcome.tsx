@@ -2,11 +2,13 @@ import { setOptions } from '@googlemaps/js-api-loader';
 import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import ChatSidebar from '@/components/welcome/ChatSidebar';
 import HealthBar from '@/components/welcome/HealthBar';
 import Lobby from '@/components/welcome/Lobby';
 import MapPicker from '@/components/welcome/MapPicker';
 import ResultsMap from '@/components/welcome/ResultsMap';
 import ShimmerText from '@/components/welcome/ShimmerText';
+import { StandardCompass } from '@/components/welcome/StandardCompass';
 import StreetViewPanel from '@/components/welcome/StreetViewPanel';
 import type {
     Game,
@@ -20,6 +22,7 @@ import type {
 } from '@/components/welcome/types';
 import { WinnerOverlay } from '@/components/welcome/WinnerOverlay';
 import echo from '@/echo';
+import { cn } from '@/lib/utils';
 
 const MAX_EVENTS = 5;
 const MAX_MESSAGES = 6;
@@ -82,6 +85,28 @@ function roundRemainingSeconds(startedAt: Date | null) {
 
 // --- Page ---
 
+function CountdownTimer({
+    config,
+}: {
+    config: { value: number; label: string; valueClass: string };
+}) {
+    return (
+        <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-4 py-3 text-center backdrop-blur-sm">
+            <div
+                className={cn(
+                    'font-mono text-6xl font-bold tabular-nums',
+                    config.valueClass,
+                )}
+            >
+                {config.value}
+            </div>
+            <div className="mt-1 font-mono text-sm text-white/40">
+                {config.label}
+            </div>
+        </div>
+    );
+}
+
 export default function Welcome({
     player,
     game: initialGame,
@@ -134,7 +159,6 @@ export default function Welcome({
     const queueFadeTimerRef = useRef<number | null>(null);
     const [chatOpen, setChatOpen] = useState(false);
     const [chatText, setChatText] = useState('');
-    const chatInputRef = useRef<HTMLInputElement | null>(null);
     const lastRememberedGameId = useRef<string | null>(null);
 
     const isPlayerOne = game ? player.id === game.player_one.id : false;
@@ -172,6 +196,31 @@ export default function Welcome({
     const gameState = round
         ? deriveGameState(round, gameOver, roundFinished)
         : 'waiting';
+    const hasRoundCountdown = roundFinished && countdown !== null;
+    const hasUrgentCountdown =
+        (gameState === 'one_guessed' || gameState === 'waiting') &&
+        urgentCountdown !== null;
+    const countdownConfig = hasRoundCountdown
+        ? {
+              value: countdown as number,
+              label: 'next round',
+              valueClass: 'text-white',
+          }
+        : hasUrgentCountdown
+          ? {
+                value: urgentCountdown as number,
+                label:
+                    gameState === 'waiting'
+                        ? 'time to guess'
+                        : myLocked
+                          ? 'waiting for opponent'
+                          : 'time to guess',
+                valueClass: cn({
+                    'text-red-400': (urgentCountdown as number) <= 15,
+                    'text-amber-400': (urgentCountdown as number) > 15,
+                }),
+            }
+          : null;
 
     function pushEvent(name: GameEvent['name'], data: Record<string, unknown>) {
         setEvents((prev) => [
@@ -686,12 +735,6 @@ export default function Welcome({
         };
     }, [location]);
 
-    useEffect(() => {
-        if (!chatOpen) return;
-        const t = setTimeout(() => chatInputRef.current?.focus(), 0);
-        return () => clearTimeout(t);
-    }, [chatOpen]);
-
     const stateLabel: Record<GameState, ReactNode> = {
         waiting:
             urgentCountdown !== null ? (
@@ -777,89 +820,21 @@ export default function Welcome({
                                                 color={me?.barColor ?? 'blue'}
                                             />
                                         </div>
-                                        <div className="pointer-events-none space-y-2">
-                                            {messages.length > 0 && (
-                                                <div className="rounded border border-white/10 bg-black/50 p-2 text-xs text-white/80 backdrop-blur-sm">
-                                                    {messages.map((m) => (
-                                                        <div
-                                                            key={m.id}
-                                                            className="mb-1 last:mb-0"
-                                                        >
-                                                            <span className="text-white/40">
-                                                                {m.ts}
-                                                            </span>{' '}
-                                                            <span className="text-white/70">
-                                                                {m.name}:
-                                                            </span>{' '}
-                                                            <span>
-                                                                {m.text}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            <div
-                                                className={`pointer-events-auto rounded border border-white/10 bg-black/60 p-2 text-xs backdrop-blur-sm ${chatOpen ? '' : 'opacity-70'}`}
-                                            >
-                                                {chatOpen ? (
-                                                    <input
-                                                        ref={chatInputRef}
-                                                        value={chatText}
-                                                        maxLength={255}
-                                                        onChange={(e) =>
-                                                            setChatText(
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                        onKeyDown={(e) => {
-                                                            if (
-                                                                e.key ===
-                                                                'Enter'
-                                                            ) {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                void sendMessage();
-                                                            }
-                                                        }}
-                                                        placeholder="Type a message…"
-                                                        className="w-full bg-transparent text-white outline-none placeholder:text-white/30"
-                                                    />
-                                                ) : (
-                                                    <div className="text-white/40">
-                                                        Press Enter to chat
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
+                                        <ChatSidebar
+                                            messages={messages}
+                                            chatOpen={chatOpen}
+                                            chatText={chatText}
+                                            onChatTextChange={setChatText}
+                                            onSendMessage={() =>
+                                                void sendMessage()
+                                            }
+                                        />
                                     </div>
-                                    {roundFinished && countdown !== null && (
-                                        <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-4 py-3 text-center backdrop-blur-sm">
-                                            <div className="font-mono text-6xl font-bold text-white tabular-nums">
-                                                {countdown}
-                                            </div>
-                                            <div className="mt-1 font-mono text-sm text-white/40">
-                                                next round
-                                            </div>
-                                        </div>
+                                    {countdownConfig && (
+                                        <CountdownTimer
+                                            config={countdownConfig}
+                                        />
                                     )}
-                                    {(gameState === 'one_guessed' ||
-                                        gameState === 'waiting') &&
-                                        urgentCountdown !== null && (
-                                            <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-4 py-3 text-center backdrop-blur-sm">
-                                                <div
-                                                    className={`font-mono text-6xl font-bold tabular-nums ${urgentCountdown <= 15 ? 'text-red-400' : 'text-amber-400'}`}
-                                                >
-                                                    {urgentCountdown}
-                                                </div>
-                                                <div className="mt-1 font-mono text-sm text-white/40">
-                                                    {gameState === 'waiting'
-                                                        ? 'time to guess'
-                                                        : myLocked
-                                                          ? 'waiting for opponent'
-                                                          : 'time to guess'}
-                                                </div>
-                                            </div>
-                                        )}
                                     <div className="pointer-events-none absolute top-6 right-8 z-20 rounded bg-black/50 px-4 py-3 text-right backdrop-blur-sm">
                                         {roundFinished &&
                                             opponent?.score !== null && (
@@ -916,37 +891,8 @@ export default function Welcome({
                         </div>
 
                         {/* Bottom-center: compass */}
-                        {location && heading !== null && (
-                            <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center justify-center">
-                                <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/30 bg-black/60 backdrop-blur-sm">
-                                    <div className="absolute inset-2 rounded-full border border-white/15" />
-                                    <div className="absolute top-1 left-1/2 -translate-x-1/2 text-xs font-semibold text-white">
-                                        N
-                                    </div>
-                                    <div className="absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-white/50">
-                                        E
-                                    </div>
-                                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-white/50">
-                                        S
-                                    </div>
-                                    <div className="absolute top-1/2 left-2 -translate-y-1/2 text-[10px] text-white/50">
-                                        W
-                                    </div>
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div
-                                            className="relative h-14 w-2.5"
-                                            style={{
-                                                transform: `rotate(${heading}deg)`,
-                                                transformOrigin: '50% 50%',
-                                            }}
-                                        >
-                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 border-r-[4px] border-b-[22px] border-l-[4px] border-r-transparent border-b-red-500/90 border-l-transparent" />
-                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 border-t-[22px] border-r-[4px] border-l-[4px] border-t-slate-300/80 border-r-transparent border-l-transparent" />
-                                        </div>
-                                    </div>
-                                    <div className="h-2 w-2 rounded-full bg-white/60" />
-                                </div>
-                            </div>
+                        {location && heading && (
+                            <StandardCompass heading={heading} />
                         )}
 
                         {/* Bottom-right: guess map for current player */}
@@ -987,7 +933,6 @@ export default function Welcome({
                         <div
                             className={`pointer-events-none absolute inset-0 z-40 bg-black transition-opacity duration-500 ${blackoutVisible ? 'opacity-100' : 'opacity-0'}`}
                         />
-
                         <WinnerOverlay
                             visible={winnerOverlayVisible}
                             winnerId={winnerId}
