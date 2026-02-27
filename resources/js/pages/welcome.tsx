@@ -16,6 +16,7 @@ import type {
     GameState,
     LatLng,
     Location,
+    Message,
     Player,
     Round,
     RoundResult,
@@ -131,9 +132,7 @@ export default function Welcome({
     });
     const [gameOver, setGameOver] = useState(false);
     const [events, setEvents] = useState<GameEvent[]>([]);
-    const [messages, setMessages] = useState<
-        { id: number; name: string; text: string; ts: string }[]
-    >([]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [countdown, setCountdown] = useState<number | null>(null);
     const [urgentCountdown, setUrgentCountdown] = useState<number | null>(null);
     const [pendingRoundData, setPendingRoundData] = useState<Record<

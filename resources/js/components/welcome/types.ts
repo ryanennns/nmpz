@@ -48,3 +48,10 @@ export interface GameStats {
     rounds_played: number;
     total_players: number;
 }
+
+export interface Message {
+    id: number;
+    name: string;
+    text: string;
+    ts: string;
+}
