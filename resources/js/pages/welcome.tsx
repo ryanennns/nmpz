@@ -1,7 +1,7 @@
 import { setOptions } from '@googlemaps/js-api-loader';
 import { Head } from '@inertiajs/react';
-import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import HealthBar from '@/components/welcome/HealthBar';
 import Lobby from '@/components/welcome/Lobby';
 import MapPicker from '@/components/welcome/MapPicker';
@@ -26,6 +26,20 @@ const END_MAP_HOLD_MS = 3000;
 const END_FADE_MS = 500;
 const END_WINNER_HOLD_MS = 2500;
 const QUEUE_FADE_MS = 500;
+
+type RoundData = {
+    game_id: string;
+    round_id: string;
+    round_number: number;
+    player_one_health: number;
+    player_two_health: number;
+    location_lat: number;
+    location_lng: number;
+    location_heading: number;
+    started_at?: string | null;
+    player_one_locked_in?: boolean;
+    player_two_locked_in?: boolean;
+};
 
 setOptions({
     key: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
@@ -71,10 +85,12 @@ export default function Welcome({
     player,
     game: initialGame,
     queue_count: initialQueueCount,
+    round_data: initialRoundData,
 }: {
     player: Player;
     game: Game | null;
     queue_count: number;
+    round_data?: RoundData | null;
 }) {
     const [game, setGame] = useState<Game | null>(initialGame);
     const [playerName, setPlayerName] = useState<string | null>(
@@ -118,6 +134,7 @@ export default function Welcome({
     const [chatOpen, setChatOpen] = useState(false);
     const [chatText, setChatText] = useState('');
     const chatInputRef = useRef<HTMLInputElement | null>(null);
+    const lastRememberedGameId = useRef<string | null>(null);
 
     const isPlayerOne = game ? player.id === game.player_one.id : false;
     const myLocked = round
@@ -151,6 +168,33 @@ export default function Welcome({
             window.clearTimeout(queueFadeTimerRef.current);
             queueFadeTimerRef.current = null;
         }
+    }
+
+    function applyRoundData(data: RoundData) {
+        const startedAt = data.started_at ? new Date(data.started_at) : null;
+        roundStartedAtRef.current = startedAt;
+        setUrgentCountdown(roundRemainingSeconds(startedAt));
+        setRoundFinished(false);
+        setRoundResult(null);
+        setRoundScores({ p1: null, p2: null });
+        setHealth({
+            p1: data.player_one_health,
+            p2: data.player_two_health,
+        });
+        setLocation({
+            lat: data.location_lat,
+            lng: data.location_lng,
+            heading: data.location_heading,
+        });
+        setHeading(data.location_heading);
+        setRound({
+            id: data.round_id,
+            round_number: data.round_number,
+            player_one_locked_in: data.player_one_locked_in ?? false,
+            player_two_locked_in: data.player_two_locked_in ?? false,
+        });
+        setPin(null);
+        setCountdown(null);
     }
 
     function scheduleEndSequence(resetGame: () => void) {
@@ -242,6 +286,11 @@ export default function Welcome({
         setPin(null);
     }, [countdown, pendingRoundData]);
 
+    useEffect(() => {
+        if (!initialRoundData) return;
+        applyRoundData(initialRoundData);
+    }, []);
+
     // Countdown tick (15s guess deadline)
     useEffect(() => {
         if (urgentCountdown === null || urgentCountdown <= 0) return;
@@ -251,6 +300,39 @@ export default function Welcome({
         );
         return () => clearTimeout(t);
     }, [urgentCountdown]);
+
+    // Remember ongoing game in session
+    useEffect(() => {
+        if (!game) {
+            if (lastRememberedGameId.current) {
+                const url = `/players/${player.id}/games/${lastRememberedGameId.current}/remember`;
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-XSRF-TOKEN': getCsrfToken(),
+                    },
+                    body: JSON.stringify({ active: false }),
+                }).catch(() => {});
+                lastRememberedGameId.current = null;
+            }
+            return;
+        }
+
+        if (lastRememberedGameId.current === game.id) return;
+
+        lastRememberedGameId.current = game.id;
+        fetch(`/players/${player.id}/games/${game.id}/remember`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': getCsrfToken(),
+            },
+            body: JSON.stringify({ active: true }),
+        }).catch(() => {});
+    }, [game?.id, player.id]);
 
     // Matchmaking channel — only when waiting for a game
     useEffect(() => {
