@@ -42,21 +42,21 @@ export default function RoundSummaryPanel({
     ];
 
     return (
-        <div className="absolute bottom-20 left-1/2 z-20 -translate-x-1/2 rounded border border-white/10 bg-black/80 px-6 py-4 font-mono text-xs backdrop-blur-sm">
-            <table className="w-full">
+        <div className="absolute bottom-20 left-1/2 z-20 -translate-x-1/2 rounded border border-white/10 bg-black/80 px-2 py-4 font-mono text-xs backdrop-blur-sm">
+            <table className="w-full" style={{ borderSpacing: 0 }}>
                 <thead>
                     <tr className="text-white/40">
-                        <th className="pr-6 text-left font-normal"></th>
-                        <th className={`w-28 text-right font-normal ${myColor}`}>You</th>
-                        <th className={`w-28 text-right font-normal ${opponentColor}`}>{opponentName}</th>
+                        <th className="w-24 text-center font-normal"></th>
+                        <th className={`w-28 text-center font-normal ${myColor}`}>You</th>
+                        <th className={`w-28 text-center font-normal ${opponentColor}`}>{opponentName}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {rows.map((row) => (
                         <tr key={row.label} className="text-white/80">
-                            <td className="pr-6 pt-1 text-white/40">{row.label}</td>
-                            <td className={`pt-1 text-right ${myColor}`}>{row.me}</td>
-                            <td className={`pt-1 text-right ${opponentColor}`}>{row.opponent}</td>
+                            <td className="pt-1 text-center text-white/40">{row.label}</td>
+                            <td className={`pt-1 text-center ${myColor}`}>{row.me}</td>
+                            <td className={`pt-1 text-center ${opponentColor}`}>{row.opponent}</td>
                         </tr>
                     ))}
                 </tbody>
