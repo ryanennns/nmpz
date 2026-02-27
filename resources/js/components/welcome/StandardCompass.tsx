@@ -1,41 +1,92 @@
+const DIRECTIONS = [
+    { label: 'N', deg: 0, cardinal: true },
+    { label: 'NE', deg: 45, cardinal: false },
+    { label: 'E', deg: 90, cardinal: true },
+    { label: 'SE', deg: 135, cardinal: false },
+    { label: 'S', deg: 180, cardinal: true },
+    { label: 'SW', deg: 225, cardinal: false },
+    { label: 'W', deg: 270, cardinal: true },
+    { label: 'NW', deg: 315, cardinal: false },
+] as const;
+
+const TICK_INTERVAL = 15;
+const TICKS_COUNT = 360 / TICK_INTERVAL; // 24
+const PX_PER_DEG = 2.4;
+const STRIP_WIDTH = 360 * PX_PER_DEG; // 864px
+
 export const StandardCompass = ({ heading }: { heading: number }) => {
+    const offset = -((heading % 360 + 360) % 360) * PX_PER_DEG;
+
     return (
-        <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center justify-center">
-            <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/30 bg-black/60 backdrop-blur-sm">
-                <div className="absolute inset-2 rounded-full border border-white/15" />
+        <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2">
+            {/* Center indicator */}
+            <div className="absolute top-0 left-1/2 z-10 -translate-x-1/2">
+                <div className="h-0 w-0 border-t-[6px] border-r-[5px] border-l-[5px] border-t-white border-r-transparent border-l-transparent" />
+            </div>
+
+            {/* Compass bar */}
+            <div
+                className="relative mt-[6px] overflow-hidden rounded bg-black/50 backdrop-blur-sm"
+                style={{
+                    width: 360,
+                    height: 32,
+                    maskImage:
+                        'linear-gradient(to right, transparent, black 12%, black 88%, transparent)',
+                    WebkitMaskImage:
+                        'linear-gradient(to right, transparent, black 12%, black 88%, transparent)',
+                }}
+            >
                 <div
-                    className="absolute inset-0"
+                    className="absolute top-0 h-full"
                     style={{
-                        transform: `rotate(${-heading}deg)`,
-                        transformOrigin: '50% 50%',
+                        width: STRIP_WIDTH * 3,
+                        transform: `translateX(${offset + 180 * PX_PER_DEG - STRIP_WIDTH}px)`,
+                        willChange: 'transform',
                     }}
                 >
-                    <div className="absolute top-1 left-1/2 -translate-x-1/2 text-xs font-semibold text-white">
-                        N
-                    </div>
-                    <div className="absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-white/50">
-                        E
-                    </div>
-                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-white/50">
-                        S
-                    </div>
-                    <div className="absolute top-1/2 left-2 -translate-y-1/2 text-[10px] text-white/50">
-                        W
-                    </div>
+                    {[0, 1, 2].map((copy) =>
+                        DIRECTIONS.map((dir) => (
+                            <span
+                                key={`d-${copy}-${dir.deg}`}
+                                className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 font-mono leading-none ${
+                                    dir.cardinal
+                                        ? 'text-xs font-bold text-white'
+                                        : 'text-[10px] font-medium text-white/50'
+                                }`}
+                                style={{
+                                    left:
+                                        copy * STRIP_WIDTH +
+                                        dir.deg * PX_PER_DEG,
+                                }}
+                            >
+                                {dir.label}
+                            </span>
+                        )),
+                    )}
+                    {[0, 1, 2].map((copy) =>
+                        Array.from({ length: TICKS_COUNT }, (_, i) => {
+                            const deg = i * TICK_INTERVAL;
+                            const isCardinal = deg % 90 === 0;
+                            const isIntercardinal =
+                                deg % 45 === 0 && !isCardinal;
+                            if (isCardinal || isIntercardinal) return null;
+                            return (
+                                <span
+                                    key={`t-${copy}-${deg}`}
+                                    className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 text-white/20"
+                                    style={{
+                                        left:
+                                            copy * STRIP_WIDTH +
+                                            deg * PX_PER_DEG,
+                                        height: deg % 30 === 0 ? 10 : 6,
+                                        width: 1,
+                                        backgroundColor: 'currentColor',
+                                    }}
+                                />
+                            );
+                        }),
+                    )}
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div
-                        className="relative h-14 w-2.5"
-                        style={{
-                            transform: `rotate(${-heading}deg)`,
-                            transformOrigin: '50% 50%',
-                        }}
-                    >
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 border-r-[4px] border-b-[22px] border-l-[4px] border-r-transparent border-b-red-500/90 border-l-transparent" />
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 border-t-[22px] border-r-[4px] border-l-[4px] border-t-slate-300/80 border-r-transparent border-l-transparent" />
-                    </div>
-                </div>
-                <div className="h-2 w-2 rounded-full bg-white/60" />
             </div>
         </div>
     );
