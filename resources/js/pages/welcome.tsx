@@ -18,6 +18,7 @@ import type {
     Round,
     RoundResult,
 } from '@/components/welcome/types';
+import { WinnerOverlay } from '@/components/welcome/WinnerOverlay';
 import echo from '@/echo';
 
 const MAX_EVENTS = 5;
@@ -142,6 +143,32 @@ export default function Welcome({
             ? round.player_one_locked_in
             : round.player_two_locked_in
         : false;
+    type PlayerColour = 'blue' | 'red';
+    const playerConfig = game
+        ? {
+              me: {
+                  color: isPlayerOne ? 'text-blue-400' : 'text-red-400',
+                  colorDim: isPlayerOne
+                      ? 'text-blue-400/60'
+                      : 'text-red-400/60',
+                  health: isPlayerOne ? health.p1 : health.p2,
+                  score: isPlayerOne ? roundScores.p1 : roundScores.p2,
+                  barColor: isPlayerOne ? 'blue' : ('red' as PlayerColour),
+              },
+              opponent: {
+                  color: isPlayerOne ? 'text-red-400' : 'text-blue-400',
+                  colorDim: isPlayerOne
+                      ? 'text-red-400/60'
+                      : 'text-blue-400/60',
+                  health: isPlayerOne ? health.p2 : health.p1,
+                  score: isPlayerOne ? roundScores.p2 : roundScores.p1,
+                  barColor: isPlayerOne ? 'red' : ('blue' as PlayerColour),
+                  name: isPlayerOne
+                      ? game.player_two.user.name
+                      : game.player_one.user.name,
+              },
+          }
+        : null;
     const gameState = round
         ? deriveGameState(round, gameOver, roundFinished)
         : 'waiting';
@@ -727,55 +754,27 @@ export default function Welcome({
 
                         {/* Top corners: player panels (always visible) */}
                         {(() => {
-                            const myColor = isPlayerOne
-                                ? 'text-blue-400'
-                                : 'text-red-400';
-                            const myColorDim = isPlayerOne
-                                ? 'text-blue-400/60'
-                                : 'text-red-400/60';
-                            const myHealth = isPlayerOne
-                                ? health.p1
-                                : health.p2;
-                            const myScore = isPlayerOne
-                                ? roundScores.p1
-                                : roundScores.p2;
-                            const oppColor = isPlayerOne
-                                ? 'text-red-400'
-                                : 'text-blue-400';
-                            const oppColorDim = isPlayerOne
-                                ? 'text-red-400/60'
-                                : 'text-blue-400/60';
-                            const oppHealth = isPlayerOne
-                                ? health.p2
-                                : health.p1;
-                            const oppScore = isPlayerOne
-                                ? roundScores.p2
-                                : roundScores.p1;
-                            const oppName = isPlayerOne
-                                ? game.player_two.user.name
-                                : game.player_one.user.name;
+                            const { me, opponent } = playerConfig ?? {};
                             return (
                                 <>
                                     <div className="pointer-events-none absolute top-6 left-8 z-20 flex w-72 flex-col gap-3">
                                         <div className="rounded bg-black/50 px-4 py-3 backdrop-blur-sm">
                                             {roundFinished &&
-                                                myScore !== null && (
+                                                me?.score !== null && (
                                                     <div
-                                                        className={`${myColor} mb-3 font-mono text-6xl font-bold tabular-nums`}
+                                                        className={`${me?.color} mb-3 font-mono text-6xl font-bold tabular-nums`}
                                                     >
-                                                        {myScore.toLocaleString()}
+                                                        {me?.score?.toLocaleString()}
                                                     </div>
                                                 )}
                                             <div
-                                                className={`${myColorDim} mb-1 font-mono text-xs`}
+                                                className={`${me?.colorDim} mb-1 font-mono text-xs`}
                                             >
                                                 You
                                             </div>
                                             <HealthBar
-                                                health={myHealth}
-                                                color={
-                                                    isPlayerOne ? 'blue' : 'red'
-                                                }
+                                                health={me?.health ?? 0}
+                                                color={me?.barColor ?? 'blue'}
                                             />
                                         </div>
                                         <div className="pointer-events-none space-y-2">
@@ -862,21 +861,22 @@ export default function Welcome({
                                             </div>
                                         )}
                                     <div className="pointer-events-none absolute top-6 right-8 z-20 rounded bg-black/50 px-4 py-3 text-right backdrop-blur-sm">
-                                        {roundFinished && oppScore !== null && (
-                                            <div
-                                                className={`${oppColor} mb-3 font-mono text-6xl font-bold tabular-nums`}
-                                            >
-                                                {oppScore.toLocaleString()}
-                                            </div>
-                                        )}
+                                        {roundFinished &&
+                                            opponent?.score !== null && (
+                                                <div
+                                                    className={`${opponent?.color} mb-3 font-mono text-6xl font-bold tabular-nums`}
+                                                >
+                                                    {opponent?.score?.toLocaleString()}
+                                                </div>
+                                            )}
                                         <div
-                                            className={`${oppColorDim} mb-1 font-mono text-xs`}
+                                            className={`${opponent?.colorDim} mb-1 font-mono text-xs`}
                                         >
-                                            {oppName}
+                                            {opponent?.name}
                                         </div>
                                         <HealthBar
-                                            health={oppHealth}
-                                            color={isPlayerOne ? 'red' : 'blue'}
+                                            health={opponent?.health ?? 0}
+                                            color={opponent?.barColor ?? 'red'}
                                         />
                                     </div>
                                 </>
@@ -988,23 +988,12 @@ export default function Welcome({
                             className={`pointer-events-none absolute inset-0 z-40 bg-black transition-opacity duration-500 ${blackoutVisible ? 'opacity-100' : 'opacity-0'}`}
                         />
 
-                        {/* Winner overlay */}
-                        <div
-                            className={`pointer-events-none absolute inset-0 z-50 flex flex-col items-center justify-center transition-opacity duration-500 ${winnerOverlayVisible ? 'opacity-100' : 'opacity-0'}`}
-                        >
-                            <div className="font-mono text-6xl font-bold tracking-wide text-white">
-                                {winnerId === null
-                                    ? 'Draw'
-                                    : winnerId === player.id
-                                      ? 'you won'
-                                      : 'you lost'}
-                            </div>
-                            {winnerId !== null && winnerName && (
-                                <div className="mt-3 font-mono text-xs text-white/40">
-                                    winner: {winnerName}
-                                </div>
-                            )}
-                        </div>
+                        <WinnerOverlay
+                            visible={winnerOverlayVisible}
+                            winnerId={winnerId}
+                            id={player.id}
+                            winnerName={winnerName}
+                        />
                     </div>
                 )}
             </div>

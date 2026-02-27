@@ -219,9 +219,7 @@ export default function Lobby({
                     that, while capable, i certainly wouldn't trust with my
                     life.
                 </p>
-                <p className="mt-4 font-bold">
-                    - ryan :)
-                </p>
+                <p className="mt-4 font-bold">- ryan :)</p>
             </SimpleModal>
         </>
     );
