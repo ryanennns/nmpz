@@ -73,11 +73,14 @@ type GameChannelDeps = {
     setLocation: Dispatch<SetStateAction<Location | null>>;
     setHeading: Dispatch<SetStateAction<number | null>>;
     setRematchState: Dispatch<SetStateAction<RematchState>>;
+    setOpponentLiveGuess: Dispatch<SetStateAction<{ lat: number; lng: number } | null>>;
+    setPostGameButtonsVisible: (v: boolean) => void;
+    setWinnerOverlayVisible: (v: boolean) => void;
+    setPageVisible: (v: boolean) => void;
+    setBlackoutVisible: (v: boolean) => void;
     scheduleEndSequence: (resetGame: () => void) => void;
-    dismissEndSequence: (resetGame: () => void) => void;
     clearEndSequenceTimers: () => void;
     resetGameState: () => void;
-    setOpponentLiveGuess: Dispatch<SetStateAction<{ lat: number; lng: number } | null>>;
     playerId: string;
     playSound: (name: SoundName) => void;
 };
@@ -101,10 +104,13 @@ export function useGameChannel(deps: GameChannelDeps) {
         setWinnerId,
         setWinnerName,
         setRematchState,
-        scheduleEndSequence,
-        dismissEndSequence,
-        clearEndSequenceTimers,
         setOpponentLiveGuess,
+        setPostGameButtonsVisible,
+        setWinnerOverlayVisible,
+        setPageVisible,
+        setBlackoutVisible,
+        scheduleEndSequence,
+        clearEndSequenceTimers,
         resetGameState,
         playerId,
         playSound,
@@ -275,14 +281,25 @@ export function useGameChannel(deps: GameChannelDeps) {
             (data: RematchAcceptedData) => {
                 clearEndSequenceTimers();
                 setRematchState('none');
-                dismissEndSequence(() => {
+                // Skip the full dismiss animation — directly swap to new game
+                // to avoid tearing down the channel and missing RoundStarted
+                setPostGameButtonsVisible(false);
+                setWinnerOverlayVisible(false);
+                setPageVisible(false);
+                window.setTimeout(() => {
                     resetGameState();
                     setGame(data.new_game);
                     setHealth({
                         p1: data.new_game.player_one_health,
                         p2: data.new_game.player_two_health,
                     });
-                });
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            setPageVisible(true);
+                            setBlackoutVisible(false);
+                        });
+                    });
+                }, 500);
             },
         );
 
