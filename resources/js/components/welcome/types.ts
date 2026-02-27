@@ -42,3 +42,9 @@ export type GameEvent = {
 };
 
 export type LatLng = { lat: number; lng: number };
+
+export interface GameStats {
+    games_in_progress: number;
+    rounds_played: number;
+    total_players: number;
+}

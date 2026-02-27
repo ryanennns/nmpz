@@ -2,8 +2,8 @@ import { MessageCircleQuestion } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
 import NamePrompt from '@/components/welcome/NamePrompt';
-import ShimmerText from '@/components/welcome/ShimmerText';
 import type { Player } from '@/components/welcome/types';
+import { WaitingRoom } from '@/components/welcome/WaitingRoom';
 
 function getCsrfToken() {
     const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
@@ -148,27 +148,13 @@ export default function Lobby({
                     className={`transition-opacity duration-300 ${panelVisible ? 'opacity-100' : 'opacity-0'}`}
                 >
                     {queued ? (
-                        <div className="text-center">
-                            <div className="mb-2 text-xs text-white/50">
-                                {playerName}
-                            </div>
-                            <ShimmerText>waiting for opponent</ShimmerText>
-                            <div className="mt-2 min-h-[1.25rem] text-xs text-white/40">
-                                {stats && (
-                                    <div
-                                        className={`transition-opacity duration-500 ${statVisible ? 'opacity-100' : 'opacity-0'}`}
-                                    >
-                                        {statText}
-                                    </div>
-                                )}
-                            </div>
-                            <button
-                                onClick={() => void leaveQueue()}
-                                className="mt-3 rounded px-2 py-1 text-xs text-white/20 transition-all duration-500 hover:bg-white/5 hover:text-white/50"
-                            >
-                                leave queue
-                            </button>
-                        </div>
+                        <WaitingRoom
+                            playerName={playerName}
+                            stats={stats}
+                            statVisible={statVisible}
+                            statText={statText}
+                            onClick={() => void leaveQueue()}
+                        />
                     ) : (
                         <div className="flex w-full max-w-sm flex-col items-center gap-4">
                             <div className="relative text-center font-mono text-5xl text-white">
