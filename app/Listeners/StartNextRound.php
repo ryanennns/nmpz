@@ -10,9 +10,8 @@ use App\Jobs\ForceEndRound;
 use App\Models\Game;
 use App\Models\Location;
 use App\Models\Round;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
-class StartNextRound implements ShouldQueue
+class StartNextRound
 {
     public function handle(RoundFinished $event): void
     {
