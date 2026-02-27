@@ -10,6 +10,7 @@ import ResultsMap from '@/components/welcome/ResultsMap';
 import ShimmerText from '@/components/welcome/ShimmerText';
 import { StandardCompass } from '@/components/welcome/StandardCompass';
 import StreetViewPanel from '@/components/welcome/StreetViewPanel';
+import { GameProvider, useGameContext } from '@/components/welcome/GameContext';
 import type {
     Game,
     GameEvent,
@@ -119,7 +120,27 @@ export default function Welcome({
     queue_count: number;
     round_data?: RoundData | null;
 }) {
-    const [game, setGame] = useState<Game | null>(initialGame);
+    return (
+        <GameProvider initialGame={initialGame}>
+            <WelcomePage
+                player={player}
+                queue_count={initialQueueCount}
+                round_data={initialRoundData}
+            />
+        </GameProvider>
+    );
+}
+
+function WelcomePage({
+    player,
+    queue_count: initialQueueCount,
+    round_data: initialRoundData,
+}: {
+    player: Player;
+    queue_count: number;
+    round_data?: RoundData | null;
+}) {
+    const { game, setGame } = useGameContext();
     const [playerName, setPlayerName] = useState<string | null>(
         player.name ?? null,
     );
@@ -127,8 +148,8 @@ export default function Welcome({
     const [location, setLocation] = useState<Location | null>(null);
     const [heading, setHeading] = useState<number | null>(null);
     const [health, setHealth] = useState({
-        p1: initialGame?.player_one_health ?? 5000,
-        p2: initialGame?.player_two_health ?? 5000,
+        p1: game?.player_one_health ?? 5000,
+        p2: game?.player_two_health ?? 5000,
     });
     const [gameOver, setGameOver] = useState(false);
     const [events, setEvents] = useState<GameEvent[]>([]);
