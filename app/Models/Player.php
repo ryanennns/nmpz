@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\GameStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -39,5 +40,16 @@ class Player extends Model
     {
         return Game::where('player_one_id', $this->getKey())
             ->orWhere('player_two_id', $this->getKey());
+    }
+
+    public function hasActiveGame(): bool
+    {
+        return Game::query()
+            ->where('status', GameStatus::InProgress)
+            ->where(function ($query) {
+                $query->where('player_one_id', $this->getKey())
+                    ->orWhere('player_two_id', $this->getKey());
+            })
+            ->exists();
     }
 }

@@ -23,6 +23,10 @@ class JoinQueue extends Controller
             return response()->json(['error' => 'Name is required'], 422);
         }
 
+        if ($player->hasActiveGame()) {
+            return response()->json(['error' => 'Player already in game'], 409);
+        }
+
         $queue = Cache::get('matchmaking_queue', []);
         $queue = array_values(array_filter($queue, fn ($id) => $id !== $player->getKey()));
 
