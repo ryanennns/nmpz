@@ -33,6 +33,13 @@ class JoinQueue extends Controller
         $queue[] = $player->getKey();
         $queue = array_values(array_unique($queue));
         Cache::put('matchmaking_queue', $queue, now()->addMinutes(5));
+
+        // Record join time for ELO-based matchmaking window expansion
+        $joinTimes = Cache::get('matchmaking_queue_times', []);
+        if (! isset($joinTimes[$player->getKey()])) {
+            $joinTimes[$player->getKey()] = time();
+            Cache::put('matchmaking_queue_times', $joinTimes, now()->addMinutes(5));
+        }
         MatchmakeQueueJob::dispatch();
 
         return response()->json([

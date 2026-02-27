@@ -62,6 +62,12 @@ export function useApiClient(playerId: string) {
             );
         },
         fetchStats: () => client.get('/stats'),
+        fetchLeaderboard: () => client.get('/leaderboard'),
+        fetchPlayerStats: () => client.get(`/players/${playerId}/stats`),
+        requestRematch: (gameId: string) =>
+            client.post(`/players/${playerId}/games/${gameId}/rematch`),
+        declineRematch: (gameId: string) =>
+            client.post(`/players/${playerId}/games/${gameId}/decline-rematch`),
         client,
     };
 }

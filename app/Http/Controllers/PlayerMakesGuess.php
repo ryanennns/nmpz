@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\OpponentGuessUpdate;
 use App\Events\PlayerGuessed;
 use App\Events\RoundFinished;
 use App\Jobs\ForceEndRound;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Game;
 use App\Models\Player;
 use App\Models\Round;
@@ -49,6 +51,17 @@ class PlayerMakesGuess extends Controller
         }
 
         $round->save();
+
+        // Broadcast live guess position to opponent if they've already locked in
+        $opponentLocked = $isPlayerOne ? $round->player_two_locked_in : $round->player_one_locked_in;
+        $myLocked = $isPlayerOne ? $round->player_one_locked_in : $round->player_two_locked_in;
+        if ($opponentLocked && ! $myLocked) {
+            $cacheKey = "opponent_guess_throttle:{$round->getKey()}:{$player->getKey()}";
+            if (! Cache::has($cacheKey)) {
+                Cache::put($cacheKey, true, now()->addMilliseconds(500));
+                OpponentGuessUpdate::dispatch($game, $player->getKey(), (float) $validated['lat'], (float) $validated['lng']);
+            }
+        }
 
         if (($validated['locked_in'] ?? false) === true) {
             PlayerGuessed::dispatch($round, $player);

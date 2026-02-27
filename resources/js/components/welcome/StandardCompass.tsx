@@ -15,13 +15,18 @@ const PX_PER_DEG = 2.4;
 const STRIP_WIDTH = 360 * PX_PER_DEG; // 864px
 
 export const StandardCompass = ({ heading }: { heading: number }) => {
-    const offset = -(((heading % 360) + 360) % 360) * PX_PER_DEG;
+    const offset = -((heading % 360 + 360) % 360) * PX_PER_DEG;
 
     return (
-        <div className="pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2">
+        <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2">
+            {/* Center indicator */}
+            <div className="absolute top-0 left-1/2 z-10 -translate-x-1/2">
+                <div className="h-0 w-0 border-t-[6px] border-r-[5px] border-l-[5px] border-t-white border-r-transparent border-l-transparent" />
+            </div>
+
             {/* Compass bar */}
             <div
-                className="relative overflow-hidden rounded bg-black/50 backdrop-blur-sm"
+                className="relative mt-[6px] overflow-hidden rounded bg-black/50 backdrop-blur-sm"
                 style={{
                     width: 360,
                     height: 32,
@@ -82,11 +87,6 @@ export const StandardCompass = ({ heading }: { heading: number }) => {
                         }),
                     )}
                 </div>
-            </div>
-
-            {/* Center indicator */}
-            <div className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2 translate-y-full">
-                <div className="h-0 w-0 border-b-[6px] border-r-[5px] border-l-[5px] border-b-white border-r-transparent border-l-transparent" />
             </div>
         </div>
     );

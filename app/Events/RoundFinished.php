@@ -41,6 +41,25 @@ class RoundFinished implements ShouldBroadcastNow
             'player_two_guess_lng' => $this->round->player_two_guess_lng,
             'player_one_score' => $this->round->player_one_score,
             'player_two_score' => $this->round->player_two_score,
+            'player_one_distance_km' => $this->playerDistanceKm('player_one'),
+            'player_two_distance_km' => $this->playerDistanceKm('player_two'),
         ];
+    }
+
+    private function playerDistanceKm(string $prefix): ?float
+    {
+        $lat = $this->round->{"{$prefix}_guess_lat"};
+        $lng = $this->round->{"{$prefix}_guess_lng"};
+
+        if ($lat === null || $lng === null) {
+            return null;
+        }
+
+        return round(Round::haversineDistanceKm(
+            $this->round->location_lat,
+            $this->round->location_lng,
+            $lat,
+            $lng,
+        ), 2);
     }
 }
