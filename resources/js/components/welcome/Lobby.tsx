@@ -1,4 +1,6 @@
+import { MessageCircleQuestion } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import SimpleModal from '@/components/ui/simple-modal';
 import NamePrompt from '@/components/welcome/NamePrompt';
 import ShimmerText from '@/components/welcome/ShimmerText';
 import type { Player } from '@/components/welcome/types';
@@ -30,6 +32,7 @@ export default function Lobby({
     const [statText, setStatText] = useState('');
     const [statVisible, setStatVisible] = useState(false);
     const statCycleRef = useRef(0);
+    const [helpOpen, setHelpOpen] = useState(false);
 
     useEffect(() => {
         function onBeforeUnload() {
@@ -139,73 +142,98 @@ export default function Lobby({
     }
 
     return (
-        <div className="relative flex h-screen items-center justify-center bg-neutral-900 font-mono text-sm text-neutral-400">
-            <div
-                className={`transition-opacity duration-300 ${panelVisible ? 'opacity-100' : 'opacity-0'}`}
-            >
-                {queued ? (
-                    <div className="text-center">
-                        <div className="mb-2 text-xs text-white/50">
-                            {playerName}
-                        </div>
-                        <ShimmerText>waiting for opponent</ShimmerText>
-                        <div className="mt-2 min-h-[1.25rem] text-xs text-white/40">
-                            {stats && (
-                                <div
-                                    className={`transition-opacity duration-500 ${statVisible ? 'opacity-100' : 'opacity-0'}`}
-                                >
-                                    {statText}
-                                </div>
-                            )}
-                        </div>
-                        <button
-                            onClick={() => void leaveQueue()}
-                            className="mt-3 rounded px-2 py-1 text-xs text-white/20 transition-all duration-500 hover:bg-white/5 hover:text-white/50"
-                        >
-                            leave queue
-                        </button>
-                    </div>
-                ) : playerName ? (
-                    <div className="flex w-full max-w-sm flex-col items-center gap-4">
-                        <div className="text-center font-mono text-5xl text-white">
-                            nmpz.dev
-                        </div>
-                        <div className="w-full rounded border border-white/10 bg-black/60 p-4 text-xs text-white/80 backdrop-blur-sm">
-                            <div className="mb-2 text-center text-sm text-white">
+        <>
+            <div className="relative flex h-screen items-center justify-center bg-neutral-900 font-mono text-sm text-neutral-400">
+                <div
+                    className={`transition-opacity duration-300 ${panelVisible ? 'opacity-100' : 'opacity-0'}`}
+                >
+                    {queued ? (
+                        <div className="text-center">
+                            <div className="mb-2 text-xs text-white/50">
                                 {playerName}
                             </div>
+                            <ShimmerText>waiting for opponent</ShimmerText>
+                            <div className="mt-2 min-h-[1.25rem] text-xs text-white/40">
+                                {stats && (
+                                    <div
+                                        className={`transition-opacity duration-500 ${statVisible ? 'opacity-100' : 'opacity-0'}`}
+                                    >
+                                        {statText}
+                                    </div>
+                                )}
+                            </div>
                             <button
-                                onClick={() => void joinQueue()}
-                                className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
+                                onClick={() => void leaveQueue()}
+                                className="mt-3 rounded px-2 py-1 text-xs text-white/20 transition-all duration-500 hover:bg-white/5 hover:text-white/50"
                             >
-                                Join queue
+                                leave queue
                             </button>
-                            <div className="mt-2 text-xs text-white/40">
-                                {queueCount} player
-                                {queueCount === 1 ? '' : 's'} queued
+                        </div>
+                    ) : (
+                        <div className="flex w-full max-w-sm flex-col items-center gap-4">
+                            <div className="relative text-center font-mono text-5xl text-white">
+                                nmpz.dev
+                                <button
+                                    type="button"
+                                    onClick={() => setHelpOpen(true)}
+                                    className="absolute -top-2 -right-6 flex h-6 w-6 items-center justify-center rounded-full text-xs text-white/70 transition hover:text-white"
+                                    aria-label="Open help"
+                                >
+                                    <MessageCircleQuestion />
+                                </button>
+                            </div>
+                            <div className="w-full rounded border border-white/10 bg-black/60 p-4 text-xs text-white/80 backdrop-blur-sm">
+                                {playerName ? (
+                                    <>
+                                        <div className="mb-2 text-center text-sm text-white">
+                                            {playerName}
+                                        </div>
+                                        <button
+                                            onClick={() => void joinQueue()}
+                                            className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
+                                        >
+                                            Join queue
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="mb-2 text-sm text-white">
+                                            Enter your name
+                                        </div>
+                                        <NamePrompt
+                                            onSubmit={(name) =>
+                                                void joinQueue(name)
+                                            }
+                                        />
+                                    </>
+                                )}
+                                <div className="mt-2 text-xs text-white/40">
+                                    {queueCount} player
+                                    {queueCount === 1 ? '' : 's'} queued
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ) : (
-                    <div className="flex w-full max-w-sm flex-col items-center gap-4">
-                        <div className="text-center font-mono text-5xl text-white">
-                            nmpz.dev
-                        </div>
-                        <div className="w-full rounded border border-white/10 bg-black/60 p-4 text-xs text-white/80 backdrop-blur-sm">
-                            <div className="mb-2 text-sm text-white">
-                                Enter your name
-                            </div>
-                            <NamePrompt
-                                onSubmit={(name) => void joinQueue(name)}
-                            />
-                            <div className="mt-2 text-xs text-white/40">
-                                {queueCount} player
-                                {queueCount === 1 ? '' : 's'} queued
-                            </div>
-                        </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
-        </div>
+            <SimpleModal open={helpOpen} onClose={() => setHelpOpen(false)}>
+                <div className="mb-2 text-2xl text-white/50">
+                    what is nmpz.dev?
+                </div>
+                <p className="mb-2 leading-relaxed">
+                    nmpz.dev is my quick and dirty attempt creating the
+                    GeoGuessr competitive experience in a simple, KISS-adherent
+                    format that is free and usable for anyone to enjoy.
+                </p>
+                <p className="leading-relaxed">
+                    please understand that this app is <b>not secure</b>, not
+                    feature complete, and <b>likely very buggy</b>. while i have
+                    done my best to architecturally guide it, the overwhelming
+                    majority of the code has been written by various a.i. agents
+                    that, while capable, i certainly wouldn't trust with my
+                    life.
+                </p>
+            </SimpleModal>
+        </>
     );
 }
