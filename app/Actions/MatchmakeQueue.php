@@ -71,6 +71,8 @@ class MatchmakeQueue
         $game = Game::query()->create([
             'player_one_id' => $playerOne->getKey(),
             'player_two_id' => $playerTwo->getKey(),
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
             'map_id' => $map->getKey(),
             'seed' => $seed,
             'status' => GameStatus::InProgress,
@@ -94,6 +96,7 @@ class MatchmakeQueue
 
         $p1Health = $game->player_one_health;
         $p2Health = $game->player_two_health;
+
         dispatch(function () use ($round, $p1Health, $p2Health) {
             $round->forceFill(['started_at' => now()])->save();
             RoundStarted::dispatch($round, $p1Health, $p2Health);
