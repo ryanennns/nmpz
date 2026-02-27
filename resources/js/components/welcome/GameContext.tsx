@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { createContext, useContext, useState } from 'react';
 import type { Game } from '@/components/welcome/types';
 
 type GameContextValue = {
     game: Game | null;
-    setGame: React.Dispatch<React.SetStateAction<Game | null>>;
+    setGame: Dispatch<SetStateAction<Game | null>>;
 };
 
 const GameContext = createContext<GameContextValue | null>(null);

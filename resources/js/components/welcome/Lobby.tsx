@@ -1,14 +1,11 @@
+import axios from 'axios';
 import { MessageCircleQuestion } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
 import NamePrompt from '@/components/welcome/NamePrompt';
 import type { Player } from '@/components/welcome/types';
 import { WaitingRoom } from '@/components/welcome/WaitingRoom';
-
-function getCsrfToken() {
-    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-    return match ? decodeURIComponent(match[1]) : '';
-}
+import { useApiClient } from '@/hooks/useApiClient';
 
 export default function Lobby({
     player,
@@ -33,18 +30,16 @@ export default function Lobby({
     const [statVisible, setStatVisible] = useState(false);
     const statCycleRef = useRef(0);
     const [helpOpen, setHelpOpen] = useState(false);
+    const [joinError, setJoinError] = useState<string | null>(null);
+    const api = useApiClient(player.id);
 
     useEffect(() => {
         function onBeforeUnload() {
-            fetch(`/players/${player.id}/leave-queue`, {
-                method: 'POST',
-                keepalive: true,
-                headers: { 'X-XSRF-TOKEN': getCsrfToken() },
-            });
+            void api.leaveQueue();
         }
         window.addEventListener('beforeunload', onBeforeUnload);
         return () => window.removeEventListener('beforeunload', onBeforeUnload);
-    }, [player.id]);
+    }, [api]);
 
     useEffect(() => {
         if (!queued || !stats) return;
@@ -87,22 +82,18 @@ export default function Lobby({
     useEffect(() => {
         if (!queued) return;
         const t = setInterval(async () => {
-            const res = await fetch('/stats', {
-                headers: { Accept: 'application/json' },
-            });
-            if (res.ok) {
-                const data = (await res.json()) as {
-                    games_in_progress: number;
-                    rounds_played: number;
-                    total_players: number;
-                    queue_count: number;
-                };
-                setStats(data);
-                setQueueCount(data.queue_count);
-            }
+            const res = await api.fetchStats();
+            const data = res.data as {
+                games_in_progress: number;
+                rounds_played: number;
+                total_players: number;
+                queue_count: number;
+            };
+            setStats(data);
+            setQueueCount(data.queue_count);
         }, 5000);
         return () => clearInterval(t);
-    }, [queued]);
+    }, [queued, api]);
 
     async function fadeTransition(fn: () => void) {
         setPanelVisible(false);
@@ -112,32 +103,31 @@ export default function Lobby({
     }
 
     async function leaveQueue() {
-        void fetch(`/players/${player.id}/leave-queue`, {
-            method: 'POST',
-            headers: { 'X-XSRF-TOKEN': getCsrfToken() },
-        });
+        void api.leaveQueue();
         await fadeTransition(() => setQueued(false));
     }
 
     async function joinQueue(name?: string) {
-        const res = await fetch(`/players/${player.id}/join-queue`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': getCsrfToken(),
-            },
-            body: JSON.stringify(name ? { name } : {}),
-        });
-        if (res.ok) {
-            const payload = (await res.json()) as { queue_count?: number };
+        try {
+            const res = await api.joinQueue(name);
+            const payload = res.data as { queue_count?: number };
             if (typeof payload.queue_count === 'number') {
                 setQueueCount(payload.queue_count);
             }
             await fadeTransition(() => {
                 if (name) onNameChange(name);
                 setQueued(true);
+                setJoinError(null);
             });
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                const message =
+                    (error.response?.data as { error?: string })?.error ??
+                    'Unable to join queue.';
+                setJoinError(message);
+                return;
+            }
+            setJoinError('Unable to join queue.');
         }
     }
 
@@ -180,6 +170,11 @@ export default function Lobby({
                                         >
                                             Join queue
                                         </button>
+                                        {joinError ? (
+                                            <div className="mt-2 text-xs text-red-300">
+                                                {joinError}
+                                            </div>
+                                        ) : null}
                                     </>
                                 ) : (
                                     <>
@@ -191,6 +186,11 @@ export default function Lobby({
                                                 void joinQueue(name)
                                             }
                                         />
+                                        {joinError ? (
+                                            <div className="mt-2 text-xs text-red-300">
+                                                {joinError}
+                                            </div>
+                                        ) : null}
                                     </>
                                 )}
                                 <div className="mt-2 text-xs text-white/40">

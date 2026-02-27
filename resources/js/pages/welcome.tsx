@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import ChatSidebar from '@/components/welcome/ChatSidebar';
+import { GameProvider, useGameContext } from '@/components/welcome/GameContext';
 import HealthBar from '@/components/welcome/HealthBar';
 import Lobby from '@/components/welcome/Lobby';
 import MapPicker from '@/components/welcome/MapPicker';
@@ -10,7 +11,7 @@ import ResultsMap from '@/components/welcome/ResultsMap';
 import ShimmerText from '@/components/welcome/ShimmerText';
 import { StandardCompass } from '@/components/welcome/StandardCompass';
 import StreetViewPanel from '@/components/welcome/StreetViewPanel';
-import { GameProvider, useGameContext } from '@/components/welcome/GameContext';
+
 import type {
     Game,
     GameEvent,
@@ -24,6 +25,7 @@ import type {
 } from '@/components/welcome/types';
 import { WinnerOverlay } from '@/components/welcome/WinnerOverlay';
 import echo from '@/echo';
+import { useApiClient } from '@/hooks/useApiClient';
 import { cn } from '@/lib/utils';
 
 const MAX_EVENTS = 5;
@@ -53,12 +55,6 @@ setOptions({
 });
 
 // --- Helpers ---
-
-function getCsrfToken() {
-    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-    return match ? decodeURIComponent(match[1]) : '';
-}
-
 function deriveGameState(
     round: Round,
     gameOver: boolean,
@@ -180,6 +176,7 @@ function WelcomePage({
     const [chatOpen, setChatOpen] = useState(false);
     const [chatText, setChatText] = useState('');
     const lastRememberedGameId = useRef<string | null>(null);
+    const api = useApiClient(player.id);
 
     const isPlayerOne = game ? player.id === game.player_one.id : false;
     const myLocked = round
@@ -401,16 +398,9 @@ function WelcomePage({
     useEffect(() => {
         if (!game) {
             if (lastRememberedGameId.current) {
-                const url = `/players/${player.id}/games/${lastRememberedGameId.current}/remember`;
-                fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'X-XSRF-TOKEN': getCsrfToken(),
-                    },
-                    body: JSON.stringify({ active: false }),
-                }).catch(() => {});
+                void api
+                    .rememberGame(false, lastRememberedGameId.current)
+                    .catch(() => {});
                 lastRememberedGameId.current = null;
             }
             return;
@@ -419,15 +409,7 @@ function WelcomePage({
         if (lastRememberedGameId.current === game.id) return;
 
         lastRememberedGameId.current = game.id;
-        fetch(`/players/${player.id}/games/${game.id}/remember`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': getCsrfToken(),
-            },
-            body: JSON.stringify({ active: true }),
-        }).catch(() => {});
+        void api.rememberGame(true).catch(() => {});
     }, [game?.id, player.id]);
 
     // Matchmaking channel — only when waiting for a game
@@ -614,47 +596,20 @@ function WelcomePage({
     async function guess() {
         if (!pin || !round || !game || myLocked || gameOver) return;
         setMapHovered(false);
-        const url = `/players/${player.id}/games/${game.id}/rounds/${round.id}/guess`;
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': getCsrfToken(),
-            },
-            body: JSON.stringify({ ...pin, locked_in: true }),
-        });
-        if (res.ok) setRound(await res.json());
+        const res = await api.guess(round.id, pin, true);
+        if (res?.data) setRound(res.data as Round);
     }
 
     async function updateGuess(coords: LatLng) {
         if (!round || !game || myLocked || gameOver) return;
-        const url = `/players/${player.id}/games/${game.id}/rounds/${round.id}/guess`;
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': getCsrfToken(),
-            },
-            body: JSON.stringify(coords),
-        });
-        if (res.ok) setRound(await res.json());
+        const res = await api.guess(round.id, coords, false);
+        if (res?.data) setRound(res.data as Round);
     }
 
     async function sendMessage() {
         if (!game || !chatText.trim()) return;
-        const url = `/players/${player.id}/games/${game.id}/send-message`;
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': getCsrfToken(),
-            },
-            body: JSON.stringify({ message: chatText.trim() }),
-        });
-        if (res.ok) {
+        const res = await api.sendMessage(chatText.trim());
+        if (res) {
             setChatText('');
             setChatOpen(false);
         }
