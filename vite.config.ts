@@ -24,4 +24,9 @@ export default defineConfig({
     esbuild: {
         jsx: 'automatic',
     },
+    server: {
+        watch: {
+            ignored: ["**/likeacw-mapillary.jsonl"],
+        },
+    },
 });
