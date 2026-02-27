@@ -12,18 +12,26 @@ use App\Models\Player;
 use App\Models\Round;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Illuminate\Support\Str;
 
 Route::get('/', function (Request $request) {
     $playerId = $request->session()->get('player_id');
     $player = $playerId ? Player::with('user')->find($playerId) : null;
 
     if (! $player) {
-        $player = Player::factory()
-            ->for(User::factory()->create(['name' => 'Guest']))
-            ->create(['name' => null]);
+        $user = User::query()->create([
+            'name' => 'Guest',
+            'email' => Str::uuid().'@guest.local',
+            'password' => Hash::make(Str::random(32)),
+        ]);
+        $player = Player::query()->create([
+            'user_id' => $user->getKey(),
+            'name' => null,
+        ]);
         $request->session()->put('player_id', $player->getKey());
         $player->load('user');
     }

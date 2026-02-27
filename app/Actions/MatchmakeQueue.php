@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Events\GameReady;
 use App\Events\RoundStarted;
 use App\Jobs\ForceEndRound;
+use App\Enums\GameStatus;
 use App\Models\Game;
 use App\Models\Location;
 use App\Models\Map;
@@ -67,11 +68,12 @@ class MatchmakeQueue
 
         $seed = random_int(0, $locationCount - 1);
 
-        $game = Game::factory()->inProgress()->create([
+        $game = Game::query()->create([
             'player_one_id' => $playerOne->getKey(),
             'player_two_id' => $playerTwo->getKey(),
             'map_id' => $map->getKey(),
             'seed' => $seed,
+            'status' => GameStatus::InProgress,
         ]);
 
         $location = Location::query()->where('map_id', $map->getKey())
@@ -79,7 +81,8 @@ class MatchmakeQueue
             ->offset($seed % $locationCount)
             ->firstOrFail();
 
-        $round = Round::factory()->for($game)->create([
+        $round = Round::query()->create([
+            'game_id' => $game->getKey(),
             'round_number' => 1,
             'location_lat' => $location->lat,
             'location_lng' => $location->lng,
