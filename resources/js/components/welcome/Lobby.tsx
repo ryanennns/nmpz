@@ -32,6 +32,8 @@ export default function Lobby({
     const [helpOpen, setHelpOpen] = useState(false);
     const [joinError, setJoinError] = useState<string | null>(null);
     const api = useApiClient(player.id);
+    const [editingName, setEditingName] = useState(false);
+    const [nameDraft, setNameDraft] = useState(playerName ?? '');
 
     useEffect(() => {
         function onBeforeUnload() {
@@ -108,16 +110,22 @@ export default function Lobby({
     }
 
     async function joinQueue(name?: string) {
+        const trimmed = name?.trim().slice(0, 32);
+        if (name && !trimmed) {
+            setJoinError('Name is required.');
+            return;
+        }
         try {
-            const res = await api.joinQueue(name);
+            const res = await api.joinQueue(trimmed || undefined);
             const payload = res.data as { queue_count?: number };
             if (typeof payload.queue_count === 'number') {
                 setQueueCount(payload.queue_count);
             }
             await fadeTransition(() => {
-                if (name) onNameChange(name);
+                if (trimmed) onNameChange(trimmed);
                 setQueued(true);
                 setJoinError(null);
+                setEditingName(false);
             });
         } catch (error) {
             if (axios.isAxiosError(error)) {
@@ -162,15 +170,76 @@ export default function Lobby({
                             <div className="w-full rounded border border-white/10 bg-black/60 p-4 text-xs text-white/80 backdrop-blur-sm">
                                 {playerName ? (
                                     <>
-                                        <div className="mb-2 text-center text-sm text-white">
-                                            {playerName}
-                                        </div>
-                                        <button
-                                            onClick={() => void joinQueue()}
-                                            className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
-                                        >
-                                            Join queue
-                                        </button>
+                                        {editingName ? (
+                                            <div className="mb-2">
+                                                <input
+                                                    value={nameDraft}
+                                                    maxLength={32}
+                                                    onChange={(e) =>
+                                                        setNameDraft(
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Your name"
+                                                    className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white placeholder:text-white/40"
+                                                />
+                                                <div className="mt-2 flex gap-2">
+                                                    <button
+                                                        onClick={() =>
+                                                            void joinQueue(
+                                                                nameDraft,
+                                                            )
+                                                        }
+                                                        className="flex-1 rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingName(
+                                                                false,
+                                                            );
+                                                            setNameDraft(
+                                                                playerName,
+                                                            );
+                                                            setJoinError(null);
+                                                        }}
+                                                        className="flex-1 rounded bg-white/5 px-2 py-1 text-xs text-white/70 hover:bg-white/10"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="mb-2 flex items-center justify-center gap-2 text-center text-sm text-white">
+                                                <span>
+                                                    {playerName.slice(0, 32)}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setEditingName(true);
+                                                        setNameDraft(
+                                                            playerName,
+                                                        );
+                                                        setJoinError(null);
+                                                    }}
+                                                    className="rounded bg-white/10 px-2 py-0.5 text-[10px] text-white/70 hover:bg-white/20"
+                                                >
+                                                    Edit
+                                                </button>
+                                            </div>
+                                        )}
+                                        {!editingName && (
+                                            <button
+                                                onClick={() =>
+                                                    void joinQueue()
+                                                }
+                                                className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
+                                            >
+                                                Join queue
+                                            </button>
+                                        )}
                                         {joinError ? (
                                             <div className="mt-2 text-xs text-red-300">
                                                 {joinError}
