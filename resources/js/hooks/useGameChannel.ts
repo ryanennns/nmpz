@@ -74,6 +74,7 @@ type GameChannelDeps = {
     setHeading: Dispatch<SetStateAction<number | null>>;
     setRematchState: Dispatch<SetStateAction<RematchState>>;
     setOpponentLiveGuess: Dispatch<SetStateAction<{ lat: number; lng: number } | null>>;
+    setRatingChange: Dispatch<SetStateAction<{ my: number | null; opponent: number | null }>>;
     setPostGameButtonsVisible: (v: boolean) => void;
     setWinnerOverlayVisible: (v: boolean) => void;
     setPageVisible: (v: boolean) => void;
@@ -105,6 +106,7 @@ export function useGameChannel(deps: GameChannelDeps) {
         setWinnerName,
         setRematchState,
         setOpponentLiveGuess,
+        setRatingChange,
         setPostGameButtonsVisible,
         setWinnerOverlayVisible,
         setPageVisible,
@@ -243,8 +245,14 @@ export function useGameChannel(deps: GameChannelDeps) {
                 });
                 setGameOver(true);
 
+                // Capture ELO rating changes
+                const isP1 = playerId === game.player_one.id;
+                setRatingChange({
+                    my: isP1 ? data.player_one_rating_change : data.player_two_rating_change,
+                    opponent: isP1 ? data.player_two_rating_change : data.player_one_rating_change,
+                });
+
                 const wId = data.winner_id;
-                setWinnerId(wId);
                 const name =
                     wId === game.player_one.id
                         ? game.player_one.user.name

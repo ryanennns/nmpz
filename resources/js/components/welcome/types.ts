@@ -1,7 +1,11 @@
+export type Rank = 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Master';
+
 export type Player = {
     id: string;
     name?: string | null;
     user: { name: string };
+    elo_rating?: number;
+    rank?: Rank;
 };
 
 export type Round = {
@@ -78,6 +82,10 @@ export type GameFinishedData = {
     winner_id: string | null;
     player_one_health: number;
     player_two_health: number;
+    player_one_rating_change: number | null;
+    player_two_rating_change: number | null;
+    player_one_elo: number | null;
+    player_two_elo: number | null;
 };
 
 export type PlayerGuessedData = {
@@ -145,6 +153,8 @@ export type PlayerStatsData = {
     win_rate: number;
     average_score: number;
     average_distance_km: number;
+    elo_rating: number;
+    rank: Rank;
 };
 
 export type LeaderboardEntry = {
@@ -154,6 +164,8 @@ export type LeaderboardEntry = {
     games_played: number;
     win_rate: number;
     best_win_streak: number;
+    elo_rating: number;
+    rank: Rank;
 };
 
 export interface GameStats {

@@ -14,6 +14,7 @@ import ShimmerText from '@/components/welcome/ShimmerText';
 import SpectatorMap from '@/components/welcome/SpectatorMap';
 import { StandardCompass } from '@/components/welcome/StandardCompass';
 
+import RankBadge from '@/components/welcome/RankBadge';
 import RoundSummaryPanel from '@/components/welcome/RoundSummaryPanel';
 
 import type {
@@ -23,6 +24,7 @@ import type {
     Location,
     Message,
     Player,
+    Rank,
     RematchState,
     Round,
     RoundData,
@@ -138,6 +140,7 @@ function WelcomePage({
     const [rematchState, setRematchState] = useState<RematchState>('none');
     const [lastGameId, setLastGameId] = useState<string | null>(null);
     const [opponentLiveGuess, setOpponentLiveGuess] = useState<{ lat: number; lng: number } | null>(null);
+    const [ratingChange, setRatingChange] = useState<{ my: number | null; opponent: number | null }>({ my: null, opponent: null });
     const [chatOpen, setChatOpen] = useState(false);
     const [chatText, setChatText] = useState('');
     const guessRef = useRef<() => void>(() => {});
@@ -199,6 +202,7 @@ function WelcomePage({
         setChatText('');
         setRematchState('none');
         setOpponentLiveGuess(null);
+        setRatingChange({ my: null, opponent: null });
         endSequence.setWinnerId(null);
         endSequence.setWinnerName(null);
         endSequence.setWinnerOverlayVisible(false);
@@ -226,6 +230,7 @@ function WelcomePage({
         setHeading,
         setRematchState,
         setOpponentLiveGuess,
+        setRatingChange,
         setPostGameButtonsVisible: endSequence.setPostGameButtonsVisible,
         setWinnerOverlayVisible: endSequence.setWinnerOverlayVisible,
         setPageVisible: endSequence.setPageVisible,
@@ -410,6 +415,8 @@ function WelcomePage({
                   health: isPlayerOne ? health.p1 : health.p2,
                   score: isPlayerOne ? roundScores.p1 : roundScores.p2,
                   barColor: isPlayerOne ? 'blue' : ('red' as PlayerColour),
+                  elo: isPlayerOne ? game.player_one.elo_rating : game.player_two.elo_rating,
+                  rank: (isPlayerOne ? game.player_one.rank : game.player_two.rank) as Rank | undefined,
               },
               opponent: {
                   color: isPlayerOne ? 'text-red-400' : 'text-blue-400',
@@ -422,6 +429,8 @@ function WelcomePage({
                   name: isPlayerOne
                       ? game.player_two.user.name
                       : game.player_one.user.name,
+                  elo: isPlayerOne ? game.player_two.elo_rating : game.player_one.elo_rating,
+                  rank: (isPlayerOne ? game.player_two.rank : game.player_one.rank) as Rank | undefined,
               },
           }
         : null;
@@ -567,9 +576,10 @@ function WelcomePage({
                                                     </div>
                                                 )}
                                             <div
-                                                className={`${me?.colorDim} mb-1 font-mono text-xs`}
+                                                className={`${me?.colorDim} mb-1 flex items-center gap-2 font-mono text-xs`}
                                             >
-                                                You
+                                                <span>You</span>
+                                                {me?.rank && <RankBadge rank={me.rank} elo={me.elo} size="xs" />}
                                             </div>
                                             <HealthBar
                                                 health={me?.health ?? 0}
@@ -601,9 +611,10 @@ function WelcomePage({
                                                 </div>
                                             )}
                                         <div
-                                            className={`${opponent?.colorDim} mb-1 font-mono text-xs`}
+                                            className={`${opponent?.colorDim} mb-1 flex items-center justify-end gap-2 font-mono text-xs`}
                                         >
-                                            {opponent?.name}
+                                            {opponent?.rank && <RankBadge rank={opponent.rank} elo={opponent.elo} size="xs" />}
+                                            <span>{opponent?.name}</span>
                                         </div>
                                         <HealthBar
                                             health={opponent?.health ?? 0}
@@ -712,6 +723,7 @@ function WelcomePage({
                             winnerName={endSequence.winnerName}
                             postGameButtonsVisible={endSequence.postGameButtonsVisible}
                             rematchState={rematchState}
+                            ratingChange={ratingChange}
                             onRematch={handleRematch}
                             onRequeue={handleRequeue}
                             onExit={handleExit}

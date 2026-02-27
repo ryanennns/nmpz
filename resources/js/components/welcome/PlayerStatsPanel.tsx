@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import RankBadge from '@/components/welcome/RankBadge';
 import type { PlayerStatsData } from '@/components/welcome/types';
 import { useApiClient } from '@/hooks/useApiClient';
 
@@ -44,7 +45,12 @@ export default function PlayerStatsPanel({ playerId }: { playerId: string }) {
 
     return (
         <div className="w-full rounded border border-white/10 bg-black/60 p-3 backdrop-blur-sm">
-            <div className="mb-2 text-xs text-white/40">Your Stats</div>
+            <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs text-white/40">Your Stats</span>
+                {stats.elo_rating !== undefined && stats.rank && (
+                    <RankBadge rank={stats.rank} elo={stats.elo_rating} />
+                )}
+            </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 {rows.map((row) => (
                     <div key={row.label} className="contents">

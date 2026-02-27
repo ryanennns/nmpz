@@ -39,10 +39,14 @@ class RematchAccepted implements ShouldBroadcastNow
                 'player_one' => [
                     'id' => $this->newGame->player_one_id,
                     'user' => ['name' => $this->newGame->playerOne->user->name],
+                    'elo_rating' => $this->newGame->playerOne->elo_rating,
+                    'rank' => $this->newGame->playerOne->rank,
                 ],
                 'player_two' => [
                     'id' => $this->newGame->player_two_id,
                     'user' => ['name' => $this->newGame->playerTwo->user->name],
+                    'elo_rating' => $this->newGame->playerTwo->elo_rating,
+                    'rank' => $this->newGame->playerTwo->rank,
                 ],
                 'player_one_health' => $this->newGame->player_one_health,
                 'player_two_health' => $this->newGame->player_two_health,

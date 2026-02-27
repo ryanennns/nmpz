@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import RankBadge from '@/components/welcome/RankBadge';
 import type { LeaderboardEntry } from '@/components/welcome/types';
 import { useApiClient } from '@/hooks/useApiClient';
 
 export default function Leaderboard({ playerId }: { playerId: string }) {
     const api = useApiClient(playerId);
     const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-    const [sortBy, setSortBy] = useState<'games_won' | 'win_rate' | 'best_win_streak'>('games_won');
+    const [sortBy, setSortBy] = useState<'elo_rating' | 'games_won' | 'win_rate' | 'best_win_streak'>('elo_rating');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -18,6 +19,7 @@ export default function Leaderboard({ playerId }: { playerId: string }) {
     const sorted = [...entries].sort((a, b) => b[sortBy] - a[sortBy]);
 
     const columns: { key: typeof sortBy; label: string }[] = [
+        { key: 'elo_rating', label: 'ELO' },
         { key: 'games_won', label: 'Wins' },
         { key: 'win_rate', label: 'Win %' },
         { key: 'best_win_streak', label: 'Streak' },
@@ -57,7 +59,13 @@ export default function Leaderboard({ playerId }: { playerId: string }) {
                             className="border-b border-white/5 text-white/70"
                         >
                             <td className="px-3 py-1.5 text-white/30">{i + 1}</td>
-                            <td className="px-3 py-1.5 text-white">{entry.player_name}</td>
+                            <td className="px-3 py-1.5">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-white">{entry.player_name}</span>
+                                    {entry.rank && <RankBadge rank={entry.rank} size="xs" />}
+                                </div>
+                            </td>
+                            <td className="px-3 py-1.5 text-right">{entry.elo_rating}</td>
                             <td className="px-3 py-1.5 text-right">{entry.games_won}</td>
                             <td className="px-3 py-1.5 text-right">{entry.win_rate}%</td>
                             <td className="px-3 py-1.5 text-right">{entry.best_win_streak}</td>

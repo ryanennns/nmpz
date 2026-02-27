@@ -47,10 +47,14 @@ Route::get('/', function (Request $request) {
                 'player_one' => [
                     'id' => $gameModel->player_one_id,
                     'user' => ['name' => $gameModel->playerOne->user->name],
+                    'elo_rating' => $gameModel->playerOne->elo_rating,
+                    'rank' => $gameModel->playerOne->rank,
                 ],
                 'player_two' => [
                     'id' => $gameModel->player_two_id,
                     'user' => ['name' => $gameModel->playerTwo->user->name],
+                    'elo_rating' => $gameModel->playerTwo->elo_rating,
+                    'rank' => $gameModel->playerTwo->rank,
                 ],
                 'player_one_health' => $gameModel->player_one_health,
                 'player_two_health' => $gameModel->player_two_health,
@@ -82,7 +86,11 @@ Route::get('/', function (Request $request) {
     }
 
     return Inertia::render('welcome', [
-        'player' => $player,
+        'player' => array_merge($player->toArray(), [
+            'user' => $player->user->toArray(),
+            'elo_rating' => $player->elo_rating,
+            'rank' => $player->rank,
+        ]),
         'queue_count' => count(Cache::get('matchmaking_queue', [])),
         'game' => $game,
         'round_data' => $roundData,
@@ -123,6 +131,8 @@ Route::get('leaderboard', function () {
             'games_played' => $s->games_played,
             'win_rate' => $s->win_rate,
             'best_win_streak' => $s->best_win_streak,
+            'elo_rating' => $s->player?->elo_rating ?? 1000,
+            'rank' => $s->player?->rank ?? 'Bronze',
         ]);
 
     return response()->json($entries);
@@ -140,6 +150,8 @@ Route::get('players/{player}/stats', function (\App\Models\Player $player) {
             'total_distance_km' => 0, 'total_guesses_made' => 0,
             'total_guesses_missed' => 0, 'win_rate' => 0,
             'average_score' => 0, 'average_distance_km' => 0,
+            'elo_rating' => $player->elo_rating,
+            'rank' => $player->rank,
         ]);
     }
 
@@ -147,6 +159,8 @@ Route::get('players/{player}/stats', function (\App\Models\Player $player) {
         'win_rate' => $stats->win_rate,
         'average_score' => $stats->average_score,
         'average_distance_km' => $stats->average_distance_km,
+        'elo_rating' => $player->elo_rating,
+        'rank' => $player->rank,
     ]));
 });
 

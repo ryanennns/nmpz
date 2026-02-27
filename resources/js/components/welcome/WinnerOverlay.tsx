@@ -7,6 +7,7 @@ export const WinnerOverlay = ({
     id,
     postGameButtonsVisible,
     rematchState,
+    ratingChange,
     onRematch,
     onRequeue,
     onExit,
@@ -19,6 +20,7 @@ export const WinnerOverlay = ({
     id: string;
     postGameButtonsVisible: boolean;
     rematchState: RematchState;
+    ratingChange: { my: number | null; opponent: number | null };
     onRematch: () => void;
     onRequeue: () => void;
     onExit: () => void;
@@ -40,6 +42,11 @@ export const WinnerOverlay = ({
             {winnerId !== null && winnerName && (
                 <div className="mt-3 font-mono text-xs text-white/40">
                     winner: {winnerName}
+                </div>
+            )}
+            {ratingChange.my !== null && (
+                <div className={`mt-2 font-mono text-sm font-bold ${ratingChange.my > 0 ? 'text-green-400' : ratingChange.my < 0 ? 'text-red-400' : 'text-white/40'}`}>
+                    {ratingChange.my > 0 ? '+' : ''}{ratingChange.my} ELO
                 </div>
             )}
 

@@ -48,6 +48,25 @@ class Player extends Model
         return $this->hasOne(PlayerStats::class);
     }
 
+    public function eloHistory(): HasMany
+    {
+        return $this->hasMany(EloHistory::class)->orderByDesc('created_at');
+    }
+
+    public function getRankAttribute(): string
+    {
+        $elo = $this->elo_rating;
+
+        return match (true) {
+            $elo >= 2000 => 'Master',
+            $elo >= 1700 => 'Diamond',
+            $elo >= 1400 => 'Platinum',
+            $elo >= 1100 => 'Gold',
+            $elo >= 800 => 'Silver',
+            default => 'Bronze',
+        };
+    }
+
     public function hasActiveGame(): bool
     {
         return Game::query()

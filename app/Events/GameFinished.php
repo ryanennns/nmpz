@@ -29,11 +29,17 @@ class GameFinished implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $this->game->load(['playerOne', 'playerTwo']);
+
         return [
             'game_id' => $this->game->getKey(),
             'winner_id' => $this->game->winner_id,
             'player_one_health' => $this->game->player_one_health,
             'player_two_health' => $this->game->player_two_health,
+            'player_one_rating_change' => $this->game->player_one_rating_change,
+            'player_two_rating_change' => $this->game->player_two_rating_change,
+            'player_one_elo' => $this->game->playerOne?->elo_rating,
+            'player_two_elo' => $this->game->playerTwo?->elo_rating,
         ];
     }
 }
