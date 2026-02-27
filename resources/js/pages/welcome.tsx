@@ -173,6 +173,9 @@ function WelcomePage({
     const roundStartedAtRef = useRef<Date | null>(null);
     const endTimersRef = useRef<number[]>([]);
     const queueFadeTimerRef = useRef<number | null>(null);
+    const [myDamageKey, setMyDamageKey] = useState(0);
+    const prevMyHealthRef = useRef<number | null>(null);
+    const gameContainerRef = useRef<HTMLDivElement>(null);
     const [chatOpen, setChatOpen] = useState(false);
     const [chatText, setChatText] = useState('');
     const lastRememberedGameId = useRef<string | null>(null);
@@ -486,13 +489,15 @@ function WelcomePage({
             const p2Score = (data.player_two_score as number) ?? 0;
             setRoundScores({ p1: p1Score, p2: p2Score });
             const damage = Math.abs(p1Score - p2Score);
-            setHealth((prev) => {
-                if (p1Score < p2Score)
-                    return { p1: prev.p1 - damage, p2: prev.p2 };
-                if (p2Score < p1Score)
-                    return { p1: prev.p1, p2: prev.p2 - damage };
-                return prev;
-            });
+            window.setTimeout(() => {
+                setHealth((prev) => {
+                    if (p1Score < p2Score)
+                        return { p1: prev.p1 - damage, p2: prev.p2 };
+                    if (p2Score < p1Score)
+                        return { p1: prev.p1, p2: prev.p2 - damage };
+                    return prev;
+                });
+            }, 1800);
             const locLat = Number(data.location_lat);
             const locLng = Number(data.location_lng);
             if (!Number.isFinite(locLat) || !Number.isFinite(locLng)) {
@@ -592,6 +597,35 @@ function WelcomePage({
     }, [game?.id]);
 
     useEffect(() => () => clearEndSequenceTimers(), []);
+
+    // Detect when my health drops → screen vignette + shake
+    useEffect(() => {
+        if (!game) {
+            prevMyHealthRef.current = null;
+            return;
+        }
+        const myHealth = isPlayerOne ? health.p1 : health.p2;
+        if (
+            prevMyHealthRef.current !== null &&
+            myHealth < prevMyHealthRef.current
+        ) {
+            // Vignette: increment key forces the overlay div to remount, restarting animation
+            setMyDamageKey((k) => k + 1);
+            // Screen shake via direct DOM class manipulation
+            const el = gameContainerRef.current;
+            if (el) {
+                el.classList.remove('screen-shake');
+                void el.offsetWidth; // force reflow so animation restarts
+                el.classList.add('screen-shake');
+                el.addEventListener(
+                    'animationend',
+                    () => el.classList.remove('screen-shake'),
+                    { once: true },
+                );
+            }
+        }
+        prevMyHealthRef.current = myHealth;
+    }, [health, isPlayerOne, game?.id]);
 
     async function guess() {
         if (!pin || !round || !game || myLocked || gameOver) return;
@@ -744,9 +778,19 @@ function WelcomePage({
                         onNameChange={setPlayerName}
                     />
                 ) : (
-                    <div className="relative h-screen w-screen overflow-hidden font-mono text-white">
+                    <div
+                        ref={gameContainerRef}
+                        className="relative h-screen w-screen overflow-hidden font-mono text-white"
+                    >
                         {urgentCountdown !== null && urgentCountdown <= 15 && (
                             <div className="urgent-screen-halo pointer-events-none absolute inset-0 z-10" />
+                        )}
+                        {/* Red vignette flash when my health drops */}
+                        {myDamageKey > 0 && (
+                            <div
+                                key={myDamageKey}
+                                className="damage-vignette pointer-events-none absolute inset-0 z-30"
+                            />
                         )}
                         {/* Fullscreen results during countdown */}
                         {roundFinished && roundResult ? (
