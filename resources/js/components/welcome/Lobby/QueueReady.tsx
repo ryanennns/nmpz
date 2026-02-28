@@ -10,7 +10,7 @@ export const QueueReady = ({
     return (
         <div className="w-72">
             <div className="mb-2 flex items-center justify-between gap-2 text-center text-sm text-white">
-                <span>&gt; {playerName?.slice(0, 32)}</span>
+                <span><span className="text-white/30">&gt;</span> <span className="underline">{playerName?.slice(0, 32)}</span></span>
                 <button
                     type="button"
                     onClick={onEditName}
