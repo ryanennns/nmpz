@@ -1,5 +1,5 @@
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { Game } from '@/components/welcome/types';
 
 type GameContextValue = {
@@ -10,13 +10,17 @@ type GameContextValue = {
 const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({
-    initialGame,
+    game: providedGame,
     children,
 }: {
-    initialGame: Game;
+    game: Game;
     children: ReactNode;
 }) {
-    const [game, setGame] = useState<Game>(initialGame);
+    const [game, setGame] = useState<Game>(providedGame);
+
+    useEffect(() => {
+        setGame(providedGame);
+    }, [providedGame]);
 
     return (
         <GameContext.Provider value={{ game, setGame }}>

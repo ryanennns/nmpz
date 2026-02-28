@@ -81,6 +81,28 @@ function roundRemainingSeconds(startedAt: Date | null) {
     return Math.max(0, 60 - elapsed);
 }
 
+function roundStartedAtFromData(roundData: RoundData) {
+    return roundData.started_at ? new Date(roundData.started_at) : null;
+}
+
+function roundFromData(roundData: RoundData): Round {
+    return {
+        id: roundData.round_id,
+        round_number: roundData.round_number,
+        player_one_locked_in: roundData.player_one_locked_in ?? false,
+        player_two_locked_in: roundData.player_two_locked_in ?? false,
+    };
+}
+
+function locationFromData(roundData: RoundData): Location {
+    return {
+        lat: roundData.location_lat,
+        lng: roundData.location_lng,
+        heading: roundData.location_heading,
+        image_id: roundData.location_image_id ?? null,
+    };
+}
+
 // --- Page ---
 
 function CountdownTimer({
@@ -107,40 +129,48 @@ function CountdownTimer({
 
 export default function Welcome({
     player,
-    game: initialGame,
-    round_data: initialRoundData,
+    game,
+    round_data: roundData,
 }: {
     player: Player;
     game: Game;
-    round_data?: RoundData | null;
+    round_data: RoundData;
 }) {
     return (
-        <GameProvider initialGame={initialGame}>
-            <WelcomePage player={player} round_data={initialRoundData} />
+        <GameProvider game={game}>
+            <WelcomePage player={player} roundData={roundData} />
         </GameProvider>
     );
 }
 
 function WelcomePage({
     player,
-    round_data: initialRoundData,
+    roundData,
 }: {
     player: Player;
-    round_data?: RoundData | null;
+    roundData: RoundData;
 }) {
     const { game, setGame } = useGameContext();
-    const [round, setRound] = useState<Round | null>(null);
-    const [location, setLocation] = useState<Location | null>(null);
-    const [heading, setHeading] = useState<number | null>(null);
+    const [round, setRound] = useState<Round | null>(() =>
+        roundFromData(roundData),
+    );
+    const [location, setLocation] = useState<Location | null>(() =>
+        locationFromData(roundData),
+    );
+    const [heading, setHeading] = useState<number | null>(
+        roundData.location_heading,
+    );
     const [health, setHealth] = useState({
-        p1: game?.player_one_health ?? 5000,
-        p2: game?.player_two_health ?? 5000,
+        p1: roundData.player_one_health,
+        p2: roundData.player_two_health,
     });
     const [gameOver, setGameOver] = useState(false);
     const [events, setEvents] = useState<GameEvent[]>([]);
     const [messages, setMessages] = useState<Message[]>([]);
     const [countdown, setCountdown] = useState<number | null>(null);
-    const [urgentCountdown, setUrgentCountdown] = useState<number | null>(null);
+    const [urgentCountdown, setUrgentCountdown] = useState<number | null>(() =>
+        roundRemainingSeconds(roundStartedAtFromData(roundData)),
+    );
     const [pendingRoundData, setPendingRoundData] = useState<Record<
         string,
         unknown
@@ -159,7 +189,9 @@ function WelcomePage({
     const [blackoutVisible, setBlackoutVisible] = useState(false);
     const [pageVisible, setPageVisible] = useState(true);
     const guessRef = useRef<() => void>(() => {});
-    const roundStartedAtRef = useRef<Date | null>(null);
+    const roundStartedAtRef = useRef<Date | null>(
+        roundStartedAtFromData(roundData),
+    );
     const endTimersRef = useRef<number[]>([]);
     const queueFadeTimerRef = useRef<number | null>(null);
     const [myDamageKey, setMyDamageKey] = useState(0);
@@ -255,7 +287,7 @@ function WelcomePage({
     }
 
     function applyRoundData(data: RoundData) {
-        const startedAt = data.started_at ? new Date(data.started_at) : null;
+        const startedAt = roundStartedAtFromData(data);
         roundStartedAtRef.current = startedAt;
         setUrgentCountdown(roundRemainingSeconds(startedAt));
         setRoundFinished(false);
@@ -265,19 +297,9 @@ function WelcomePage({
             p1: data.player_one_health,
             p2: data.player_two_health,
         });
-        setLocation({
-            lat: data.location_lat,
-            lng: data.location_lng,
-            heading: data.location_heading,
-            image_id: data.location_image_id ?? null,
-        });
+        setLocation(locationFromData(data));
         setHeading(data.location_heading);
-        setRound({
-            id: data.round_id,
-            round_number: data.round_number,
-            player_one_locked_in: data.player_one_locked_in ?? false,
-            player_two_locked_in: data.player_two_locked_in ?? false,
-        });
+        setRound(roundFromData(data));
         setPin(null);
         setCountdown(null);
     }
@@ -346,26 +368,7 @@ function WelcomePage({
         setWinnerName(winnerName);
 
         scheduleEndSequence(() => {
-            // setGame(null); todo oh no
-            setRound(null);
-            setLocation(null);
-            setHeading(null);
-            setHealth({ p1: 5000, p2: 5000 });
-            setGameOver(false);
-            setEvents([]);
-            setMessages([]);
-            setCountdown(null);
-            setUrgentCountdown(null);
-            setPin(null);
-            setRoundFinished(false);
-            setMapHovered(false);
-            setRoundResult(null);
-            setRoundScores({ p1: null, p2: null });
-            setChatOpen(false);
-            setChatText('');
-            setWinnerId(null);
-            setWinnerName(null);
-            setWinnerOverlayVisible(false);
+            window.location.assign('/');
         });
     }
 
@@ -384,37 +387,12 @@ function WelcomePage({
         const data = pendingRoundData;
         setPendingRoundData(null);
         setCountdown(null);
-        const startedAtRaw = data.started_at as string | undefined;
-        const startedAt = startedAtRaw ? new Date(startedAtRaw) : null;
-        roundStartedAtRef.current = startedAt;
-        setUrgentCountdown(roundRemainingSeconds(startedAt));
-        setRoundFinished(false);
-        setRoundResult(null);
-        setRoundScores({ p1: null, p2: null });
-        setHealth({
-            p1: data.player_one_health as number,
-            p2: data.player_two_health as number,
-        });
-        setLocation({
-            lat: data.location_lat as number,
-            lng: data.location_lng as number,
-            heading: data.location_heading as number,
-            image_id: (data.location_image_id as string | null) ?? null,
-        });
-        setHeading(data.location_heading as number);
-        setRound({
-            id: data.round_id as string,
-            round_number: data.round_number as number,
-            player_one_locked_in: false,
-            player_two_locked_in: false,
-        });
-        setPin(null);
+        applyRoundData(data as RoundData);
     }, [countdown, pendingRoundData]);
 
     useEffect(() => {
-        if (!initialRoundData) return;
-        applyRoundData(initialRoundData);
-    }, []);
+        applyRoundData(roundData);
+    }, [roundData]);
 
     // Countdown tick (15s guess deadline)
     useEffect(() => {

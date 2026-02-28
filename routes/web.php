@@ -48,9 +48,11 @@ Route::get('game/{game}', function (Illuminate\Http\Request $request, Game $game
         'id' => $game->getKey(),
         'player_one' => [
             'id' => $game->player_one_id,
+            'name' => $game->playerOne?->name,
         ],
         'player_two' => [
             'id' => $game->player_two_id,
+            'name' => $game->playerTwo?->name,
         ],
         'player_one_health' => $game->player_one_health,
         'player_two_health' => $game->player_two_health,
@@ -81,14 +83,7 @@ Route::get('game/{game}', function (Illuminate\Http\Request $request, Game $game
         'player_two_locked_in' => $round->player_two_locked_in,
     ];
 
-//    dd([
-//        'player' => $player,
-//        'queue_count' => count(Cache::get('matchmaking_queue', [])),
-//        'game' => $gameArray,
-//        'round_data' => $roundData,
-//    ]);
-
-    Inertia::render('welcome', [
+    return Inertia::render('welcome', [
         'player' => $player,
         'game' => $gameArray,
         'round_data' => $roundData,
