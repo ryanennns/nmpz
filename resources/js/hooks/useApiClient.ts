@@ -27,6 +27,21 @@ function createClient(): AxiosInstance {
     return client;
 }
 
+export const useStatsClient = () => {
+    const client = useMemo(() => createClient(), []);
+    return {
+        fetchStats: () => client.get('/stats'),
+    };
+};
+
+export const useUnauthedApiClient = () => {
+    const client = useMemo(() => createClient(), []);
+
+    return {
+        createPlayer: (name: string) => client.post(`/players`, { name }),
+    };
+};
+
 export function useApiClient(playerId: string) {
     const client = useMemo(() => createClient(), []);
     const { game } = useGameContext();

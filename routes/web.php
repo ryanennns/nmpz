@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\HomePageController;
 use App\Http\Controllers\JoinQueue;
 use App\Http\Controllers\PlayerLeavesQueue;
 use App\Http\Controllers\PlayerMakesGuess;
@@ -13,10 +14,19 @@ use App\Models\Round;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', GameController::class)->name('home');
+Route::get('/', HomePageController::class);
+Route::get('/game', GameController::class)->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+Route::post('players', function (Illuminate\Http\Request $request) {
+    $validated = $request->validate([
+        'name' => 'required|string|max:32',
+    ]);
+
+    $p = Player::query()->create([
+        'name' => $validated['name'],
+    ]);
+
+    return response()->json($p->toArray(), 201);
 });
 
 Route::post('players/{player}/leave-queue', PlayerLeavesQueue::class)

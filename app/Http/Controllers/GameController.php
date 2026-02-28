@@ -5,11 +5,8 @@ namespace App\Http\Controllers;
 use App\Enums\GameStatus;
 use App\Models\Game;
 use App\Models\Player;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class GameController extends Controller
