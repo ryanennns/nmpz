@@ -12,6 +12,11 @@ const PHASE_TRANSITION_MS = 200;
 
 export default function Lobby() {
     const api = useUnauthedApiClient();
+    const [shouldFadeInOnLoad] = useState(
+        () =>
+            typeof window !== 'undefined' &&
+            new URLSearchParams(window.location.search).has('redirect'),
+    );
 
     const [error, setError] = useState<string | undefined>(undefined);
 
@@ -53,12 +58,45 @@ export default function Lobby() {
 
         setPhase('queue_ready');
     };
+
+    const editPlayerName = async (name: string) => {
+        if (!player) {
+            setPlayerName(name);
+            return;
+        }
+
+        try {
+            await api.updatePlayer(player.id, name);
+            setPlayerName(name);
+            setPlayer((currentPlayer) =>
+                currentPlayer ? { ...currentPlayer, name } : currentPlayer,
+            );
+        } catch {
+            setError('oops');
+        }
+    };
+
     const [phase, setPhase] = useState<
         'guest_signin' | 'queue_ready' | 'queued'
     >('guest_signin');
 
     const [displayPhase, setDisplayPhase] = useState(phase);
-    const [phaseVisible, setPhaseVisible] = useState(true);
+    const [phaseVisible, setPhaseVisible] = useState(!shouldFadeInOnLoad);
+
+    useEffect(() => {
+        if (!shouldFadeInOnLoad) {
+            return;
+        }
+
+        const fadeInFrame = window.requestAnimationFrame(() => {
+            setPhaseVisible(true);
+        });
+
+        return () => {
+            window.cancelAnimationFrame(fadeInFrame);
+        };
+    }, [shouldFadeInOnLoad]);
+
     useEffect(() => {
         if (phase === displayPhase) {
             return;
@@ -104,7 +142,9 @@ export default function Lobby() {
                                 setPhase('queued');
                                 void api.joinQueue(player!.id);
                             }}
-                            onEditName={() => 0}
+                            onEditName={(name) => {
+                                void editPlayerName(name);
+                            }}
                         />
                     )}
                     {displayPhase === 'queued' && (

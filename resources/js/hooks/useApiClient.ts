@@ -39,6 +39,8 @@ export const useUnauthedApiClient = () => {
 
     return {
         createPlayer: (name: string) => client.post(`/players`, { name }),
+        updatePlayer: (playerId: string, name: string) =>
+            client.patch(`/players/${playerId}`, { name }),
         joinQueue: (playerId: string, name?: string) =>
             client.post(
                 `/players/${playerId}/join-queue`,
