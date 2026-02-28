@@ -1,9 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import NamePrompt from './NamePrompt';
 
 describe('NamePrompt', () => {
+    afterEach(() => cleanup())
+
     it('submits a trimmed name', async () => {
         const onSubmit = vi.fn();
         render(<NamePrompt onSubmit={onSubmit} />);

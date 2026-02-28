@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WaitingRoom } from './WaitingRoom';
@@ -27,6 +27,7 @@ describe('WaitingRoom', () => {
     afterEach(() => {
         vi.useRealTimers();
         vi.clearAllMocks();
+        cleanup();
     });
 
     it('shows the player name and lets them leave the queue', async () => {
