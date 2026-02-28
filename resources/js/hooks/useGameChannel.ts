@@ -249,6 +249,7 @@ export function useGameChannel(deps: GameChannelDeps) {
                 });
 
                 const wId = data.winner_id;
+                setWinnerId(wId);
                 const name =
                     wId === game.player_one.id
                         ? game.player_one.user.name
