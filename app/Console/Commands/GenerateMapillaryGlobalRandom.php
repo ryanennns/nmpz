@@ -3,11 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\Location;
-use App\Models\Map;
-use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
-class GenerateMapillaryGlobalRandom extends Command
+class GenerateMapillaryGlobalRandom extends MapillaryBaseCommand
 {
     protected $signature = 'mapillary:generate-global
                             {name : Target map name}
@@ -23,9 +21,8 @@ class GenerateMapillaryGlobalRandom extends Command
 
     public function handle(): int
     {
-        $token = env('VITE_MAPILLARY_ACCESS_TOKEN');
+        $token = $this->requireToken();
         if (! $token) {
-            $this->error('VITE_MAPILLARY_ACCESS_TOKEN is not set.');
             return 1;
         }
 
@@ -38,31 +35,21 @@ class GenerateMapillaryGlobalRandom extends Command
         $output = (string) ($this->option('output') ?: "{$name}.json");
         $outputPath = base_path($output);
 
-        $existing = Map::query()->where('name', $name)->first();
-        if ($existing) {
-            if (! $this->option('force')) {
-                $this->error('Target map already exists. Use --force to replace it.');
-                return 1;
-            }
-            $existing->delete();
-        }
-
-        if (file_exists($outputPath) && ! $this->option('force')) {
-            $this->error('Output file already exists. Use --force to overwrite it.');
+        $map = $this->resolveOrCreateMap($name, (bool) $this->option('force'));
+        if (! $map) {
             return 1;
         }
 
-        $map = Map::query()->create(['name' => $name]);
-
-        $latMin = -85.0;
-        $latMax = 85.0;
-        $lngMin = -180.0;
-        $lngMax = 180.0;
+        if (! $this->checkOutputFile($outputPath, (bool) $this->option('force'))) {
+            return 1;
+        }
 
         $created = 0;
         $seenImageIds = [];
         $jsonRows = [];
         $pendingRows = [];
+
+        $fields = ['id', 'computed_geometry', 'geometry', 'computed_compass_angle', 'compass_angle', 'is_pano'];
 
         $this->info("Sampling up to {$attempts} bbox(es) for {$limit} locations...");
         $this->output->progressStart($attempts);
@@ -72,73 +59,55 @@ class GenerateMapillaryGlobalRandom extends Command
                 break;
             }
 
-            $lat = $latMin + (mt_rand() / mt_getrandmax()) * ($latMax - $latMin);
-            $lng = $lngMin + (mt_rand() / mt_getrandmax()) * ($lngMax - $lngMin);
+            $lat = -85.0 + (mt_rand() / mt_getrandmax()) * 170.0;
+            $lng = -180.0 + (mt_rand() / mt_getrandmax()) * 360.0;
+            $bbox = $this->buildBbox($lat, $lng, $delta);
 
-            $bbox = implode(',', [
-                $lng - $delta,
-                $lat - $delta,
-                $lng + $delta,
-                $lat + $delta,
-            ]);
+            $data = $this->fetchMapillaryImages($bbox, $token, $fields, 2000);
+            if (is_array($data)) {
+                foreach ($data as $image) {
+                    if ($created >= $limit) {
+                        break;
+                    }
+                    if (! is_array($image) || empty($image['id'])) {
+                        continue;
+                    }
+                    if ($panoOnly && empty($image['is_pano'])) {
+                        continue;
+                    }
+                    $imageId = (string) $image['id'];
+                    if (isset($seenImageIds[$imageId])) {
+                        continue;
+                    }
 
-            $response = Http::get('https://graph.mapillary.com/images', [
-                'access_token' => $token,
-                'fields' => 'id,computed_geometry,geometry,computed_compass_angle,compass_angle,is_pano',
-                'bbox' => $bbox,
-                'limit' => 2000,
-                'is_pano' => $panoOnly ? 'true' : null,
-            ]);
+                    $coords = $this->extractCoordinates($image);
+                    if (! $coords) {
+                        continue;
+                    }
 
-            if ($response->ok()) {
-                $data = $response->json('data');
-                if (is_array($data)) {
-                    foreach ($data as $image) {
-                        if ($created >= $limit) {
-                            break;
-                        }
-                        if (! is_array($image) || empty($image['id'])) {
-                            continue;
-                        }
-                        $imageId = (string) $image['id'];
-                        if (isset($seenImageIds[$imageId])) {
-                            continue;
-                        }
+                    $heading = $this->extractHeading($image);
 
-                        $coords = $image['computed_geometry']['coordinates']
-                            ?? $image['geometry']['coordinates']
-                            ?? null;
-                        if (! is_array($coords) || count($coords) !== 2) {
-                            continue;
-                        }
+                    $row = [
+                        'id' => Str::orderedUuid()->toString(),
+                        'map_id' => $map->getKey(),
+                        'lat' => $coords['lat'],
+                        'lng' => $coords['lng'],
+                        'heading' => $heading,
+                    ];
 
-                        $heading = (int) round(
-                            $image['computed_compass_angle']
-                                ?? $image['compass_angle']
-                                ?? 0,
-                        );
+                    $pendingRows[] = $row;
+                    $jsonRows[] = [
+                        'lat' => $row['lat'],
+                        'lng' => $row['lng'],
+                        'heading' => $row['heading'],
+                    ];
 
-                        $row = [
-                            'map_id' => $map->getKey(),
-                            'lat' => $coords[1],
-                            'lng' => $coords[0],
-                            'heading' => $heading,
-                        ];
+                    $seenImageIds[$imageId] = true;
+                    $created++;
 
-                        $pendingRows[] = $row;
-                        $jsonRows[] = [
-                            'lat' => $row['lat'],
-                            'lng' => $row['lng'],
-                            'heading' => $row['heading'],
-                        ];
-
-                        $seenImageIds[$imageId] = true;
-                        $created++;
-
-                        if (count($pendingRows) >= 1000) {
-                            Location::query()->insert($pendingRows);
-                            $pendingRows = [];
-                        }
+                    if (count($pendingRows) >= 1000) {
+                        Location::query()->insert($pendingRows);
+                        $pendingRows = [];
                     }
                 }
             }

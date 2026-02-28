@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\Round;
+use App\Services\ScoringService;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -55,7 +56,7 @@ class RoundFinished implements ShouldBroadcastNow
             return null;
         }
 
-        return round(Round::haversineDistanceKm(
+        return round(ScoringService::haversineDistanceKm(
             $this->round->location_lat,
             $this->round->location_lng,
             $lat,

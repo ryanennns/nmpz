@@ -280,6 +280,32 @@ class EloCalculatorTest extends TestCase
         $this->assertLessThan(0, $game->player_two_rating_change);
     }
 
+    public function test_high_elo_experienced_player_uses_lowest_k_factor(): void
+    {
+        // Experienced player with high ELO (k_factor_high = 24)
+        $highElo = Player::factory()->withElo(1500)->create();
+        PlayerStats::create([
+            'player_id' => $highElo->getKey(),
+            'games_played' => 20,
+        ]);
+        $opponent = Player::factory()->withElo(1500)->create();
+
+        $game = $this->completedGame([
+            'player_one_id' => $highElo->getKey(),
+            'player_two_id' => $opponent->getKey(),
+            'winner_id' => $highElo->getKey(),
+            'player_one_health' => 3000,
+            'player_two_health' => 0,
+        ]);
+
+        EloCalculator::calculate($game);
+
+        $gain = $highElo->fresh()->elo_rating - 1500;
+        // k_factor_high = 24, so the gain should be smaller than k_factor_new (40) would give
+        $this->assertGreaterThan(0, $gain);
+        $this->assertLessThanOrEqual(24, $gain); // Can't gain more than K-factor
+    }
+
     // --- Edge cases ---
 
     public function test_does_nothing_when_player_not_found(): void

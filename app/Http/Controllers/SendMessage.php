@@ -3,27 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Events\GameMessage;
+use App\Http\Requests\SendMessageRequest;
 use App\Models\Game;
 use App\Models\Player;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class SendMessage extends Controller
 {
-    public function __invoke(Request $request, Player $player, Game $game): JsonResponse
+    public function __invoke(SendMessageRequest $request, Player $player, Game $game): JsonResponse
     {
-        abort_if(
-            ! in_array($player->getKey(), [$game->player_one_id, $game->player_two_id]),
-            403,
-        );
-
-        $validated = $request->validate([
-            'message' => ['required', 'string', 'max:255'],
-        ]);
-
         $player->loadMissing('user');
 
-        GameMessage::dispatch($game, $player, $validated['message']);
+        GameMessage::dispatch($game, $player, $request->validated('message'));
 
         return response()->json(['ok' => true]);
     }

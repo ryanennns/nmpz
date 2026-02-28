@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'default_map' => 'likeacw-mapillary',
     'max_health' => 5000,
     'round_timeout_seconds' => 60,
     'k_factor_new' => 40,      // < 10 games

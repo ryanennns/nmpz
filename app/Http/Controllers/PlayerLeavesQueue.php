@@ -3,16 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Player;
+use App\Services\QueueService;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Cache;
 
 class PlayerLeavesQueue extends Controller
 {
-    public function __invoke(Player $player): Response
+    public function __invoke(Player $player, QueueService $queueService): Response
     {
-        $queue = Cache::get('matchmaking_queue', []);
-        $updated = array_values(array_filter($queue, fn ($id) => $id !== $player->getKey()));
-        Cache::put('matchmaking_queue', $updated, now()->addMinutes(5));
+        $queueService->remove($player->getKey());
 
         return response()->noContent();
     }

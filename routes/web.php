@@ -27,16 +27,18 @@ Route::post('players/{player}/join-queue', JoinQueue::class)
 Route::patch('players/{player}', UpdatePlayer::class)
     ->name('players.update');
 
-Route::post('players/{player}/games/{game}/rounds/{round}/guess', PlayerMakesGuess::class)
-    ->name('games.rounds.guess');
-Route::post('players/{player}/games/{game}/send-message', SendMessage::class)
-    ->name('games.send-message');
-Route::post('players/{player}/games/{game}/remember', RememberGameSession::class)
-    ->name('games.remember');
-Route::post('players/{player}/games/{game}/rematch', RequestRematch::class)
-    ->name('games.rematch');
-Route::post('players/{player}/games/{game}/decline-rematch', DeclineRematch::class)
-    ->name('games.decline-rematch');
+Route::middleware('game.player')->group(function () {
+    Route::post('players/{player}/games/{game}/rounds/{round}/guess', PlayerMakesGuess::class)
+        ->name('games.rounds.guess');
+    Route::post('players/{player}/games/{game}/send-message', SendMessage::class)
+        ->name('games.send-message');
+    Route::post('players/{player}/games/{game}/remember', RememberGameSession::class)
+        ->name('games.remember');
+    Route::post('players/{player}/games/{game}/rematch', RequestRematch::class)
+        ->name('games.rematch');
+    Route::post('players/{player}/games/{game}/decline-rematch', DeclineRematch::class)
+        ->name('games.decline-rematch');
+});
 
 Route::get('leaderboard', LeaderboardController::class);
 Route::get('players/{player}/stats', PlayerStatsController::class);

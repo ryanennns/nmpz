@@ -3,7 +3,7 @@
 namespace App\Actions;
 
 use App\Models\Player;
-use Illuminate\Support\Facades\Cache;
+use App\Services\QueueService;
 
 class MatchmakeQueue
 {
@@ -13,35 +13,34 @@ class MatchmakeQueue
 
     public function __construct(
         private readonly CreateMatch $createMatch,
+        private readonly QueueService $queueService,
     ) {}
 
     public function handle(): int
     {
-        $lock = Cache::lock('matchmaking_queue_lock', 10);
-        if (! $lock->get()) {
+        $lock = $this->queueService->acquireLock();
+        if (! $lock) {
             return 0;
         }
 
         try {
-            $queue = Cache::get('matchmaking_queue', []);
+            $queue = $this->queueService->getQueue();
             $queue = array_values(array_unique($queue));
 
             if (count($queue) < 2) {
-                Cache::put('matchmaking_queue', $queue, now()->addMinutes(5));
+                $this->queueService->setQueue($queue);
                 return 0;
             }
 
             $players = Player::query()->whereIn('id', $queue)->get()->keyBy('id');
             $queue = array_values(array_filter($queue, fn ($id) => $players->has($id)));
 
-            // Track when each player joined the queue for window expansion
-            $joinTimes = Cache::get('matchmaking_queue_times', []);
+            $joinTimes = $this->queueService->getJoinTimes();
             $now = time();
 
             $matches = 0;
             $matched = [];
 
-            // Sort by ELO so we try to match nearby ratings first
             usort($queue, fn ($a, $b) => ($players->get($a)?->elo_rating ?? 1000) - ($players->get($b)?->elo_rating ?? 1000));
 
             for ($i = 0; $i < count($queue); $i++) {
@@ -85,7 +84,6 @@ class MatchmakeQueue
 
                     $diff = abs($p1Elo - $p2Elo);
 
-                    // Both players must accept the match (their windows must both cover the diff)
                     if ($diff <= $p1Window && $diff <= $p2Window && $diff < $bestDiff) {
                         $bestMatch = $j;
                         $bestDiff = $diff;
@@ -104,14 +102,7 @@ class MatchmakeQueue
                 }
             }
 
-            $remaining = array_values(array_filter($queue, fn ($id) => ! isset($matched[$id])));
-            Cache::put('matchmaking_queue', $remaining, now()->addMinutes(5));
-
-            // Clean up join times for matched players
-            foreach ($matched as $id => $_) {
-                unset($joinTimes[$id]);
-            }
-            Cache::put('matchmaking_queue_times', $joinTimes, now()->addMinutes(5));
+            $this->queueService->cleanupMatchedPlayers($matched);
 
             return $matches;
         } finally {

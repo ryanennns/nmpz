@@ -53,6 +53,11 @@ class Game extends Model
         return $this->hasMany(Round::class)->orderBy('round_number');
     }
 
+    public function hasPlayer(Player $player): bool
+    {
+        return in_array($player->getKey(), [$this->player_one_id, $this->player_two_id]);
+    }
+
     public function playerOneScore(): int
     {
         return (int) $this->rounds->sum('player_one_score');

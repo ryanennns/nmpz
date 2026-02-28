@@ -14,10 +14,6 @@ class RequestRematch extends Controller
 {
     public function __invoke(Player $player, Game $game, CreateMatch $createMatch): JsonResponse
     {
-        abort_if(
-            ! in_array($player->getKey(), [$game->player_one_id, $game->player_two_id]),
-            403,
-        );
         abort_if($game->status !== GameStatus::Completed, 422, 'Game is not completed.');
         abort_if($game->rematch_game_id !== null, 422, 'Rematch already created.');
 

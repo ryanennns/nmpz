@@ -15,7 +15,7 @@ class CreateMatch
 {
     public function handle(Player $playerOne, Player $playerTwo): Game
     {
-        $map = Map::query()->where('name', 'likeacw-mapillary')->firstOrFail();
+        $map = Map::query()->where('name', config('game.default_map'))->firstOrFail();
         $locationCount = Location::query()->where('map_id', $map->getKey())->count();
 
         abort_if($locationCount === 0, 500, 'No locations available.');
@@ -50,7 +50,7 @@ class CreateMatch
         dispatch(function () use ($round, $p1Health, $p2Health) {
             $round->forceFill(['started_at' => now()])->save();
             RoundStarted::dispatch($round, $p1Health, $p2Health);
-            ForceEndRound::dispatch($round->getKey())->delay(now()->addSeconds(60));
+            ForceEndRound::dispatch($round->getKey())->delay(now()->addSeconds(config('game.round_timeout_seconds')));
         })->delay(now()->addSeconds(2));
 
         return $game;
