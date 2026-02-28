@@ -9,6 +9,7 @@ import RankBadge from '@/components/welcome/RankBadge';
 import type { Player } from '@/components/welcome/types';
 import { WaitingRoom } from '@/components/welcome/WaitingRoom';
 import { useApiClient } from '@/hooks/useApiClient';
+import { FADE_TRANSITION_MS, STATS_POLL_MS, STAT_HIDDEN_MS, STAT_VISIBLE_MS } from '@/lib/game-constants';
 
 export default function Lobby({
     player,
@@ -71,8 +72,8 @@ export default function Lobby({
                     statCycleRef.current =
                         (statCycleRef.current + 1) % messages.length;
                     cycle();
-                }, 500);
-            }, 3000);
+                }, STAT_HIDDEN_MS);
+            }, STAT_VISIBLE_MS);
         }
 
         statCycleRef.current = statCycleRef.current % messages.length;
@@ -97,13 +98,13 @@ export default function Lobby({
             };
             setStats(data);
             setQueueCount(data.queue_count);
-        }, 5000);
+        }, STATS_POLL_MS);
         return () => clearInterval(t);
     }, [queued, api]);
 
     async function fadeTransition(fn: () => void) {
         setPanelVisible(false);
-        await new Promise<void>((r) => setTimeout(r, 300));
+        await new Promise<void>((r) => setTimeout(r, FADE_TRANSITION_MS));
         fn();
         setPanelVisible(true);
     }
@@ -111,6 +112,16 @@ export default function Lobby({
     async function leaveQueue() {
         void api.leaveQueue();
         await fadeTransition(() => setQueued(false));
+    }
+
+    function handleApiError(error: unknown, fallback: string) {
+        if (axios.isAxiosError(error)) {
+            setJoinError(
+                (error.response?.data as { error?: string })?.error ?? fallback,
+            );
+            return;
+        }
+        setJoinError(fallback);
     }
 
     async function joinQueue(name?: string) {
@@ -132,14 +143,7 @@ export default function Lobby({
                 setEditingName(false);
             });
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                const message =
-                    (error.response?.data as { error?: string })?.error ??
-                    'Unable to join queue.';
-                setJoinError(message);
-                return;
-            }
-            setJoinError('Unable to join queue.');
+            handleApiError(error, 'Unable to join queue.');
         }
     }
 
@@ -157,14 +161,7 @@ export default function Lobby({
             setEditingName(false);
             setJoinError(null);
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                const message =
-                    (error.response?.data as { error?: string })?.error ??
-                    'Unable to update name.';
-                setJoinError(message);
-                return;
-            }
-            setJoinError('Unable to update name.');
+            handleApiError(error, 'Unable to update name.');
         }
     }
 

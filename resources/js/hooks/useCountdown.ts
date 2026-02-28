@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { SoundName } from '@/hooks/useSoundEffects';
+import { COUNTDOWN_TICK_THRESHOLD } from '@/lib/game-constants';
 
 export function useCountdown(playSound?: (name: SoundName) => void) {
     const [countdown, setCountdown] = useState<number | null>(null);
@@ -15,7 +16,7 @@ export function useCountdown(playSound?: (name: SoundName) => void) {
     // Tick: guess-deadline countdown
     useEffect(() => {
         if (urgentCountdown === null || urgentCountdown <= 0) return;
-        if (urgentCountdown <= 5) {
+        if (urgentCountdown <= COUNTDOWN_TICK_THRESHOLD) {
             playSound?.('countdown-tick');
         }
         const t = setTimeout(

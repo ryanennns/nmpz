@@ -18,17 +18,16 @@ import RankBadge from '@/components/welcome/RankBadge';
 import RoundSummaryPanel from '@/components/welcome/RoundSummaryPanel';
 
 import type {
+    Game,
     GameEvent,
     GameState,
     LatLng,
-    Location,
     Message,
     Player,
     Rank,
     RematchState,
     Round,
     RoundData,
-    RoundResult,
     RoundSummary,
 } from '@/components/welcome/types';
 import { SoundContext, useSoundContext } from '@/components/welcome/SoundContext';
@@ -40,7 +39,9 @@ import { useEndSequence } from '@/hooks/useEndSequence';
 import { useGameChannel } from '@/hooks/useGameChannel';
 import { useKeyBindings } from '@/hooks/useKeyBindings';
 import { useMatchmakingChannel } from '@/hooks/useMatchmakingChannel';
+import { deriveGameState, useRoundState } from '@/hooks/useRoundState';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
+import { MAX_HEALTH, URGENT_COUNTDOWN_THRESHOLD } from '@/lib/game-constants';
 import { cn } from '@/lib/utils';
 
 setOptions({
@@ -50,28 +51,6 @@ setOptions({
 
 const panel = 'rounded border border-white/10 bg-black/60 p-3 backdrop-blur-sm';
 
-function deriveGameState(
-    round: Round,
-    gameOver: boolean,
-    roundFinished: boolean,
-): GameState {
-    if (gameOver) return 'game_over';
-    if (
-        roundFinished ||
-        (round.player_one_locked_in && round.player_two_locked_in)
-    )
-        return 'finished';
-    if (round.player_one_locked_in || round.player_two_locked_in)
-        return 'one_guessed';
-    return 'waiting';
-}
-
-function roundRemainingSeconds(startedAt: Date | null) {
-    if (!startedAt || Number.isNaN(startedAt.getTime())) return null;
-    const elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000);
-    return Math.max(0, 60 - elapsed);
-}
-
 export default function Welcome({
     player,
     game: initialGame,
@@ -79,7 +58,7 @@ export default function Welcome({
     round_data: initialRoundData,
 }: {
     player: Player;
-    game: import('@/components/welcome/types').Game | null;
+    game: Game | null;
     queue_count: number;
     round_data?: RoundData | null;
 }) {
@@ -112,48 +91,50 @@ function WelcomePage({
     const [playerName, setPlayerName] = useState<string | null>(
         player.name ?? null,
     );
-    const [round, setRound] = useState<Round | null>(null);
-    const [location, setLocation] = useState<Location | null>(null);
-    const [heading, setHeading] = useState<number | null>(null);
     const [health, setHealth] = useState({
-        p1: game?.player_one_health ?? 5000,
-        p2: game?.player_two_health ?? 5000,
+        p1: game?.player_one_health ?? MAX_HEALTH,
+        p2: game?.player_two_health ?? MAX_HEALTH,
     });
     const [gameOver, setGameOver] = useState(false);
     const [events, setEvents] = useState<GameEvent[]>([]);
     const [messages, setMessages] = useState<Message[]>([]);
-    const [pendingRoundData, setPendingRoundData] = useState<RoundData | null>(
-        null,
-    );
-    const [pin, setPin] = useState<LatLng | null>(null);
-    const [roundFinished, setRoundFinished] = useState(false);
-    const [mapHovered, setMapHovered] = useState(false);
-    const [roundResult, setRoundResult] = useState<RoundResult | null>(null);
-    const [roundScores, setRoundScores] = useState<{
-        p1: number | null;
-        p2: number | null;
-    }>({ p1: null, p2: null });
-    const [roundDistances, setRoundDistances] = useState<{
-        p1: number | null;
-        p2: number | null;
-    }>({ p1: null, p2: null });
     const [rematchState, setRematchState] = useState<RematchState>('none');
     const [lastGameId, setLastGameId] = useState<string | null>(null);
-    const [opponentLiveGuess, setOpponentLiveGuess] = useState<{ lat: number; lng: number } | null>(null);
     const [ratingChange, setRatingChange] = useState<{ my: number | null; opponent: number | null }>({ my: null, opponent: null });
     const [chatOpen, setChatOpen] = useState(false);
     const [chatText, setChatText] = useState('');
+    const [mapHovered, setMapHovered] = useState(false);
     const guessRef = useRef<() => void>(() => {});
     const lastRememberedGameId = useRef<string | null>(null);
     const api = useApiClient(player.id);
-    const damageTimerRef = useRef<number | null>(null);
-    const gameOverRef = useRef(gameOver);
 
     // --- Hooks ---
     const { countdown, setCountdown, urgentCountdown, setUrgentCountdown } =
         useCountdown(playSound);
 
     const endSequence = useEndSequence();
+
+    const roundState = useRoundState({
+        countdown,
+        setCountdown,
+        setUrgentCountdown,
+        setHealth,
+    });
+    const {
+        round, setRound,
+        location, setLocation,
+        heading, setHeading,
+        pin, setPin,
+        roundFinished, setRoundFinished,
+        roundResult, setRoundResult,
+        roundScores, setRoundScores,
+        roundDistances, setRoundDistances,
+        setPendingRoundData,
+        opponentLiveGuess, setOpponentLiveGuess,
+        roundStartedAtRef,
+        applyRoundData,
+        resetRoundState,
+    } = roundState;
 
     const isPlayerOne = game ? player.id === game.player_one.id : false;
     const myHealth = isPlayerOne ? health.p1 : health.p2;
@@ -185,33 +166,25 @@ function WelcomePage({
 
     const resetGameState = useCallback(() => {
         setGame(null);
-        setRound(null);
-        setLocation(null);
-        setHeading(null);
-        setHealth({ p1: 5000, p2: 5000 });
+        resetRoundState();
+        setHealth({ p1: MAX_HEALTH, p2: MAX_HEALTH });
         setGameOver(false);
         setEvents([]);
         setMessages([]);
         setCountdown(null);
         setUrgentCountdown(null);
-        setPin(null);
-        setRoundFinished(false);
         setMapHovered(false);
-        setRoundResult(null);
-        setRoundScores({ p1: null, p2: null });
-        setRoundDistances({ p1: null, p2: null });
         setChatOpen(false);
         setChatText('');
         setRematchState('none');
-        setOpponentLiveGuess(null);
         setRatingChange({ my: null, opponent: null });
         endSequence.setWinnerId(null);
         endSequence.setWinnerName(null);
         endSequence.setWinnerOverlayVisible(false);
         endSequence.setPostGameButtonsVisible(false);
-    }, []);
+    }, [resetRoundState]);
 
-    const { roundStartedAtRef } = useGameChannel({
+    useGameChannel({
         game,
         setGame,
         setRound,
@@ -228,8 +201,6 @@ function WelcomePage({
         setGameOver,
         setWinnerId: endSequence.setWinnerId,
         setWinnerName: endSequence.setWinnerName,
-        setLocation,
-        setHeading,
         setRematchState,
         setOpponentLiveGuess,
         setRatingChange,
@@ -240,78 +211,16 @@ function WelcomePage({
         scheduleEndSequence: endSequence.scheduleEndSequence,
         clearEndSequenceTimers: endSequence.clearEndSequenceTimers,
         resetGameState,
+        roundStartedAtRef,
         playerId: player.id,
         playSound,
     });
 
-    // Apply buffered RoundStarted data once countdown expires
-    useEffect(() => {
-        if (pendingRoundData === null) return;
-        if (countdown !== null && countdown > 0) return;
-
-        const data = pendingRoundData;
-        setPendingRoundData(null);
-        setCountdown(null);
-        const startedAt = data.started_at
-            ? new Date(data.started_at)
-            : null;
-        roundStartedAtRef.current = startedAt;
-        setUrgentCountdown(roundRemainingSeconds(startedAt));
-        setRoundFinished(false);
-        setRoundResult(null);
-        setRoundScores({ p1: null, p2: null });
-        setRoundDistances({ p1: null, p2: null });
-        setOpponentLiveGuess(null);
-        setHealth({
-            p1: data.player_one_health,
-            p2: data.player_two_health,
-        });
-        setLocation({
-            lat: data.location_lat,
-            lng: data.location_lng,
-            heading: data.location_heading,
-        });
-        setHeading(data.location_heading);
-        setRound({
-            id: data.round_id,
-            round_number: data.round_number,
-            player_one_locked_in: false,
-            player_two_locked_in: false,
-        });
-        setPin(null);
-    }, [countdown, pendingRoundData]);
-
     // Apply initial round data on mount
     useEffect(() => {
         if (!initialRoundData) return;
-        const startedAt = initialRoundData.started_at
-            ? new Date(initialRoundData.started_at)
-            : null;
-        roundStartedAtRef.current = startedAt;
-        setUrgentCountdown(roundRemainingSeconds(startedAt));
-        setRoundFinished(false);
-        setRoundResult(null);
-        setRoundScores({ p1: null, p2: null });
-        setHealth({
-            p1: initialRoundData.player_one_health,
-            p2: initialRoundData.player_two_health,
-        });
-        setLocation({
-            lat: initialRoundData.location_lat,
-            lng: initialRoundData.location_lng,
-            heading: initialRoundData.location_heading,
-        });
-        setHeading(initialRoundData.location_heading);
-        setRound({
-            id: initialRoundData.round_id,
-            round_number: initialRoundData.round_number,
-            player_one_locked_in:
-                initialRoundData.player_one_locked_in ?? false,
-            player_two_locked_in:
-                initialRoundData.player_two_locked_in ?? false,
-        });
-        setPin(null);
         setCountdown(null);
+        applyRoundData(initialRoundData);
     }, []);
 
     // Remember ongoing game in session
@@ -389,13 +298,6 @@ function WelcomePage({
             if (gid) void api.declineRematch(gid);
         }
         endSequence.dismissEndSequence(resetGameState);
-    }
-
-    function handleAcceptRematch() {
-        const gid = lastGameId ?? game?.id;
-        if (!gid) return;
-        void api.requestRematch(gid);
-        setRematchState('sent');
     }
 
     function handleDeclineRematch() {
@@ -480,8 +382,8 @@ function WelcomePage({
                           ? 'waiting for opponent'
                           : 'time to guess',
                 valueClass: cn({
-                    'text-red-400': (urgentCountdown as number) <= 15,
-                    'text-amber-400': (urgentCountdown as number) > 15,
+                    'text-red-400': (urgentCountdown as number) <= URGENT_COUNTDOWN_THRESHOLD,
+                    'text-amber-400': (urgentCountdown as number) > URGENT_COUNTDOWN_THRESHOLD,
                 }),
             }
           : null;
@@ -525,7 +427,7 @@ function WelcomePage({
                         ref={gameContainerRef}
                         className="relative h-screen w-screen overflow-hidden font-mono text-white"
                     >
-                        {urgentCountdown !== null && urgentCountdown <= 15 && (
+                        {urgentCountdown !== null && urgentCountdown <= URGENT_COUNTDOWN_THRESHOLD && (
                             <div className="urgent-screen-halo pointer-events-none absolute inset-0 z-10" />
                         )}
                         {myDamageKey > 0 && (
@@ -729,7 +631,7 @@ function WelcomePage({
                             onRematch={handleRematch}
                             onRequeue={handleRequeue}
                             onExit={handleExit}
-                            onAcceptRematch={handleAcceptRematch}
+                            onAcceptRematch={handleRematch}
                             onDeclineRematch={handleDeclineRematch}
                         />
                     </div>

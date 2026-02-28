@@ -1,11 +1,5 @@
 import type { RoundSummary } from '@/components/welcome/types';
-
-function formatDistance(km: number | null): string {
-    if (km === null) return 'No guess';
-    if (km < 1) return `${Math.round(km * 1000)} m`;
-    if (km < 100) return `${km.toFixed(1)} km`;
-    return `${Math.round(km).toLocaleString()} km`;
-}
+import { formatDistance } from '@/lib/format';
 
 export default function RoundSummaryPanel({
     summary,

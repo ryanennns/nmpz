@@ -17,7 +17,7 @@ export function useEndSequence() {
         endTimersRef.current = [];
     }
 
-    function scheduleEndSequence(_resetGame: () => void) {
+    function scheduleEndSequence() {
         clearEndSequenceTimers();
         setBlackoutVisible(false);
         setWinnerOverlayVisible(false);

@@ -13,7 +13,7 @@ class JoinQueue extends Controller
     public function __invoke(Request $request, Player $player): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'name' => ['sometimes', 'nullable', 'string', 'max:' . config('game.max_name_length')],
         ]);
 
         if (! empty($validated['name'])) {

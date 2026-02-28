@@ -7,12 +7,11 @@ use App\Events\GameFinished;
 use App\Events\RoundFinished;
 use App\Events\RoundStarted;
 use App\Jobs\ForceEndRound;
-use App\Models\EloHistory;
 use App\Models\Game;
 use App\Models\Location;
-use App\Models\Player;
 use App\Models\PlayerStats;
 use App\Models\Round;
+use App\Services\EloCalculator;
 
 class StartNextRound
 {
@@ -51,7 +50,7 @@ class StartNextRound
             $game->update(['no_guess_rounds' => 0]);
         }
 
-        if ($game->no_guess_rounds >= 3) {
+        if ($game->no_guess_rounds >= config('game.no_guess_forfeit_rounds')) {
             $game->update([
                 'status' => GameStatus::Completed,
                 'winner_id' => null,
@@ -80,7 +79,7 @@ class StartNextRound
         ]);
 
         RoundStarted::dispatch($next, $game->player_one_health, $game->player_two_health);
-        ForceEndRound::dispatch($next->getKey())->delay(now()->addSeconds(60));
+        ForceEndRound::dispatch($next->getKey())->delay(now()->addSeconds(config('game.round_timeout_seconds')));
     }
 
     private function deductHealth(Game $game, Round $round): void
@@ -120,7 +119,7 @@ class StartNextRound
                 $stats->best_round_score = $myScore;
             }
 
-            if ($myScore === 5000 && $hasGuess) {
+            if ($myScore === config('game.max_health') && $hasGuess) {
                 $stats->perfect_rounds++;
             }
 
@@ -172,99 +171,7 @@ class StartNextRound
             $stats->save();
         }
 
-        $this->updateEloRatings($game);
-    }
-
-    private function updateEloRatings(Game $game): void
-    {
-        $p1 = Player::find($game->player_one_id);
-        $p2 = Player::find($game->player_two_id);
-
-        if (! $p1 || ! $p2) {
-            return;
-        }
-
-        $p1Rating = $p1->elo_rating;
-        $p2Rating = $p2->elo_rating;
-
-        // Expected scores (standard ELO formula)
-        $expected1 = 1 / (1 + pow(10, ($p2Rating - $p1Rating) / 400));
-        $expected2 = 1 - $expected1;
-
-        // Actual scores: 1 for win, 0.5 for draw, 0 for loss
-        if ($game->winner_id === null) {
-            $actual1 = 0.5;
-            $actual2 = 0.5;
-        } elseif ($game->winner_id === $p1->getKey()) {
-            $actual1 = 1;
-            $actual2 = 0;
-        } else {
-            $actual1 = 0;
-            $actual2 = 1;
-        }
-
-        // K-factor: higher for newer players, lower for experienced
-        $k1 = $this->kFactor($p1);
-        $k2 = $this->kFactor($p2);
-
-        // Health margin bonus: scale K up to 50% for dominant wins
-        $marginMultiplier = 1.0;
-        if ($game->winner_id !== null) {
-            $winnerHealth = $game->winner_id === $p1->getKey()
-                ? $game->player_one_health
-                : $game->player_two_health;
-            // Max health is 5000; more health remaining = more dominant
-            $marginMultiplier = 1.0 + 0.5 * ($winnerHealth / 5000);
-        }
-
-        $change1 = (int) round($k1 * $marginMultiplier * ($actual1 - $expected1));
-        $change2 = (int) round($k2 * $marginMultiplier * ($actual2 - $expected2));
-
-        $new1 = max(100, $p1Rating + $change1);
-        $new2 = max(100, $p2Rating + $change2);
-
-        $p1->update(['elo_rating' => $new1]);
-        $p2->update(['elo_rating' => $new2]);
-
-        EloHistory::create([
-            'player_id' => $p1->getKey(),
-            'game_id' => $game->getKey(),
-            'rating_before' => $p1Rating,
-            'rating_after' => $new1,
-            'rating_change' => $new1 - $p1Rating,
-            'opponent_rating' => $p2Rating,
-        ]);
-
-        EloHistory::create([
-            'player_id' => $p2->getKey(),
-            'game_id' => $game->getKey(),
-            'rating_before' => $p2Rating,
-            'rating_after' => $new2,
-            'rating_change' => $new2 - $p2Rating,
-            'opponent_rating' => $p1Rating,
-        ]);
-
-        // Store rating changes on the game for broadcasting
-        $game->update([
-            'player_one_rating_change' => $new1 - $p1Rating,
-            'player_two_rating_change' => $new2 - $p2Rating,
-        ]);
-    }
-
-    private function kFactor(Player $player): int
-    {
-        $stats = PlayerStats::where('player_id', $player->getKey())->first();
-        $gamesPlayed = $stats?->games_played ?? 0;
-
-        if ($gamesPlayed < 10) {
-            return 40;
-        }
-
-        if ($player->elo_rating < 1400) {
-            return 32;
-        }
-
-        return 24;
+        EloCalculator::calculate($game);
     }
 
     private function pickLocation(Game $game, int $roundNumber): Location

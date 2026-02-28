@@ -42,7 +42,7 @@ export type GameEvent = {
         | 'GameFinished'
         | 'GameMessage';
     ts: string;
-    data: Record<string, unknown>;
+    data: unknown;
 };
 
 export type LatLng = { lat: number; lng: number };

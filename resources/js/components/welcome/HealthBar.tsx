@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { MAX_HEALTH } from '@/lib/game-constants';
 
-const MAX_HP = 5000;
+const MAX_HP = MAX_HEALTH;
 const BLOCKS = 24;
 const blockStr = '█'.repeat(BLOCKS);
 
@@ -74,6 +75,8 @@ export default function HealthBar({
 
         return () => {
             if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+            if (ghostTimerRef.current) clearTimeout(ghostTimerRef.current);
+            if (damageTimerRef.current) clearTimeout(damageTimerRef.current);
         };
     }, [health]);
 

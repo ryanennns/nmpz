@@ -1,11 +1,10 @@
-import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { useEffect, useRef } from 'react';
 import type {
     Game,
     GameEvent,
     GameFinishedData,
     GameMessageData,
-    Location,
     Message,
     PlayerGuessedData,
     RematchAcceptedData,
@@ -19,34 +18,31 @@ import type {
     RoundResult,
 } from '@/components/welcome/types';
 import echo from '@/echo';
+import { roundRemainingSeconds } from '@/hooks/useRoundState';
 import type { SoundName } from '@/hooks/useSoundEffects';
-
-const MAX_EVENTS = 5;
-const MAX_MESSAGES = 6;
-const HEALTH_DEDUCT_DELAY_MS = 1800;
-
-let eventSeq = 0;
+import {
+    HEALTH_DEDUCT_DELAY_MS,
+    MAX_EVENTS,
+    MAX_MESSAGES,
+    NEXT_ROUND_COUNTDOWN,
+    URGENT_COUNTDOWN_THRESHOLD,
+} from '@/lib/game-constants';
 
 function pushEvent(
+    seqRef: MutableRefObject<number>,
     setEvents: Dispatch<SetStateAction<GameEvent[]>>,
     name: GameEvent['name'],
-    data: Record<string, unknown>,
+    data: unknown,
 ) {
     setEvents((prev) => [
         {
-            id: eventSeq++,
+            id: seqRef.current++,
             name,
             ts: new Date().toISOString().substring(11, 23),
             data,
         },
         ...prev.slice(0, MAX_EVENTS - 1),
     ]);
-}
-
-function roundRemainingSeconds(startedAt: Date | null) {
-    if (!startedAt || Number.isNaN(startedAt.getTime())) return null;
-    const elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000);
-    return Math.max(0, 60 - elapsed);
 }
 
 type GameChannelDeps = {
@@ -70,8 +66,6 @@ type GameChannelDeps = {
     setGameOver: Dispatch<SetStateAction<boolean>>;
     setWinnerId: (id: string | null) => void;
     setWinnerName: (name: string | null) => void;
-    setLocation: Dispatch<SetStateAction<Location | null>>;
-    setHeading: Dispatch<SetStateAction<number | null>>;
     setRematchState: Dispatch<SetStateAction<RematchState>>;
     setOpponentLiveGuess: Dispatch<SetStateAction<{ lat: number; lng: number } | null>>;
     setRatingChange: Dispatch<SetStateAction<{ my: number | null; opponent: number | null }>>;
@@ -79,9 +73,10 @@ type GameChannelDeps = {
     setWinnerOverlayVisible: (v: boolean) => void;
     setPageVisible: (v: boolean) => void;
     setBlackoutVisible: (v: boolean) => void;
-    scheduleEndSequence: (resetGame: () => void) => void;
+    scheduleEndSequence: () => void;
     clearEndSequenceTimers: () => void;
     resetGameState: () => void;
+    roundStartedAtRef: MutableRefObject<Date | null>;
     playerId: string;
     playSound: (name: SoundName) => void;
 };
@@ -114,11 +109,12 @@ export function useGameChannel(deps: GameChannelDeps) {
         scheduleEndSequence,
         clearEndSequenceTimers,
         resetGameState,
+        roundStartedAtRef,
         playerId,
         playSound,
     } = deps;
 
-    const roundStartedAtRef = useRef<Date | null>(null);
+    const eventSeqRef = useRef(0);
 
     useEffect(() => {
         if (!game) return;
@@ -128,7 +124,7 @@ export function useGameChannel(deps: GameChannelDeps) {
         channel.listen(
             '.PlayerGuessed',
             (data: PlayerGuessedData) => {
-                pushEvent(setEvents, 'PlayerGuessed', data as unknown as Record<string, unknown>);
+                pushEvent(eventSeqRef, setEvents,'PlayerGuessed', data);
                 setRound((prev) =>
                     prev
                         ? {
@@ -146,7 +142,7 @@ export function useGameChannel(deps: GameChannelDeps) {
                         roundStartedAtRef.current,
                     );
                     setUrgentCountdown(
-                        remaining === null ? 15 : Math.min(remaining, 15),
+                        remaining === null ? URGENT_COUNTDOWN_THRESHOLD : Math.min(remaining, URGENT_COUNTDOWN_THRESHOLD),
                     );
                 }
             },
@@ -155,12 +151,12 @@ export function useGameChannel(deps: GameChannelDeps) {
         channel.listen(
             '.RoundFinished',
             (data: RoundFinishedData) => {
-                pushEvent(setEvents, 'RoundFinished', data as unknown as Record<string, unknown>);
+                pushEvent(eventSeqRef, setEvents,'RoundFinished', data);
                 playSound('round-end');
                 setRoundFinished(true);
                 setOpponentLiveGuess(null);
                 setUrgentCountdown(null);
-                setCountdown(6);
+                setCountdown(NEXT_ROUND_COUNTDOWN);
                 const p1Score = data.player_one_score ?? 0;
                 const p2Score = data.player_two_score ?? 0;
                 setRoundScores({ p1: p1Score, p2: p2Score });
@@ -209,7 +205,7 @@ export function useGameChannel(deps: GameChannelDeps) {
         channel.listen(
             '.RoundStarted',
             (data: RoundData) => {
-                pushEvent(setEvents, 'RoundStarted', data as unknown as Record<string, unknown>);
+                pushEvent(eventSeqRef, setEvents,'RoundStarted', data);
                 setPendingRoundData(data);
             },
         );
@@ -217,12 +213,12 @@ export function useGameChannel(deps: GameChannelDeps) {
         channel.listen(
             '.GameMessage',
             (data: GameMessageData) => {
-                pushEvent(setEvents, 'GameMessage', data as unknown as Record<string, unknown>);
+                pushEvent(eventSeqRef, setEvents,'GameMessage', data);
                 setMessages((prev) =>
                     [
                         ...prev,
                         {
-                            id: eventSeq++,
+                            id: eventSeqRef.current++,
                             name: data.player_name ?? 'Player',
                             text: data.message ?? '',
                             ts: new Date().toISOString().substring(11, 19),
@@ -235,7 +231,7 @@ export function useGameChannel(deps: GameChannelDeps) {
         channel.listen(
             '.GameFinished',
             (data: GameFinishedData) => {
-                pushEvent(setEvents, 'GameFinished', data as unknown as Record<string, unknown>);
+                pushEvent(eventSeqRef, setEvents,'GameFinished', data);
                 setCountdown(null);
                 setUrgentCountdown(null);
                 roundStartedAtRef.current = null;
@@ -262,7 +258,7 @@ export function useGameChannel(deps: GameChannelDeps) {
                 setWinnerName(name);
                 playSound(wId === playerId ? 'win-jingle' : 'lose-sound');
 
-                scheduleEndSequence(resetGameState);
+                scheduleEndSequence();
             },
         );
 
@@ -326,5 +322,5 @@ export function useGameChannel(deps: GameChannelDeps) {
         };
     }, [game?.id]);
 
-    return { roundStartedAtRef };
 }
+
