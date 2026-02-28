@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import ChatSidebar from '@/components/welcome/ChatSidebar';
 import { GameProvider, useGameContext } from '@/components/welcome/GameContext';
 import HealthBar from '@/components/welcome/HealthBar';
-import Lobby from '@/components/welcome/Lobby';
 import MapillaryImagePanel from '@/components/welcome/MapillaryImagePanel';
 import MapPicker from '@/components/welcome/MapPicker';
 import ResultsMap from '@/components/welcome/ResultsMap';
@@ -109,38 +108,27 @@ function CountdownTimer({
 export default function Welcome({
     player,
     game: initialGame,
-    queue_count: initialQueueCount,
     round_data: initialRoundData,
 }: {
     player: Player;
-    game: Game | null;
-    queue_count: number;
+    game: Game;
     round_data?: RoundData | null;
 }) {
     return (
         <GameProvider initialGame={initialGame}>
-            <WelcomePage
-                player={player}
-                queue_count={initialQueueCount}
-                round_data={initialRoundData}
-            />
+            <WelcomePage player={player} round_data={initialRoundData} />
         </GameProvider>
     );
 }
 
 function WelcomePage({
     player,
-    queue_count: initialQueueCount,
     round_data: initialRoundData,
 }: {
     player: Player;
-    queue_count: number;
     round_data?: RoundData | null;
 }) {
     const { game, setGame } = useGameContext();
-    const [playerName, setPlayerName] = useState<string | null>(
-        player.name ?? null,
-    );
     const [round, setRound] = useState<Round | null>(null);
     const [location, setLocation] = useState<Location | null>(null);
     const [heading, setHeading] = useState<number | null>(null);
@@ -179,8 +167,7 @@ function WelcomePage({
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const [chatOpen, setChatOpen] = useState(false);
     const [chatText, setChatText] = useState('');
-    const lastRememberedGameId = useRef<string | null>(null);
-    const api = useApiClient(player.id);
+    const api = useApiClient();
     const damageTimerRef = useRef<number | null>(null);
     const gameOverRef = useRef(gameOver);
 
@@ -210,9 +197,7 @@ function WelcomePage({
                   health: isPlayerOne ? health.p2 : health.p1,
                   score: isPlayerOne ? roundScores.p2 : roundScores.p1,
                   barColor: isPlayerOne ? 'red' : ('blue' as PlayerColour),
-                  name: isPlayerOne
-                      ? game.player_two.user.name
-                      : game.player_one.user.name,
+                  name: 'oops',
               },
           }
         : null;
@@ -361,7 +346,7 @@ function WelcomePage({
         setWinnerName(winnerName);
 
         scheduleEndSequence(() => {
-            setGame(null);
+            // setGame(null); todo oh no
             setRound(null);
             setLocation(null);
             setHeading(null);
@@ -440,24 +425,6 @@ function WelcomePage({
         );
         return () => clearTimeout(t);
     }, [urgentCountdown]);
-
-    // Remember ongoing game in session
-    useEffect(() => {
-        if (!game) {
-            if (lastRememberedGameId.current) {
-                void api
-                    .rememberGame(false, lastRememberedGameId.current)
-                    .catch(() => {});
-                lastRememberedGameId.current = null;
-            }
-            return;
-        }
-
-        if (lastRememberedGameId.current === game.id) return;
-
-        lastRememberedGameId.current = game.id;
-        void api.rememberGame(true).catch(() => {});
-    }, [game?.id, player.id]);
 
     // Matchmaking channel — only when waiting for a game
     useEffect(() => {
@@ -602,9 +569,9 @@ function WelcomePage({
             const winnerId = data.winner_id as string | null;
             const name =
                 winnerId === game.player_one.id
-                    ? game.player_one.user.name
+                    ? game.player_one.name
                     : winnerId === game.player_two.id
-                      ? game.player_two.user.name
+                      ? game.player_two.name
                       : null;
             triggerGameOver(winnerId, name);
         });
@@ -629,8 +596,8 @@ function WelcomePage({
             health.p1 < 0 ? game.player_two.id : game.player_one.id;
         const winnerName =
             winnerId === game.player_one.id
-                ? game.player_one.user.name
-                : game.player_two.user.name;
+                ? game.player_one.name
+                : game.player_two.name;
 
         triggerGameOver(winnerId, winnerName);
     }, [game?.id, gameOver, health.p1, health.p2]);
@@ -667,19 +634,19 @@ function WelcomePage({
     async function guess() {
         if (!pin || !round || !game || myLocked || gameOver) return;
         setMapHovered(false);
-        const res = await api.guess(round.id, pin, true);
+        const res = await api.guess(player.id, round.id, pin, true);
         if (res?.data) setRound(res.data as Round);
     }
 
     async function updateGuess(coords: LatLng) {
         if (!round || !game || myLocked || gameOver) return;
-        const res = await api.guess(round.id, coords, false);
+        const res = await api.guess(player.id, round.id, coords, false);
         if (res?.data) setRound(res.data as Round);
     }
 
     async function sendMessage() {
         if (!game || !chatText.trim()) return;
-        const res = await api.sendMessage(chatText.trim());
+        const res = await api.sendMessage(player.id, chatText.trim());
         if (res) {
             setChatText('');
             setChatOpen(false);
@@ -807,194 +774,179 @@ function WelcomePage({
             <div
                 className={`transition-opacity duration-500 ${pageVisible ? 'opacity-100' : 'opacity-0'}`}
             >
-                {!game ? (
-                    <Lobby
-                        player={player}
-                        initialQueueCount={initialQueueCount}
-                        playerName={playerName}
-                        onNameChange={setPlayerName}
-                    />
-                ) : (
-                    <div
-                        ref={gameContainerRef}
-                        className="relative h-screen w-screen overflow-hidden font-mono text-white"
-                    >
-                        {urgentCountdown !== null && urgentCountdown <= 15 && (
-                            <div className="urgent-screen-halo pointer-events-none absolute inset-0 z-10" />
-                        )}
-                        {/* Red vignette flash when my health drops */}
-                        {myDamageKey > 0 && (
-                            <div
-                                key={myDamageKey}
-                                className="damage-vignette pointer-events-none absolute inset-0 z-30"
-                            />
-                        )}
-                        {/* Fullscreen results during countdown */}
-                        {roundFinished && roundResult ? (
-                            <ResultsMap
-                                key={`result-${round?.id ?? 'pending'}`}
-                                result={roundResult}
-                            />
-                        ) : location ? (
-                            <MapillaryImagePanel
-                                key={`${location.image_id ?? ''}-${location.lat},${location.lng}`}
-                                location={location}
-                                onHeadingChange={setHeading}
-                            />
-                        ) : (
-                            <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 text-sm text-neutral-500">
-                                <ShimmerText>
-                                    Waiting for round to start
-                                </ShimmerText>
-                            </div>
-                        )}
+                <div
+                    ref={gameContainerRef}
+                    className="relative h-screen w-screen overflow-hidden font-mono text-white"
+                >
+                    {urgentCountdown !== null && urgentCountdown <= 15 && (
+                        <div className="urgent-screen-halo pointer-events-none absolute inset-0 z-10" />
+                    )}
+                    {/* Red vignette flash when my health drops */}
+                    {myDamageKey > 0 && (
+                        <div
+                            key={myDamageKey}
+                            className="damage-vignette pointer-events-none absolute inset-0 z-30"
+                        />
+                    )}
+                    {/* Fullscreen results during countdown */}
+                    {roundFinished && roundResult ? (
+                        <ResultsMap
+                            key={`result-${round?.id ?? 'pending'}`}
+                            result={roundResult}
+                        />
+                    ) : location ? (
+                        <MapillaryImagePanel
+                            key={`${location.image_id ?? ''}-${location.lat},${location.lng}`}
+                            location={location}
+                            onHeadingChange={setHeading}
+                        />
+                    ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 text-sm text-neutral-500">
+                            <ShimmerText>
+                                Waiting for round to start
+                            </ShimmerText>
+                        </div>
+                    )}
 
-                        {/* Top corners: player panels (always visible) */}
-                        {(() => {
-                            const { me, opponent } = playerConfig ?? {};
-                            return (
-                                <>
-                                    <div className="pointer-events-none absolute top-6 left-8 z-20 flex w-72 flex-col gap-3">
-                                        <div className="rounded bg-black/50 px-4 py-3 backdrop-blur-sm">
-                                            {roundFinished &&
-                                                me?.score !== null && (
-                                                    <div
-                                                        className={`${me?.color} mb-3 font-mono text-6xl font-bold tabular-nums`}
-                                                    >
-                                                        {me?.score?.toLocaleString()}
-                                                    </div>
-                                                )}
-                                            <div
-                                                className={`${me?.colorDim} mb-1 font-mono text-xs`}
-                                            >
-                                                You
-                                            </div>
-                                            <HealthBar
-                                                health={me?.health ?? 0}
-                                                color={me?.barColor ?? 'blue'}
-                                            />
-                                        </div>
-                                        <ChatSidebar
-                                            messages={messages}
-                                            chatOpen={chatOpen}
-                                            chatText={chatText}
-                                            onChatTextChange={setChatText}
-                                            onSendMessage={() =>
-                                                void sendMessage()
-                                            }
-                                        />
-                                    </div>
-                                    {countdownConfig && (
-                                        <CountdownTimer
-                                            config={countdownConfig}
-                                        />
-                                    )}
-                                    <div className="pointer-events-none absolute top-6 right-8 z-20 rounded bg-black/50 px-4 py-3 text-right backdrop-blur-sm">
+                    {/* Top corners: player panels (always visible) */}
+                    {(() => {
+                        const { me, opponent } = playerConfig ?? {};
+                        return (
+                            <>
+                                <div className="pointer-events-none absolute top-6 left-8 z-20 flex w-72 flex-col gap-3">
+                                    <div className="rounded bg-black/50 px-4 py-3 backdrop-blur-sm">
                                         {roundFinished &&
-                                            opponent?.score !== null && (
+                                            me?.score !== null && (
                                                 <div
-                                                    className={`${opponent?.color} mb-3 font-mono text-6xl font-bold tabular-nums`}
+                                                    className={`${me?.color} mb-3 font-mono text-6xl font-bold tabular-nums`}
                                                 >
-                                                    {opponent?.score?.toLocaleString()}
+                                                    {me?.score?.toLocaleString()}
                                                 </div>
                                             )}
                                         <div
-                                            className={`${opponent?.colorDim} mb-1 font-mono text-xs`}
+                                            className={`${me?.colorDim} mb-1 font-mono text-xs`}
                                         >
-                                            {opponent?.name}
+                                            You
                                         </div>
                                         <HealthBar
-                                            health={opponent?.health ?? 0}
-                                            color={opponent?.barColor ?? 'red'}
+                                            health={me?.health ?? 0}
+                                            color={me?.barColor ?? 'blue'}
                                         />
                                     </div>
-                                </>
-                            );
-                        })()}
-
-                        {/* Bottom-left: event feed */}
-                        <div
-                            className={`absolute bottom-4 left-4 z-10 w-80 space-y-2 text-xs ${panel}`}
-                        >
-                            {round && (
-                                <>
-                                    <div className="flex justify-between text-xs opacity-70">
-                                        <span>Round {round.round_number}</span>
-                                        <span>{stateLabel[gameState]}</span>
-                                    </div>
-                                    {events.length > 0 && (
-                                        <div className="border-t border-white/10" />
-                                    )}
-                                </>
-                            )}
-                            {events.length === 0 ? (
-                                <p className="opacity-30">no events yet</p>
-                            ) : (
-                                events.map((e) => (
-                                    <div
-                                        key={e.id}
-                                        className="flex gap-2 opacity-40"
-                                    >
-                                        <span>{e.ts}</span>
-                                        <span className="truncate text-white/70">
-                                            {e.name}
-                                        </span>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-                        {/* Bottom-center: compass */}
-                        {location && heading && (
-                            <StandardCompass heading={heading} />
-                        )}
-
-                        {/* Bottom-right: guess map for current player */}
-                        {round && !roundFinished && (
-                            <div
-                                className={`absolute right-4 bottom-4 z-10 overflow-hidden rounded transition-all duration-150 ${mapHovered ? 'h-[70vh] w-[55vw]' : 'h-40 w-64'}`}
-                                onMouseEnter={() => setMapHovered(true)}
-                                onMouseLeave={() => setMapHovered(false)}
-                            >
-                                <MapPicker
-                                    key={round.id}
-                                    onPin={(coords) => {
-                                        setPin(coords);
-                                        void updateGuess(coords);
-                                    }}
-                                    pinColor={
-                                        isPlayerOne ? '#60a5fa' : '#f87171'
-                                    }
-                                    disabled={myLocked || gameOver}
-                                />
-                                <div className="absolute right-2 bottom-2 left-2 font-mono">
-                                    <button
-                                        onClick={guess}
-                                        disabled={!pin || myLocked || gameOver}
-                                        className="w-full rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm enabled:hover:bg-black/80 disabled:opacity-30"
-                                    >
-                                        {myLocked
-                                            ? 'Locked in ✓'
-                                            : pin
-                                              ? 'Lock in guess [space]'
-                                              : 'Click map to place pin'}
-                                    </button>
+                                    <ChatSidebar
+                                        messages={messages}
+                                        chatOpen={chatOpen}
+                                        chatText={chatText}
+                                        onChatTextChange={setChatText}
+                                        onSendMessage={() => void sendMessage()}
+                                    />
                                 </div>
-                            </div>
-                        )}
+                                {countdownConfig && (
+                                    <CountdownTimer config={countdownConfig} />
+                                )}
+                                <div className="pointer-events-none absolute top-6 right-8 z-20 rounded bg-black/50 px-4 py-3 text-right backdrop-blur-sm">
+                                    {roundFinished &&
+                                        opponent?.score !== null && (
+                                            <div
+                                                className={`${opponent?.color} mb-3 font-mono text-6xl font-bold tabular-nums`}
+                                            >
+                                                {opponent?.score?.toLocaleString()}
+                                            </div>
+                                        )}
+                                    <div
+                                        className={`${opponent?.colorDim} mb-1 font-mono text-xs`}
+                                    >
+                                        {opponent?.name}
+                                    </div>
+                                    <HealthBar
+                                        health={opponent?.health ?? 0}
+                                        color={opponent?.barColor ?? 'red'}
+                                    />
+                                </div>
+                            </>
+                        );
+                    })()}
 
-                        {/* Fade to black overlay */}
-                        <div
-                            className={`pointer-events-none absolute inset-0 z-40 bg-black transition-opacity duration-500 ${blackoutVisible ? 'opacity-100' : 'opacity-0'}`}
-                        />
-                        <WinnerOverlay
-                            visible={winnerOverlayVisible}
-                            winnerId={winnerId}
-                            id={player.id}
-                            winnerName={winnerName}
-                        />
+                    {/* Bottom-left: event feed */}
+                    <div
+                        className={`absolute bottom-4 left-4 z-10 w-80 space-y-2 text-xs ${panel}`}
+                    >
+                        {round && (
+                            <>
+                                <div className="flex justify-between text-xs opacity-70">
+                                    <span>Round {round.round_number}</span>
+                                    <span>{stateLabel[gameState]}</span>
+                                </div>
+                                {events.length > 0 && (
+                                    <div className="border-t border-white/10" />
+                                )}
+                            </>
+                        )}
+                        {events.length === 0 ? (
+                            <p className="opacity-30">no events yet</p>
+                        ) : (
+                            events.map((e) => (
+                                <div
+                                    key={e.id}
+                                    className="flex gap-2 opacity-40"
+                                >
+                                    <span>{e.ts}</span>
+                                    <span className="truncate text-white/70">
+                                        {e.name}
+                                    </span>
+                                </div>
+                            ))
+                        )}
                     </div>
-                )}
+
+                    {/* Bottom-center: compass */}
+                    {location && heading && (
+                        <StandardCompass heading={heading} />
+                    )}
+
+                    {/* Bottom-right: guess map for current player */}
+                    {round && !roundFinished && (
+                        <div
+                            className={`absolute right-4 bottom-4 z-10 overflow-hidden rounded transition-all duration-150 ${mapHovered ? 'h-[70vh] w-[55vw]' : 'h-40 w-64'}`}
+                            onMouseEnter={() => setMapHovered(true)}
+                            onMouseLeave={() => setMapHovered(false)}
+                        >
+                            <MapPicker
+                                key={round.id}
+                                onPin={(coords) => {
+                                    setPin(coords);
+                                    void updateGuess(coords);
+                                }}
+                                pinColor={isPlayerOne ? '#60a5fa' : '#f87171'}
+                                disabled={myLocked || gameOver}
+                            />
+                            <div className="absolute right-2 bottom-2 left-2 font-mono">
+                                <button
+                                    onClick={guess}
+                                    disabled={!pin || myLocked || gameOver}
+                                    className="w-full rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm enabled:hover:bg-black/80 disabled:opacity-30"
+                                >
+                                    {myLocked
+                                        ? 'Locked in ✓'
+                                        : pin
+                                          ? 'Lock in guess [space]'
+                                          : 'Click map to place pin'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Fade to black overlay */}
+                    <div
+                        className={`pointer-events-none absolute inset-0 z-40 bg-black transition-opacity duration-500 ${blackoutVisible ? 'opacity-100' : 'opacity-0'}`}
+                    />
+                    <WinnerOverlay
+                        visible={winnerOverlayVisible}
+                        winnerId={winnerId}
+                        id={player.id}
+                        winnerName={winnerName}
+                    />
+                </div>
             </div>
         </>
     );

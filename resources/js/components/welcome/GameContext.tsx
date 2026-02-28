@@ -3,8 +3,8 @@ import { createContext, useContext, useState } from 'react';
 import type { Game } from '@/components/welcome/types';
 
 type GameContextValue = {
-    game: Game | null;
-    setGame: Dispatch<SetStateAction<Game | null>>;
+    game: Game;
+    setGame: Dispatch<SetStateAction<Game>>;
 };
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -13,10 +13,10 @@ export function GameProvider({
     initialGame,
     children,
 }: {
-    initialGame: Game | null;
+    initialGame: Game;
     children: ReactNode;
 }) {
-    const [game, setGame] = useState<Game | null>(initialGame);
+    const [game, setGame] = useState<Game>(initialGame);
 
     return (
         <GameContext.Provider value={{ game, setGame }}>

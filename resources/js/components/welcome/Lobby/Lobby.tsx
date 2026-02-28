@@ -28,6 +28,9 @@ export default function Lobby() {
 
         channel.listen('.GameReady', (data: { game: Game }) => {
             console.log('game found!', data);
+            window.location.assign(
+                `/game/${data.game.id}?player=${player!.id}`,
+            );
         });
 
         return () => {
@@ -61,6 +64,7 @@ export default function Lobby() {
             return;
         }
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPhaseVisible(false);
 
         const swapTimeout = window.setTimeout(() => {
