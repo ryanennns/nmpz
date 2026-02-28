@@ -10,6 +10,7 @@ export const LobbyHeader = ({ onClick }: { onClick: () => void }) => {
                 onClick={onClick}
                 className="absolute -top-2 -right-6 flex h-6 w-6 items-center justify-center rounded-full text-xs text-white/70 transition hover:text-white"
                 aria-label="Open help"
+                data-testid="help-button"
             >
                 <MessageCircleQuestion />
             </button>

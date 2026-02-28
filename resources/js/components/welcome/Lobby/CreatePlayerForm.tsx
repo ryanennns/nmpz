@@ -4,7 +4,7 @@ export const CreatePlayerForm = () => {
             <input
                 maxLength={32}
                 onChange={(e) => 0}
-                placeholder="Your name"
+                placeholder="your name"
                 className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white placeholder:text-white/40"
             />
             <div className="mt-2 flex gap-2">
