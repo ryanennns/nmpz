@@ -11,14 +11,14 @@ export type SoundName =
     | 'lose-sound';
 
 const SOUND_FILES: Record<SoundName, string> = {
-    'match-found': '/sounds/match-found.mp3',
-    'lock-in': '/sounds/lock-in.mp3',
-    'opponent-locked': '/sounds/opponent-locked.mp3',
-    'round-end': '/sounds/round-end.mp3',
-    'damage-taken': '/sounds/damage-taken.mp3',
-    'countdown-tick': '/sounds/countdown-tick.mp3',
-    'win-jingle': '/sounds/win-jingle.mp3',
-    'lose-sound': '/sounds/lose-sound.mp3',
+    'match-found': '/sounds/match-found.wav',
+    'lock-in': '/sounds/lock-in.wav',
+    'opponent-locked': '/sounds/opponent-locked.wav',
+    'round-end': '/sounds/round-end.wav',
+    'damage-taken': '/sounds/damage-taken.wav',
+    'countdown-tick': '/sounds/countdown-tick.wav',
+    'win-jingle': '/sounds/win-jingle.wav',
+    'lose-sound': '/sounds/lose-sound.wav',
 };
 
 export function useSoundEffects() {
