@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
 import { QueueReady } from '@/components/welcome/Lobby/QueueReady';
 import NamePrompt from '@/components/welcome/NamePrompt';
+import type { Game, Player } from '@/components/welcome/types';
 import { WaitingRoom } from '@/components/welcome/WaitingRoom';
+import echo from '@/echo';
 import { useUnauthedApiClient } from '@/hooks/useApiClient';
 import { LobbyHeader } from './LobbyHeader';
+
+const PHASE_TRANSITION_MS = 200;
 
 export default function Lobby() {
     const api = useUnauthedApiClient();
@@ -13,6 +17,24 @@ export default function Lobby() {
 
     const [helpOpen, setHelpOpen] = useState(false);
     const [playerName, setPlayerName] = useState<string | undefined>(undefined);
+
+    const [player, setPlayer] = useState<Player | undefined>(undefined);
+    useEffect(() => {
+        if (!player) {
+            return;
+        }
+
+        const channel = echo.channel(`player.${player!.id}`);
+
+        channel.listen('.GameReady', (data: { game: Game }) => {
+            console.log('game found!', data);
+        });
+
+        return () => {
+            echo.leaveChannel(`player.${player!.id}`);
+        };
+    }, [player, player?.id]);
+
     const submitGuestPlayerName = async (name: string) => {
         setPlayerName(name);
 
@@ -20,7 +42,11 @@ export default function Lobby() {
 
         if (response.status !== 201) {
             setError('oops');
+
+            return;
         }
+
+        setPlayer(response.data as Player);
 
         setPhase('queue_ready');
     };
@@ -28,32 +54,66 @@ export default function Lobby() {
         'guest_signin' | 'queue_ready' | 'queued'
     >('guest_signin');
 
+    const [displayPhase, setDisplayPhase] = useState(phase);
+    const [phaseVisible, setPhaseVisible] = useState(true);
+    useEffect(() => {
+        if (phase === displayPhase) {
+            return;
+        }
+
+        setPhaseVisible(false);
+
+        const swapTimeout = window.setTimeout(() => {
+            setDisplayPhase(phase);
+
+            window.requestAnimationFrame(() => {
+                setPhaseVisible(true);
+            });
+        }, PHASE_TRANSITION_MS);
+
+        return () => {
+            window.clearTimeout(swapTimeout);
+        };
+    }, [displayPhase, phase]);
+
     return (
         <div className="flex h-[100vh] items-center justify-center font-mono">
             <div className="flex w-72 max-w-sm flex-col items-center gap-4">
-                {phase !== 'queued' && (
-                    <LobbyHeader onClick={() => setHelpOpen(true)} />
-                )}
-                {phase === 'guest_signin' && (
-                    <NamePrompt
-                        onSubmit={submitGuestPlayerName}
-                        error={!!error}
-                    />
-                )}
-                {phase === 'queue_ready' && (
-                    <QueueReady
-                        playerName={playerName || ''}
-                        onJoinQueue={() => setPhase('queued')}
-                        onEditName={() => 0}
-                    />
-                )}
-                {phase === 'queued' && (
-                    <WaitingRoom
-                        playerName={playerName || ''}
-                        onLeaveQueue={() => setPhase('queue_ready')}
-                        active={phase === 'queued'}
-                    />
-                )}
+                <div
+                    className={`flex w-full flex-col items-center gap-4 transition-opacity duration-200 ${
+                        phaseVisible ? 'opacity-100' : 'opacity-0'
+                    }`}
+                >
+                    {displayPhase !== 'queued' && (
+                        <LobbyHeader onClick={() => setHelpOpen(true)} />
+                    )}
+                    {displayPhase === 'guest_signin' && (
+                        <NamePrompt
+                            onSubmit={submitGuestPlayerName}
+                            error={!!error}
+                        />
+                    )}
+                    {displayPhase === 'queue_ready' && (
+                        <QueueReady
+                            playerName={playerName || ''}
+                            onJoinQueue={() => {
+                                setPhase('queued');
+                                void api.joinQueue(player!.id);
+                            }}
+                            onEditName={() => 0}
+                        />
+                    )}
+                    {displayPhase === 'queued' && (
+                        <WaitingRoom
+                            playerName={playerName || ''}
+                            onLeaveQueue={() => {
+                                setPhase('queue_ready');
+                                void api.leaveQueue(player!.id);
+                            }}
+                            active={displayPhase === 'queued'}
+                        />
+                    )}
+                </div>
                 <SimpleModal open={helpOpen} onClose={() => setHelpOpen(false)}>
                     <div className="mb-2 text-2xl text-white/50">
                         what is <span className="text-white/80">nmpz</span>

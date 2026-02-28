@@ -39,37 +39,50 @@ export const useUnauthedApiClient = () => {
 
     return {
         createPlayer: (name: string) => client.post(`/players`, { name }),
-    };
-};
-
-export function useApiClient(playerId: string) {
-    const client = useMemo(() => createClient(), []);
-    const { game } = useGameContext();
-
-    return {
-        joinQueue: (name?: string) =>
+        joinQueue: (playerId: string, name?: string) =>
             client.post(
                 `/players/${playerId}/join-queue`,
                 name ? { name } : {},
             ),
-        updatePlayer: (name: string) =>
+        leaveQueue: (playerId: string) =>
+            client.post(`/players/${playerId}/leave-queue`),
+    };
+};
+
+export function useApiClient() {
+    const client = useMemo(() => createClient(), []);
+    const { game } = useGameContext();
+
+    return {
+        joinQueue: (playerId: string, name?: string) =>
+            client.post(
+                `/players/${playerId}/join-queue`,
+                name ? { name } : {},
+            ),
+        leaveQueue: (playerId: string) =>
+            client.post(`/players/${playerId}/leave-queue`),
+        updatePlayer: (playerId: string, name: string) =>
             client.patch(`/players/${playerId}`, { name }),
-        leaveQueue: () => client.post(`/players/${playerId}/leave-queue`),
-        rememberGame: (active = true, gameId?: string) => {
+        rememberGame: (playerId: string, active = true, gameId?: string) => {
             const id = gameId ?? game?.id;
             if (!id) return Promise.resolve(null);
             return client.post(`/players/${playerId}/games/${id}/remember`, {
                 active,
             });
         },
-        guess: (roundId: string, coords: LatLng, lockedIn = false) => {
+        guess: (
+            playerId: string,
+            roundId: string,
+            coords: LatLng,
+            lockedIn = false,
+        ) => {
             if (!game) return Promise.resolve(null);
             return client.post(
                 `/players/${playerId}/games/${game.id}/rounds/${roundId}/guess`,
                 lockedIn ? { ...coords, locked_in: true } : coords,
             );
         },
-        sendMessage: (message: string) => {
+        sendMessage: (playerId: string, message: string) => {
             if (!game) return Promise.resolve(null);
             return client.post(
                 `/players/${playerId}/games/${game.id}/send-message`,

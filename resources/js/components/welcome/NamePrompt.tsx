@@ -36,7 +36,7 @@ export default function NamePrompt({
                 }}
                 placeholder="your name"
                 className={clsx(
-                    'w-full rounded border bg-black/40 px-2 py-1 text-white outline-none placeholder:text-white/30',
+                    'w-full rounded border bg-black/40 px-2 py-1 text-white outline-none placeholder:text-white/30 text-xs',
                     error ? 'border-solid border-red-500' : 'border-white/10',
                 )}
             />
