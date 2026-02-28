@@ -48,6 +48,7 @@ export const useUnauthedApiClient = () => {
             ),
         leaveQueue: (playerId: string) =>
             client.post(`/players/${playerId}/leave-queue`),
+        getPlayer: (playerId: string) => client.get(`/players/${playerId}`),
     };
 };
 

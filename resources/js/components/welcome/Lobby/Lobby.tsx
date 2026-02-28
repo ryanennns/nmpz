@@ -6,39 +6,74 @@ import type { Game, Player } from '@/components/welcome/types';
 import { WaitingRoom } from '@/components/welcome/WaitingRoom';
 import echo from '@/echo';
 import { useUnauthedApiClient } from '@/hooks/useApiClient';
+import { PLAYER_ID_KEY, useLocalStorage } from '@/hooks/useLocalStorage';
 import { LobbyHeader } from './LobbyHeader';
 
 const PHASE_TRANSITION_MS = 200;
 
 export default function Lobby() {
     const api = useUnauthedApiClient();
-
-    const [error, setError] = useState<string | undefined>(undefined);
+    const localStorage = useLocalStorage();
 
     const [helpOpen, setHelpOpen] = useState(false);
     const [playerName, setPlayerName] = useState<string | undefined>(undefined);
-
     const [player, setPlayer] = useState<Player | undefined>(undefined);
+
+    const [error, setError] = useState<string | undefined>(undefined);
+    const [phase, setPhase] = useState<
+        'guest_signin' | 'queue_ready' | 'queued'
+    >('guest_signin');
+
+    const [displayPhase, setDisplayPhase] = useState(phase);
+    const [phaseVisible, setPhaseVisible] = useState(false);
+
+    // on mount
+    useEffect(() => {
+        const key = localStorage.get(PLAYER_ID_KEY);
+        if (key) {
+            api.getPlayer(key).then((data) => {
+                if (data.status !== 200) {
+                    setError('get fucked');
+
+                    return;
+                }
+
+                setPlayer(data.data);
+                setPhase('queue_ready');
+                setPlayerName(data.data.name);
+            });
+        }
+
+        const fadeInFrame = window.requestAnimationFrame(() => {
+            setPhaseVisible(true);
+        });
+
+        return () => {
+            window.cancelAnimationFrame(fadeInFrame);
+        };
+    }, []);
+
+    // set local storage player id, listen to game-ready event
     useEffect(() => {
         if (!player) {
             return;
         }
 
-        const channel = echo.channel(`player.${player!.id}`);
+        localStorage.set(PLAYER_ID_KEY, player.id);
+
+        const channel = echo.channel(`player.${player.id}`);
 
         channel.listen('.GameReady', (data: { game: Game }) => {
             console.log('game found!', data);
-            window.location.assign(
-                `/game/${data.game.id}?player=${player!.id}`,
-            );
+            window.location.assign(`/game/${data.game.id}?player=${player.id}`);
         });
 
         return () => {
-            echo.leaveChannel(`player.${player!.id}`);
+            echo.leaveChannel(`player.${player.id}`);
         };
-    }, [player, player?.id]);
+    }, [localStorage, player, player?.id]);
 
-    const submitGuestPlayerName = async (name: string) => {
+    const submitPlayerName = async (name: string) => {
         setPlayerName(name);
 
         const response = await api.createPlayer(name);
@@ -50,11 +85,10 @@ export default function Lobby() {
         }
 
         setPlayer(response.data as Player);
-
         setPhase('queue_ready');
     };
 
-    const editPlayerName = async (name: string) => {
+    const updatePlayerName = async (name: string) => {
         if (!player) {
             setPlayerName(name);
             return;
@@ -71,23 +105,7 @@ export default function Lobby() {
         }
     };
 
-    const [phase, setPhase] = useState<
-        'guest_signin' | 'queue_ready' | 'queued'
-    >('guest_signin');
-
-    const [displayPhase, setDisplayPhase] = useState(phase);
-    const [phaseVisible, setPhaseVisible] = useState(false);
-
-    useEffect(() => {
-        const fadeInFrame = window.requestAnimationFrame(() => {
-            setPhaseVisible(true);
-        });
-
-        return () => {
-            window.cancelAnimationFrame(fadeInFrame);
-        };
-    }, []);
-
+    // fade in transition
     useEffect(() => {
         if (phase === displayPhase) {
             return;
@@ -122,7 +140,7 @@ export default function Lobby() {
                     )}
                     {displayPhase === 'guest_signin' && (
                         <NamePrompt
-                            onSubmit={submitGuestPlayerName}
+                            onSubmit={submitPlayerName}
                             error={!!error}
                         />
                     )}
@@ -134,7 +152,7 @@ export default function Lobby() {
                                 void api.joinQueue(player!.id);
                             }}
                             onEditName={(name) => {
-                                void editPlayerName(name);
+                                void updatePlayerName(name);
                             }}
                         />
                     )}

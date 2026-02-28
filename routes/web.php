@@ -2,6 +2,7 @@
 
 use App\Enums\GameStatus;
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\GetPlayer;
 use App\Http\Controllers\HomePageController;
 use App\Http\Controllers\JoinQueue;
 use App\Http\Controllers\PlayerLeavesQueue;
@@ -32,6 +33,7 @@ Route::post('players', function (Illuminate\Http\Request $request) {
 
     return response()->json($p->toArray(), 201);
 });
+Route::get('players/{player}', GetPlayer::class);
 
 Route::get('game/{game}', function (Illuminate\Http\Request $request, Game $game) {
     $validated = $request->validate(['player' => 'required|string|exists:players,id']);
