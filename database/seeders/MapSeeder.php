@@ -48,6 +48,7 @@ class MapSeeder extends Seeder
                 'lat' => $row['lat'],
                 'lng' => $row['lng'],
                 'heading' => $row['heading'],
+                'image_id' => $row['image_id'] ?? null,
                 'created_at' => $now,
                 'updated_at' => $now,
             ];

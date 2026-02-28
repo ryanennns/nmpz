@@ -89,6 +89,7 @@ class MatchmakeQueue
             'location_lat' => $location->lat,
             'location_lng' => $location->lng,
             'location_heading' => $location->heading,
+            'location_image_id' => $location->image_id,
         ]);
 
         GameReady::dispatch($game, $playerOne);

@@ -44,6 +44,7 @@ type RoundData = {
     location_lat: number;
     location_lng: number;
     location_heading: number;
+    location_image_id?: string | null;
     started_at?: string | null;
     player_one_locked_in?: boolean;
     player_two_locked_in?: boolean;
@@ -283,6 +284,7 @@ function WelcomePage({
             lat: data.location_lat,
             lng: data.location_lng,
             heading: data.location_heading,
+            image_id: data.location_image_id ?? null,
         });
         setHeading(data.location_heading);
         setRound({
@@ -412,6 +414,7 @@ function WelcomePage({
             lat: data.location_lat as number,
             lng: data.location_lng as number,
             heading: data.location_heading as number,
+            image_id: (data.location_image_id as string | null) ?? null,
         });
         setHeading(data.location_heading as number);
         setRound({
@@ -834,7 +837,7 @@ function WelcomePage({
                             />
                         ) : location ? (
                             <MapillaryImagePanel
-                                key={`${location.lat},${location.lng}`}
+                                key={`${location.image_id ?? ''}-${location.lat},${location.lng}`}
                                 location={location}
                                 onHeadingChange={setHeading}
                             />

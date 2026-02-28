@@ -42,10 +42,12 @@ export default function MapillaryImagePanel({
         }
 
         const controller = new AbortController();
-        const bbox = buildBbox(location.lat, location.lng);
         const fields =
             'id,thumb_2048_url,thumb_1024_url,computed_compass_angle,compass_angle';
-        const url = `https://graph.mapillary.com/images?access_token=${token}&fields=${fields}&bbox=${bbox}&limit=1`;
+        const imageId = location.image_id?.trim();
+        const url = imageId
+            ? `https://graph.mapillary.com/${imageId}?access_token=${token}&fields=${fields}`
+            : `https://graph.mapillary.com/images?access_token=${token}&fields=${fields}&bbox=${buildBbox(location.lat, location.lng)}&limit=1`;
 
         setLoading(true);
         setError(null);
@@ -56,10 +58,12 @@ export default function MapillaryImagePanel({
                 if (!res.ok) {
                     throw new Error(`Mapillary error ${res.status}`);
                 }
-                const data = (await res.json()) as {
-                    data?: MapillaryImage[];
-                };
-                const image = data?.data?.[0];
+                const payload = (await res.json()) as
+                    | { data?: MapillaryImage[] }
+                    | MapillaryImage;
+                const image = imageId
+                    ? (payload as MapillaryImage)
+                    : (payload as { data?: MapillaryImage[] })?.data?.[0];
                 if (!image) {
                     throw new Error('No images found.');
                 }
@@ -89,7 +93,7 @@ export default function MapillaryImagePanel({
             });
 
         return () => controller.abort();
-    }, [location.heading, location.lat, location.lng]);
+    }, [location.heading, location.lat, location.lng, location.image_id]);
 
     return (
         <div className="absolute inset-0 bg-neutral-900">

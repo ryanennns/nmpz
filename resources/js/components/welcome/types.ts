@@ -11,7 +11,12 @@ export type Round = {
     player_two_locked_in: boolean;
 };
 
-export type Location = { lat: number; lng: number; heading: number };
+export type Location = {
+    lat: number;
+    lng: number;
+    heading: number;
+    image_id?: string | null;
+};
 
 export type Game = {
     id: string;

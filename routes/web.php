@@ -78,6 +78,7 @@ Route::get('/', function (Request $request) {
                     'location_lat' => $round->location_lat,
                     'location_lng' => $round->location_lng,
                     'location_heading' => $round->location_heading,
+                    'location_image_id' => $round->location_image_id,
                     'started_at' => optional($round->started_at)->toISOString(),
                     'player_one_locked_in' => $round->player_one_locked_in,
                     'player_two_locked_in' => $round->player_two_locked_in,

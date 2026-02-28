@@ -14,6 +14,7 @@ return new class extends Migration
             $table->decimal('lat', 10, 7);
             $table->decimal('lng', 10, 7);
             $table->smallInteger('heading');
+            $table->string('image_id')->nullable();
             $table->timestamps();
         });
     }

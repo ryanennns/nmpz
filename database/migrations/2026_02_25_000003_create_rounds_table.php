@@ -15,6 +15,7 @@ return new class extends Migration
             $table->decimal('location_lat', 10, 7);
             $table->decimal('location_lng', 10, 7);
             $table->smallInteger('location_heading');
+            $table->string('location_image_id')->nullable();
             $table->decimal('player_one_guess_lat', 10, 7)->nullable();
             $table->decimal('player_one_guess_lng', 10, 7)->nullable();
             $table->decimal('player_two_guess_lat', 10, 7)->nullable();
