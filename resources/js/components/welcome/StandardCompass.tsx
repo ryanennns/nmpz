@@ -86,7 +86,7 @@ export const StandardCompass = ({ heading }: { heading: number }) => {
 
             {/* Center indicator */}
             <div className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2 translate-y-full">
-                <div className="h-0 w-0 border-b-[6px] border-r-[5px] border-l-[5px] border-b-white border-r-transparent border-l-transparent" />
+                <div className="h-0 w-0 border-r-[5px] border-b-[6px] border-l-[5px] border-r-transparent border-b-white border-l-transparent" />
             </div>
         </div>
     );

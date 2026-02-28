@@ -31,16 +31,18 @@ class RoundStarted implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $location = $this->round->location;
+
         return [
             'game_id' => $this->round->game_id,
             'round_id' => $this->round->getKey(),
             'round_number' => $this->round->round_number,
             'player_one_health' => $this->playerOneHealth,
             'player_two_health' => $this->playerTwoHealth,
-            'location_lat' => $this->round->location_lat,
-            'location_lng' => $this->round->location_lng,
-            'location_heading' => $this->round->location_heading,
-            'location_image_id' => $this->round->location_image_id,
+            'location_lat' => $location->lat,
+            'location_lng' => $location->lng,
+            'location_heading' => $location->heading,
+            'location_image_id' => $location->image_id,
             'started_at' => optional($this->round->started_at)->toISOString(),
         ];
     }

@@ -86,10 +86,7 @@ class MatchmakeQueue
         $round = Round::query()->create([
             'game_id' => $game->getKey(),
             'round_number' => 1,
-            'location_lat' => $location->lat,
-            'location_lng' => $location->lng,
-            'location_heading' => $location->heading,
-            'location_image_id' => $location->image_id,
+            'location_id' => $location->getKey(),
         ]);
 
         GameReady::dispatch($game, $playerOne);

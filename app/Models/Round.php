@@ -12,13 +12,13 @@ class Round extends Model
     use HasFactory,
         HasUuids;
 
+    protected $with = ['location'];
+
     protected $guarded = [];
 
     protected function casts(): array
     {
         return [
-            'location_lat' => 'float',
-            'location_lng' => 'float',
             'player_one_guess_lat' => 'float',
             'player_one_guess_lng' => 'float',
             'player_two_guess_lat' => 'float',
@@ -37,12 +37,22 @@ class Round extends Model
         return $this->belongsTo(Game::class);
     }
 
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
+    }
+
     public function evaluateScores(): void
     {
+        $location = $this->location;
+        if (! $location) {
+            return;
+        }
+
         if ($this->player_one_guess_lat !== null && $this->player_one_guess_lng !== null) {
             $this->player_one_score = self::calculateScore(
-                $this->location_lat,
-                $this->location_lng,
+                $location->lat,
+                $location->lng,
                 $this->player_one_guess_lat,
                 $this->player_one_guess_lng,
             );
@@ -50,8 +60,8 @@ class Round extends Model
 
         if ($this->player_two_guess_lat !== null && $this->player_two_guess_lng !== null) {
             $this->player_two_score = self::calculateScore(
-                $this->location_lat,
-                $this->location_lng,
+                $location->lat,
+                $location->lng,
                 $this->player_two_guess_lat,
                 $this->player_two_guess_lng,
             );

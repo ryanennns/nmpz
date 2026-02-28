@@ -69,16 +69,18 @@ Route::get('/', function (Request $request) {
                 ->first();
 
             if ($round) {
+                $location = $round->location;
+
                 $roundData = [
                     'game_id' => $gameModel->getKey(),
                     'round_id' => $round->getKey(),
                     'round_number' => $round->round_number,
                     'player_one_health' => $gameModel->player_one_health,
                     'player_two_health' => $gameModel->player_two_health,
-                    'location_lat' => $round->location_lat,
-                    'location_lng' => $round->location_lng,
-                    'location_heading' => $round->location_heading,
-                    'location_image_id' => $round->location_image_id,
+                    'location_lat' => $location?->lat,
+                    'location_lng' => $location?->lng,
+                    'location_heading' => $location?->heading,
+                    'location_image_id' => $location?->image_id,
                     'started_at' => optional($round->started_at)->toISOString(),
                     'player_one_locked_in' => $round->player_one_locked_in,
                     'player_two_locked_in' => $round->player_two_locked_in,

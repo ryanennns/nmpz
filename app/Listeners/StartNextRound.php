@@ -67,10 +67,7 @@ class StartNextRound
         $next = Round::query()->create([
             'game_id' => $finished->game_id,
             'round_number' => $nextRoundNumber,
-            'location_lat' => $location->lat,
-            'location_lng' => $location->lng,
-            'location_heading' => $location->heading,
-            'location_image_id' => $location->image_id,
+            'location_id' => $location->getKey(),
             'started_at' => now(),
         ]);
 
