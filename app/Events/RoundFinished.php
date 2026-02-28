@@ -16,6 +16,8 @@ class RoundFinished implements ShouldBroadcastNow
 
     public function __construct(
         public readonly Round $round,
+        public readonly int $playerOneWins = 0,
+        public readonly int $playerTwoWins = 0,
     ) {}
 
     public function broadcastOn(): Channel
@@ -44,6 +46,8 @@ class RoundFinished implements ShouldBroadcastNow
             'player_two_score' => $this->round->player_two_score,
             'player_one_distance_km' => $this->playerDistanceKm('player_one'),
             'player_two_distance_km' => $this->playerDistanceKm('player_two'),
+            'player_one_wins' => $this->playerOneWins,
+            'player_two_wins' => $this->playerTwoWins,
         ];
     }
 

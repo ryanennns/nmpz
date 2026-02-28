@@ -36,6 +36,8 @@ class MatchmakeQueue
             $queue = array_values(array_filter($queue, fn ($id) => $players->has($id)));
 
             $joinTimes = $this->queueService->getJoinTimes();
+            $mapPrefs = $this->queueService->getMapPreferences();
+            $formatPrefs = $this->queueService->getFormatPreferences();
             $now = time();
 
             $matches = 0;
@@ -60,6 +62,8 @@ class MatchmakeQueue
                     self::ELO_WINDOW_MAX,
                     self::ELO_WINDOW_BASE + ($p1WaitSeconds * self::ELO_WINDOW_EXPAND_PER_SECOND),
                 );
+                $p1Map = $mapPrefs[$p1Id] ?? null;
+                $p1Format = $formatPrefs[$p1Id] ?? null;
 
                 $bestMatch = null;
                 $bestDiff = PHP_INT_MAX;
@@ -72,6 +76,19 @@ class MatchmakeQueue
                     $p2Id = $queue[$j];
                     $p2 = $players->get($p2Id);
                     if (! $p2) {
+                        continue;
+                    }
+
+                    $p2Map = $mapPrefs[$p2Id] ?? null;
+                    $p2Format = $formatPrefs[$p2Id] ?? null;
+
+                    // Map compatibility: both null (any), both same, or one is null
+                    if ($p1Map !== null && $p2Map !== null && $p1Map !== $p2Map) {
+                        continue;
+                    }
+
+                    // Format compatibility: both null (classic), both same, or one is null
+                    if ($p1Format !== null && $p2Format !== null && $p1Format !== $p2Format) {
                         continue;
                     }
 
@@ -93,11 +110,17 @@ class MatchmakeQueue
                 if ($bestMatch !== null) {
                     $p2Id = $queue[$bestMatch];
                     $p2 = $players->get($p2Id);
+                    $p2Map = $mapPrefs[$p2Id] ?? null;
+                    $p2Format = $formatPrefs[$p2Id] ?? null;
 
                     $matched[$p1Id] = true;
                     $matched[$p2Id] = true;
 
-                    $this->createMatch->handle($p1, $p2);
+                    // Use the specific map preference if either player specified one
+                    $mapId = $p1Map ?? $p2Map;
+                    $matchFormat = $p1Format ?? $p2Format ?? 'classic';
+
+                    $this->createMatch->handle($p1, $p2, $mapId, $matchFormat);
                     $matches++;
                 }
             }

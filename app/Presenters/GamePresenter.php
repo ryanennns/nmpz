@@ -9,13 +9,22 @@ class GamePresenter
 {
     public static function toArray(Game $game): array
     {
-        return [
+        $data = [
             'id' => $game->getKey(),
             'player_one' => self::playerToArray($game->playerOne, $game->player_one_id),
             'player_two' => self::playerToArray($game->playerTwo, $game->player_two_id),
             'player_one_health' => $game->player_one_health,
             'player_two_health' => $game->player_two_health,
         ];
+
+        if ($game->isBestOfN()) {
+            $data['match_format'] = $game->match_format;
+            $data['player_one_wins'] = $game->player_one_wins;
+            $data['player_two_wins'] = $game->player_two_wins;
+            $data['max_rounds'] = $game->max_rounds;
+        }
+
+        return $data;
     }
 
     public static function playerToArray(?Player $player, string $playerId): array

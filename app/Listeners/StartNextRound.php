@@ -48,7 +48,7 @@ class StartNextRound
             'started_at' => now(),
         ]);
 
-        RoundStarted::dispatch($next, $game->player_one_health, $game->player_two_health);
+        RoundStarted::dispatch($next, $game->player_one_health, $game->player_two_health, $game->player_one_wins, $game->player_two_wins);
         ForceEndRound::dispatch($next->getKey())->delay(now()->addSeconds(config('game.round_timeout_seconds')));
     }
 

@@ -10,6 +10,14 @@ use App\Http\Controllers\PlayerStatsController;
 use App\Http\Controllers\RememberGameSession;
 use App\Http\Controllers\RequestRematch;
 use App\Http\Controllers\SendMessage;
+use App\Http\Controllers\CancelPrivateLobby;
+use App\Http\Controllers\CreatePrivateLobby;
+use App\Http\Controllers\GameHistoryController;
+use App\Http\Controllers\JoinPrivateLobby;
+use App\Http\Controllers\LiveGamesController;
+use App\Http\Controllers\MapController;
+use App\Http\Controllers\SpectateGame;
+use App\Http\Controllers\PlayerAchievementsController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\UpdatePlayer;
 use Illuminate\Support\Facades\Route;
@@ -40,8 +48,17 @@ Route::middleware('game.player')->group(function () {
         ->name('games.decline-rematch');
 });
 
+Route::get('maps', MapController::class);
 Route::get('leaderboard', LeaderboardController::class);
 Route::get('players/{player}/stats', PlayerStatsController::class);
+Route::get('players/{player}/games', [GameHistoryController::class, 'index']);
+Route::get('games/{game}/history', [GameHistoryController::class, 'show']);
+Route::get('players/{player}/achievements', PlayerAchievementsController::class);
+Route::post('players/{player}/private-lobby', CreatePrivateLobby::class);
+Route::post('players/{player}/private-lobby/join', JoinPrivateLobby::class);
+Route::post('players/{player}/private-lobby/{private_lobby}/cancel', CancelPrivateLobby::class);
 Route::get('stats', StatsController::class);
+Route::get('games/live', LiveGamesController::class);
+Route::get('games/{game}/spectate', SpectateGame::class);
 
 require __DIR__.'/settings.php';

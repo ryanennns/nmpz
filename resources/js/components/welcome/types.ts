@@ -23,6 +23,10 @@ export type Game = {
     player_two: Player;
     player_one_health: number;
     player_two_health: number;
+    match_format?: string;
+    player_one_wins?: number;
+    player_two_wins?: number;
+    max_rounds?: number;
 };
 
 export type RoundResult = {
@@ -59,6 +63,8 @@ export type RoundData = {
     started_at?: string | null;
     player_one_locked_in?: boolean;
     player_two_locked_in?: boolean;
+    player_one_wins?: number;
+    player_two_wins?: number;
 };
 
 export type RoundFinishedData = {
@@ -75,6 +81,8 @@ export type RoundFinishedData = {
     player_two_score: number;
     player_one_distance_km: number | null;
     player_two_distance_km: number | null;
+    player_one_wins?: number;
+    player_two_wins?: number;
 };
 
 export type GameFinishedData = {
@@ -86,6 +94,9 @@ export type GameFinishedData = {
     player_two_rating_change: number | null;
     player_one_elo: number | null;
     player_two_elo: number | null;
+    match_format?: string;
+    player_one_wins?: number;
+    player_two_wins?: number;
 };
 
 export type PlayerGuessedData = {
@@ -180,3 +191,72 @@ export interface Message {
     text: string;
     ts: string;
 }
+
+export type MapOption = {
+    id: string;
+    name: string;
+    display_name: string | null;
+    description: string | null;
+    location_count: number;
+};
+
+export type GameHistoryEntry = {
+    game_id: string;
+    opponent_name: string;
+    opponent_elo: number;
+    result: 'win' | 'loss' | 'draw';
+    my_score: number;
+    opponent_score: number;
+    rating_change: number | null;
+    map_name: string;
+    played_at: string;
+};
+
+export type GameDetailRound = {
+    round_number: number;
+    location_lat: number;
+    location_lng: number;
+    player_one_guess_lat: number | null;
+    player_one_guess_lng: number | null;
+    player_two_guess_lat: number | null;
+    player_two_guess_lng: number | null;
+    player_one_score: number;
+    player_two_score: number;
+    player_one_distance_km: number | null;
+    player_two_distance_km: number | null;
+};
+
+export type GameDetail = {
+    game_id: string;
+    player_one: { id: string; name: string };
+    player_two: { id: string; name: string };
+    winner_id: string | null;
+    map_name: string;
+    player_one_rating_change: number | null;
+    player_two_rating_change: number | null;
+    rounds: GameDetailRound[];
+};
+
+export type Achievement = {
+    key: string;
+    name: string;
+    description: string;
+    icon: string | null;
+    earned_at: string | null;
+};
+
+export type PrivateLobby = {
+    lobby_id: string;
+    invite_code: string;
+};
+
+export type LiveGame = {
+    game_id: string;
+    player_one_name: string;
+    player_two_name: string;
+    player_one_elo: number;
+    player_two_elo: number;
+    spectator_count: number;
+    match_format: string;
+    created_at: string;
+};

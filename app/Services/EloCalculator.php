@@ -41,14 +41,27 @@ class EloCalculator
         $k1 = self::kFactor($p1);
         $k2 = self::kFactor($p2);
 
-        // Health margin bonus: scale K up to 50% for dominant wins
+        // Margin bonus: scale K up to 50% for dominant wins
         $marginMultiplier = 1.0;
         if ($game->winner_id !== null) {
-            $winnerHealth = $game->winner_id === $p1->getKey()
-                ? $game->player_one_health
-                : $game->player_two_health;
-            $maxHealth = config('game.max_health');
-            $marginMultiplier = 1.0 + 0.5 * ($winnerHealth / $maxHealth);
+            if ($game->isBestOfN()) {
+                // For bo-N: use win differential
+                $maxWins = $game->winsNeeded() ?? 1;
+                $winnerWins = $game->winner_id === $p1->getKey()
+                    ? $game->player_one_wins
+                    : $game->player_two_wins;
+                $loserWins = $game->winner_id === $p1->getKey()
+                    ? $game->player_two_wins
+                    : $game->player_one_wins;
+                $differential = ($winnerWins - $loserWins) / max(1, $maxWins);
+                $marginMultiplier = 1.0 + 0.5 * $differential;
+            } else {
+                $winnerHealth = $game->winner_id === $p1->getKey()
+                    ? $game->player_one_health
+                    : $game->player_two_health;
+                $maxHealth = config('game.max_health');
+                $marginMultiplier = 1.0 + 0.5 * ($winnerHealth / $maxHealth);
+            }
         }
 
         $change1 = (int) round($k1 * $marginMultiplier * ($actual1 - $expected1));

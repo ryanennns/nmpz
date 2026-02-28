@@ -53,6 +53,11 @@ class Player extends Model
         return $this->hasMany(EloHistory::class)->orderByDesc('created_at');
     }
 
+    public function playerAchievements(): HasMany
+    {
+        return $this->hasMany(PlayerAchievement::class);
+    }
+
     public function getRankAttribute(): string
     {
         $elo = $this->elo_rating;

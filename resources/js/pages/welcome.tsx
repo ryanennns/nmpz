@@ -11,6 +11,8 @@ import MapillaryImagePanel from '@/components/welcome/MapillaryImagePanel';
 import MapPicker from '@/components/welcome/MapPicker';
 import ResultsMap from '@/components/welcome/ResultsMap';
 import ShimmerText from '@/components/welcome/ShimmerText';
+import AchievementToast from '@/components/welcome/AchievementToast';
+import SeriesScore from '@/components/welcome/SeriesScore';
 import SpectatorMap from '@/components/welcome/SpectatorMap';
 import { StandardCompass } from '@/components/welcome/StandardCompass';
 
@@ -104,6 +106,8 @@ function WelcomePage({
     const [chatOpen, setChatOpen] = useState(false);
     const [chatText, setChatText] = useState('');
     const [mapHovered, setMapHovered] = useState(false);
+    const [achievementToast, setAchievementToast] = useState<{ name: string; description: string } | null>(null);
+    const [wins, setWins] = useState({ p1: game?.player_one_wins ?? 0, p2: game?.player_two_wins ?? 0 });
     const guessRef = useRef<() => void>(() => {});
     const lastRememberedGameId = useRef<string | null>(null);
     const api = useApiClient(player.id);
@@ -162,6 +166,7 @@ function WelcomePage({
         endSequence.setBlackoutVisible,
         endSequence.setWinnerOverlayVisible,
         playSound,
+        setAchievementToast,
     );
 
     const resetGameState = useCallback(() => {
@@ -178,6 +183,7 @@ function WelcomePage({
         setChatText('');
         setRematchState('none');
         setRatingChange({ my: null, opponent: null });
+        setWins({ p1: 0, p2: 0 });
         endSequence.setWinnerId(null);
         endSequence.setWinnerName(null);
         endSequence.setWinnerOverlayVisible(false);
@@ -204,6 +210,7 @@ function WelcomePage({
         setRematchState,
         setOpponentLiveGuess,
         setRatingChange,
+        setWins,
         setPostGameButtonsVisible: endSequence.setPostGameButtonsVisible,
         setWinnerOverlayVisible: endSequence.setWinnerOverlayVisible,
         setPageVisible: endSequence.setPageVisible,
@@ -485,10 +492,20 @@ function WelcomePage({
                                                 <span>You</span>
                                                 {me?.rank && <RankBadge rank={me.rank} elo={me.elo} size="xs" />}
                                             </div>
-                                            <HealthBar
-                                                health={me?.health ?? 0}
-                                                color={me?.barColor ?? 'blue'}
-                                            />
+                                            {game?.match_format && game.match_format !== 'classic' ? (
+                                                <SeriesScore
+                                                    p1Wins={isPlayerOne ? wins.p1 : wins.p2}
+                                                    p2Wins={isPlayerOne ? wins.p2 : wins.p1}
+                                                    winsNeeded={game.match_format === 'bo3' ? 2 : game.match_format === 'bo5' ? 3 : 4}
+                                                    p1Color={me?.color ?? 'text-blue-400'}
+                                                    p2Color={opponent?.color ?? 'text-red-400'}
+                                                />
+                                            ) : (
+                                                <HealthBar
+                                                    health={me?.health ?? 0}
+                                                    color={me?.barColor ?? 'blue'}
+                                                />
+                                            )}
                                         </div>
                                         <ChatSidebar
                                             messages={messages}
@@ -520,10 +537,12 @@ function WelcomePage({
                                             {opponent?.rank && <RankBadge rank={opponent.rank} elo={opponent.elo} size="xs" />}
                                             <span>{opponent?.name}</span>
                                         </div>
-                                        <HealthBar
-                                            health={opponent?.health ?? 0}
-                                            color={opponent?.barColor ?? 'red'}
-                                        />
+                                        {game?.match_format && game.match_format !== 'classic' ? null : (
+                                            <HealthBar
+                                                health={opponent?.health ?? 0}
+                                                color={opponent?.barColor ?? 'red'}
+                                            />
+                                        )}
                                     </div>
                                 </>
                             );
@@ -637,6 +656,14 @@ function WelcomePage({
                     </div>
                 )}
             </div>
+            {achievementToast && (
+                <AchievementToast
+                    key={achievementToast.name}
+                    name={achievementToast.name}
+                    description={achievementToast.description}
+                    onDone={() => setAchievementToast(null)}
+                />
+            )}
         </>
     );
 }

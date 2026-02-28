@@ -13,20 +13,36 @@ use App\Models\Round;
 
 class CreateMatch
 {
-    public function handle(Player $playerOne, Player $playerTwo): Game
+    public function handle(Player $playerOne, Player $playerTwo, ?string $mapId = null, string $matchFormat = 'classic'): Game
     {
-        $map = Map::query()->where('name', config('game.default_map'))->firstOrFail();
+        $map = $mapId
+            ? Map::query()->findOrFail($mapId)
+            : Map::query()->where('name', config('game.default_map'))->firstOrFail();
+
         $locationCount = Location::query()->where('map_id', $map->getKey())->count();
 
         abort_if($locationCount === 0, 500, 'No locations available.');
 
         $seed = random_int(0, $locationCount - 1);
 
+        $maxRounds = match ($matchFormat) {
+            'bo3' => 3,
+            'bo5' => 5,
+            'bo7' => 7,
+            default => null,
+        };
+
+        $isBestOfN = $matchFormat !== 'classic';
+
         $game = Game::factory()->inProgress()->create([
             'player_one_id' => $playerOne->getKey(),
             'player_two_id' => $playerTwo->getKey(),
             'map_id' => $map->getKey(),
             'seed' => $seed,
+            'match_format' => $matchFormat,
+            'max_rounds' => $maxRounds,
+            'player_one_health' => $isBestOfN ? 0 : config('game.max_health'),
+            'player_two_health' => $isBestOfN ? 0 : config('game.max_health'),
         ]);
 
         $location = Location::query()->where('map_id', $map->getKey())

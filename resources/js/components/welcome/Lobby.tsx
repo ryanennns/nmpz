@@ -2,8 +2,14 @@ import axios from 'axios';
 import { MessageCircleQuestion } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
+import AchievementsPanel from '@/components/welcome/AchievementsPanel';
+import GameDetailModal from '@/components/welcome/GameDetailModal';
+import GameHistoryPanel from '@/components/welcome/GameHistoryPanel';
 import Leaderboard from '@/components/welcome/Leaderboard';
+import LiveGamesList from '@/components/welcome/LiveGamesList';
+import MapSelector from '@/components/welcome/MapSelector';
 import NamePrompt from '@/components/welcome/NamePrompt';
+import PrivateLobbyPanel from '@/components/welcome/PrivateLobbyPanel';
 import PlayerStatsPanel from '@/components/welcome/PlayerStatsPanel';
 import RankBadge from '@/components/welcome/RankBadge';
 import type { Player } from '@/components/welcome/types';
@@ -38,7 +44,11 @@ export default function Lobby({
     const api = useApiClient(player.id);
     const [editingName, setEditingName] = useState(false);
     const [nameDraft, setNameDraft] = useState(playerName ?? '');
-    const [lobbyTab, setLobbyTab] = useState<'none' | 'stats' | 'leaderboard'>('none');
+    const [lobbyTab, setLobbyTab] = useState<'none' | 'stats' | 'leaderboard' | 'history' | 'achievements' | 'watch'>('none');
+    const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
+    const [selectedFormat, setSelectedFormat] = useState('classic');
+    const [detailGameId, setDetailGameId] = useState<string | null>(null);
+    const [privateLobbyOpen, setPrivateLobbyOpen] = useState(false);
 
     useEffect(() => {
         function onBeforeUnload() {
@@ -131,7 +141,11 @@ export default function Lobby({
             return;
         }
         try {
-            const res = await api.joinQueue(trimmed || undefined);
+            const res = await api.joinQueue(
+                trimmed || undefined,
+                selectedMapId ?? undefined,
+                selectedFormat !== 'classic' ? selectedFormat : undefined,
+            );
             const payload = res.data as { queue_count?: number };
             if (typeof payload.queue_count === 'number') {
                 setQueueCount(payload.queue_count);
@@ -262,12 +276,45 @@ export default function Lobby({
                                             </div>
                                         )}
                                         {!editingName && (
-                                            <button
-                                                onClick={() => void joinQueue()}
-                                                className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
-                                            >
-                                                Join queue
-                                            </button>
+                                            <>
+                                                <div className="mb-2 space-y-1">
+                                                    <MapSelector
+                                                        playerId={player.id}
+                                                        selectedMapId={selectedMapId}
+                                                        onSelect={setSelectedMapId}
+                                                    />
+                                                    <select
+                                                        value={selectedFormat}
+                                                        onChange={(e) => setSelectedFormat(e.target.value)}
+                                                        className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white"
+                                                    >
+                                                        <option value="classic">Classic (Health)</option>
+                                                        <option value="bo3">Best of 3</option>
+                                                        <option value="bo5">Best of 5</option>
+                                                        <option value="bo7">Best of 7</option>
+                                                    </select>
+                                                </div>
+                                                <button
+                                                    onClick={() => void joinQueue()}
+                                                    className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
+                                                >
+                                                    Join queue
+                                                </button>
+                                                <button
+                                                    onClick={() => setPrivateLobbyOpen(!privateLobbyOpen)}
+                                                    className="mt-1 w-full rounded bg-white/5 px-2 py-1 text-xs text-white/60 hover:bg-white/10"
+                                                >
+                                                    Private Match
+                                                </button>
+                                            </>
+                                        )}
+                                        {privateLobbyOpen && !editingName && (
+                                            <div className="mt-2">
+                                                <PrivateLobbyPanel
+                                                    playerId={player.id}
+                                                    onClose={() => setPrivateLobbyOpen(false)}
+                                                />
+                                            </div>
                                         )}
                                         {joinError ? (
                                             <div className="mt-2 text-xs text-red-300">
@@ -317,12 +364,51 @@ export default function Lobby({
                             >
                                 Leaderboard
                             </button>
+                            <button
+                                type="button"
+                                onClick={() => setLobbyTab(lobbyTab === 'history' ? 'none' : 'history')}
+                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'history' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
+                            >
+                                History
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLobbyTab(lobbyTab === 'achievements' ? 'none' : 'achievements')}
+                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'achievements' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
+                            >
+                                Achievements
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLobbyTab(lobbyTab === 'watch' ? 'none' : 'watch')}
+                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'watch' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
+                            >
+                                Watch
+                            </button>
                         </div>
                         {lobbyTab === 'stats' && <PlayerStatsPanel playerId={player.id} />}
                         {lobbyTab === 'leaderboard' && <Leaderboard playerId={player.id} />}
+                        {lobbyTab === 'history' && (
+                            <GameHistoryPanel
+                                playerId={player.id}
+                                onViewDetail={(id) => setDetailGameId(id)}
+                            />
+                        )}
+                        {lobbyTab === 'achievements' && (
+                            <AchievementsPanel playerId={player.id} />
+                        )}
+                        {lobbyTab === 'watch' && (
+                            <LiveGamesList playerId={player.id} />
+                        )}
                     </div>
                 )}
             </div>
+            <GameDetailModal
+                gameId={detailGameId}
+                playerId={player.id}
+                open={detailGameId !== null}
+                onClose={() => setDetailGameId(null)}
+            />
             <SimpleModal open={helpOpen} onClose={() => setHelpOpen(false)}>
                 <div className="mb-2 text-2xl text-white/50">
                     what is <span className="text-white/80">nmpz</span>

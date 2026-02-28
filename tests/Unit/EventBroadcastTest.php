@@ -103,7 +103,7 @@ class EventBroadcastTest extends TestCase
 
         $event = new OpponentGuessUpdate($game, 'player-123', 48.8566, 2.3522);
 
-        $this->assertEquals(new Channel("game.{$game->getKey()}"), $event->broadcastOn());
+        $this->assertEquals(new Channel("game.{$game->getKey()}.players"), $event->broadcastOn());
         $this->assertSame('OpponentGuessUpdate', $event->broadcastAs());
 
         $data = $event->broadcastWith();
@@ -260,7 +260,7 @@ class EventBroadcastTest extends TestCase
 
         $event = new RoundStarted($round, 5000, 4500);
 
-        $this->assertEquals(new Channel("game.{$game->getKey()}"), $event->broadcastOn());
+        $this->assertEquals(new Channel("game.{$game->getKey()}.players"), $event->broadcastOn());
         $this->assertSame('RoundStarted', $event->broadcastAs());
 
         $data = $event->broadcastWith();

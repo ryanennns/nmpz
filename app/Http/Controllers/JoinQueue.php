@@ -27,6 +27,13 @@ class JoinQueue extends Controller
 
         $queueService->add($player->getKey());
         $queueService->recordJoinTime($player->getKey());
+
+        $mapId = $validated['map_id'] ?? null;
+        $queueService->recordMapPreference($player->getKey(), $mapId);
+
+        $matchFormat = $validated['match_format'] ?? null;
+        $queueService->recordFormatPreference($player->getKey(), $matchFormat);
+
         MatchmakeQueueJob::dispatch();
 
         return response()->json([

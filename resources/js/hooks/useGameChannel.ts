@@ -69,6 +69,7 @@ type GameChannelDeps = {
     setRematchState: Dispatch<SetStateAction<RematchState>>;
     setOpponentLiveGuess: Dispatch<SetStateAction<{ lat: number; lng: number } | null>>;
     setRatingChange: Dispatch<SetStateAction<{ my: number | null; opponent: number | null }>>;
+    setWins: Dispatch<SetStateAction<{ p1: number; p2: number }>>;
     setPostGameButtonsVisible: (v: boolean) => void;
     setWinnerOverlayVisible: (v: boolean) => void;
     setPageVisible: (v: boolean) => void;
@@ -102,6 +103,7 @@ export function useGameChannel(deps: GameChannelDeps) {
         setRematchState,
         setOpponentLiveGuess,
         setRatingChange,
+        setWins,
         setPostGameButtonsVisible,
         setWinnerOverlayVisible,
         setPageVisible,
@@ -120,6 +122,7 @@ export function useGameChannel(deps: GameChannelDeps) {
         if (!game) return;
 
         const channel = echo.channel(`game.${game.id}`);
+        const playersChannel = echo.channel(`game.${game.id}.players`);
 
         channel.listen(
             '.PlayerGuessed',
@@ -202,10 +205,15 @@ export function useGameChannel(deps: GameChannelDeps) {
             },
         );
 
-        channel.listen(
+        // RoundStarted and OpponentGuessUpdate are on the players-only channel
+        // so spectators cannot see live locations or guess coordinates
+        playersChannel.listen(
             '.RoundStarted',
             (data: RoundData) => {
                 pushEvent(eventSeqRef, setEvents,'RoundStarted', data);
+                if (data.player_one_wins !== undefined && data.player_two_wins !== undefined) {
+                    setWins({ p1: data.player_one_wins, p2: data.player_two_wins });
+                }
                 setPendingRoundData(data);
             },
         );
@@ -263,7 +271,7 @@ export function useGameChannel(deps: GameChannelDeps) {
             },
         );
 
-        channel.listen(
+        playersChannel.listen(
             '.OpponentGuessUpdate',
             (data: OpponentGuessUpdateData) => {
                 if (data.player_id !== playerId) {
@@ -320,6 +328,7 @@ export function useGameChannel(deps: GameChannelDeps) {
         return () => {
             clearEndSequenceTimers();
             echo.leaveChannel(`game.${game.id}`);
+            echo.leaveChannel(`game.${game.id}.players`);
         };
     }, [game?.id]);
 

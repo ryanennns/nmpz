@@ -32,10 +32,14 @@ export function useApiClient(playerId: string) {
     const { game } = useGameContext();
 
     return {
-        joinQueue: (name?: string) =>
+        joinQueue: (name?: string, mapId?: string, matchFormat?: string) =>
             client.post(
                 `/players/${playerId}/join-queue`,
-                name ? { name } : {},
+                {
+                    ...(name ? { name } : {}),
+                    ...(mapId ? { map_id: mapId } : {}),
+                    ...(matchFormat ? { match_format: matchFormat } : {}),
+                },
             ),
         updatePlayer: (name: string) =>
             client.patch(`/players/${playerId}`, { name }),
@@ -68,6 +72,20 @@ export function useApiClient(playerId: string) {
             client.post(`/players/${playerId}/games/${gameId}/rematch`),
         declineRematch: (gameId: string) =>
             client.post(`/players/${playerId}/games/${gameId}/decline-rematch`),
+        fetchMaps: () => client.get('/maps'),
+        fetchGameHistory: (page = 1) => client.get(`/players/${playerId}/games?page=${page}`),
+        fetchGameDetail: (gameId: string) => client.get(`/games/${gameId}/history`),
+        fetchAchievements: () => client.get(`/players/${playerId}/achievements`),
+        createPrivateLobby: (mapId?: string, matchFormat?: string) =>
+            client.post(`/players/${playerId}/private-lobby`, {
+                ...(mapId ? { map_id: mapId } : {}),
+                ...(matchFormat ? { match_format: matchFormat } : {}),
+            }),
+        joinPrivateLobby: (code: string) =>
+            client.post(`/players/${playerId}/private-lobby/join`, { code }),
+        cancelPrivateLobby: (lobbyId: string) =>
+            client.post(`/players/${playerId}/private-lobby/${lobbyId}/cancel`),
+        fetchLiveGames: () => client.get('/games/live'),
         client,
     };
 }
