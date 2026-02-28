@@ -12,11 +12,6 @@ const PHASE_TRANSITION_MS = 200;
 
 export default function Lobby() {
     const api = useUnauthedApiClient();
-    const [shouldFadeInOnLoad] = useState(
-        () =>
-            typeof window !== 'undefined' &&
-            new URLSearchParams(window.location.search).has('redirect'),
-    );
 
     const [error, setError] = useState<string | undefined>(undefined);
 
@@ -81,13 +76,9 @@ export default function Lobby() {
     >('guest_signin');
 
     const [displayPhase, setDisplayPhase] = useState(phase);
-    const [phaseVisible, setPhaseVisible] = useState(!shouldFadeInOnLoad);
+    const [phaseVisible, setPhaseVisible] = useState(false);
 
     useEffect(() => {
-        if (!shouldFadeInOnLoad) {
-            return;
-        }
-
         const fadeInFrame = window.requestAnimationFrame(() => {
             setPhaseVisible(true);
         });
@@ -95,7 +86,7 @@ export default function Lobby() {
         return () => {
             window.cancelAnimationFrame(fadeInFrame);
         };
-    }, [shouldFadeInOnLoad]);
+    }, []);
 
     useEffect(() => {
         if (phase === displayPhase) {
