@@ -83,9 +83,14 @@ class Game extends Model
         return $this->match_format === 'classic' || $this->match_format === null;
     }
 
+    public function isRush(): bool
+    {
+        return $this->match_format === 'rush';
+    }
+
     public function isBestOfN(): bool
     {
-        return ! $this->isClassic();
+        return ! $this->isClassic() && ! $this->isRush();
     }
 
     public function winsNeeded(): ?int
@@ -96,5 +101,14 @@ class Game extends Model
             'bo7' => 4,
             default => null,
         };
+    }
+
+    public function roundTimeoutSeconds(): int
+    {
+        if ($this->isRush()) {
+            return config('game.rush_round_timeout_seconds');
+        }
+
+        return config('game.round_timeout_seconds');
     }
 }

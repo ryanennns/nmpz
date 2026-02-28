@@ -29,10 +29,11 @@ class CreateMatch
             'bo3' => 3,
             'bo5' => 5,
             'bo7' => 7,
+            'rush' => config('game.rush_max_rounds'),
             default => null,
         };
 
-        $isBestOfN = $matchFormat !== 'classic';
+        $isBestOfN = ! in_array($matchFormat, ['classic', 'rush']);
 
         $game = Game::factory()->inProgress()->create([
             'player_one_id' => $playerOne->getKey(),
@@ -63,10 +64,11 @@ class CreateMatch
         $round = $game->rounds()->first();
         $p1Health = $game->player_one_health;
         $p2Health = $game->player_two_health;
-        dispatch(function () use ($round, $p1Health, $p2Health) {
+        $timeoutSeconds = $game->roundTimeoutSeconds();
+        dispatch(function () use ($round, $p1Health, $p2Health, $timeoutSeconds) {
             $round->forceFill(['started_at' => now()])->save();
             RoundStarted::dispatch($round, $p1Health, $p2Health);
-            ForceEndRound::dispatch($round->getKey())->delay(now()->addSeconds(config('game.round_timeout_seconds')));
+            ForceEndRound::dispatch($round->getKey())->delay(now()->addSeconds($timeoutSeconds));
         })->delay(now()->addSeconds(2));
 
         return $game;

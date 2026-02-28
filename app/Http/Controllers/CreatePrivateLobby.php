@@ -13,7 +13,7 @@ class CreatePrivateLobby extends Controller
     {
         $validated = $request->validate([
             'map_id' => ['nullable', 'uuid', 'exists:maps,id'],
-            'match_format' => ['nullable', 'string', 'in:classic,bo3,bo5,bo7'],
+            'match_format' => ['nullable', 'string', 'in:classic,bo3,bo5,bo7,rush'],
         ]);
 
         // Expire old waiting lobbies for this player

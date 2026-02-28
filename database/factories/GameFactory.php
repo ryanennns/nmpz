@@ -73,4 +73,14 @@ class GameFactory extends Factory
             'player_two_health' => 0,
         ]);
     }
+
+    public function rush(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'match_format' => 'rush',
+            'max_rounds' => config('game.rush_max_rounds'),
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+        ]);
+    }
 }

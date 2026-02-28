@@ -15,6 +15,18 @@ class ScoringService
         return (int) round(5000 * exp(-$distanceKm / 2000.0));
     }
 
+    public static function calculateSpeedBonus(int $elapsedSeconds, int $roundTimeout): int
+    {
+        $maxBonus = config('game.rush_speed_bonus_max');
+        if ($elapsedSeconds >= $roundTimeout || $roundTimeout <= 0) {
+            return 0;
+        }
+
+        $fraction = 1 - ($elapsedSeconds / $roundTimeout);
+
+        return (int) round($maxBonus * $fraction);
+    }
+
     public static function haversineDistanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
     {
         $earthRadiusKm = 6371.0;

@@ -45,12 +45,14 @@ class GuessService
             $round->player_one_guess_lng = $validated['lng'];
             if (($validated['locked_in'] ?? false) === true) {
                 $round->player_one_locked_in = true;
+                $round->player_one_locked_in_at = now();
             }
         } else {
             $round->player_two_guess_lat = $validated['lat'];
             $round->player_two_guess_lng = $validated['lng'];
             if (($validated['locked_in'] ?? false) === true) {
                 $round->player_two_locked_in = true;
+                $round->player_two_locked_in_at = now();
             }
         }
 

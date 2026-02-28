@@ -45,6 +45,7 @@ class RoundStarted implements ShouldBroadcastNow
             'location_lng' => $this->round->location_lng,
             'location_heading' => $this->round->location_heading,
             'started_at' => optional($this->round->started_at)->toISOString(),
+            'round_timeout' => $this->round->game?->roundTimeoutSeconds() ?? config('game.round_timeout_seconds'),
         ];
     }
 }

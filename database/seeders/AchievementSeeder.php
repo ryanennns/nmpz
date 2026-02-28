@@ -22,6 +22,8 @@ class AchievementSeeder extends Seeder
             ['key' => 'reach_master', 'name' => 'Grand Master', 'description' => 'Reach Master rank'],
             ['key' => 'flawless_victory', 'name' => 'Flawless Victory', 'description' => 'Win a game at full health'],
             ['key' => 'comeback_king', 'name' => 'Comeback King', 'description' => 'Win a game after dropping below 1000 health'],
+            ['key' => 'rival', 'name' => 'Rival', 'description' => 'Play 5 consecutive rematches with the same opponent'],
+            ['key' => 'daily_devotee', 'name' => 'Daily Devotee', 'description' => 'Complete 7 daily challenges'],
         ];
 
         foreach ($achievements as $data) {

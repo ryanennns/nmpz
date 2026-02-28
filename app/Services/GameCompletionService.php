@@ -20,6 +20,10 @@ class GameCompletionService
             return $this->checkBestOfN($game, $round);
         }
 
+        if ($game->isRush()) {
+            return $this->checkRush($game, $round);
+        }
+
         return $this->checkClassic($game, $round);
     }
 
@@ -110,6 +114,70 @@ class GameCompletionService
         }
 
         // No-guess forfeit still applies to bo-N
+        $noGuesses =
+            $round->player_one_guess_lat === null &&
+            $round->player_one_guess_lng === null &&
+            $round->player_two_guess_lat === null &&
+            $round->player_two_guess_lng === null;
+
+        if ($noGuesses) {
+            $game->increment('no_guess_rounds');
+            $game->refresh();
+        } elseif ($game->no_guess_rounds > 0) {
+            $game->update(['no_guess_rounds' => 0]);
+        }
+
+        if ($game->no_guess_rounds >= config('game.no_guess_forfeit_rounds')) {
+            $game->update([
+                'status' => GameStatus::Completed,
+                'winner_id' => null,
+            ]);
+            $this->finalize($game);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private function checkRush(Game $game, Round $round): bool
+    {
+        // Check if max rounds reached
+        $roundsPlayed = $game->rounds()->count();
+        if ($game->max_rounds && $roundsPlayed >= $game->max_rounds) {
+            $p1Score = $game->playerOneScore();
+            $p2Score = $game->playerTwoScore();
+
+            $winnerId = null;
+            if ($p1Score > $p2Score) {
+                $winnerId = $game->player_one_id;
+            } elseif ($p2Score > $p1Score) {
+                $winnerId = $game->player_two_id;
+            }
+
+            $game->update([
+                'status' => GameStatus::Completed,
+                'winner_id' => $winnerId,
+            ]);
+            $this->finalize($game);
+
+            return true;
+        }
+
+        // Health-based completion (same as classic)
+        if ($game->player_one_health <= 0 || $game->player_two_health <= 0) {
+            $game->update([
+                'status' => GameStatus::Completed,
+                'winner_id' => $game->player_one_health >= $game->player_two_health
+                    ? $game->player_one_id
+                    : $game->player_two_id,
+            ]);
+            $this->finalize($game);
+
+            return true;
+        }
+
+        // No-guess forfeit
         $noGuesses =
             $round->player_one_guess_lat === null &&
             $round->player_one_guess_lng === null &&

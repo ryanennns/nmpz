@@ -49,7 +49,7 @@ class StartNextRound
         ]);
 
         RoundStarted::dispatch($next, $game->player_one_health, $game->player_two_health, $game->player_one_wins, $game->player_two_wins);
-        ForceEndRound::dispatch($next->getKey())->delay(now()->addSeconds(config('game.round_timeout_seconds')));
+        ForceEndRound::dispatch($next->getKey())->delay(now()->addSeconds($game->roundTimeoutSeconds()));
     }
 
     private function pickLocation(Game $game, int $roundNumber): Location
