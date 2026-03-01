@@ -133,18 +133,17 @@ class PlayerMakesGuessTest extends TestCase
     {
         Event::fake();
         Bus::fake();
-        $now = now();
-        Date::setTestNow($now);
+        Date::setTestNow(now());
 
         $player = Player::factory()->create();
         $game = Game::factory()->create(['player_one_id' => $player->getKey()]);
         $round = Round::factory()->for($game)->create([
-            'started_at' => $now->subSeconds(55),
+            'started_at' => now()->subSeconds(55),
         ]);
 
         $this->postJson($this->url($player, $game, $round), $this->lockedPayload());
 
-        $expected = $now->addSeconds(5);
+        $expected = now()->addSeconds(5);
         Bus::assertDispatched(ForceEndRound::class, function (ForceEndRound $job) use ($expected) {
             return $job->delay instanceof \DateTimeInterface
                 && $job->delay->getTimestamp() === $expected->getTimestamp();
