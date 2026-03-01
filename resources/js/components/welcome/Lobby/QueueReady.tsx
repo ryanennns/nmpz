@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export const QueueReady = ({
     playerName,
@@ -11,12 +11,6 @@ export const QueueReady = ({
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [draftName, setDraftName] = useState(playerName);
-
-    useEffect(() => {
-        if (!isEditing) {
-            setDraftName(playerName);
-        }
-    }, [isEditing, playerName]);
 
     const saveName = () => {
         const nextName = draftName.trim().slice(0, 32);
@@ -73,7 +67,10 @@ export const QueueReady = ({
                     <>
                         <button
                             type="button"
-                            onClick={() => setIsEditing(true)}
+                            onClick={() => {
+                                setDraftName(playerName);
+                                setIsEditing(true);
+                            }}
                             className="flex items-center gap-1 text-left"
                         >
                             <span className="text-white/30">&gt;</span>

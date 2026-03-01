@@ -1,8 +1,6 @@
 <?php
 
-use App\Enums\GameStatus;
 use App\Http\Controllers\CreatePlayer;
-use App\Http\Controllers\GameController;
 use App\Http\Controllers\GetGame;
 use App\Http\Controllers\GetPlayer;
 use App\Http\Controllers\HomePageController;
@@ -12,29 +10,26 @@ use App\Http\Controllers\PlayerMakesGuess;
 use App\Http\Controllers\RememberGameSession;
 use App\Http\Controllers\SendMessage;
 use App\Http\Controllers\UpdatePlayer;
-use App\Jobs\ForceEndRound;
 use App\Models\Game;
-use App\Models\Location;
 use App\Models\Player;
 use App\Models\Round;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', HomePageController::class);
-Route::get('/game', GameController::class)->name('home');
-
-Route::post('players', CreatePlayer::class)->name('players');
-Route::get('players/{player}', GetPlayer::class);
 
 Route::get('game/{game}', GetGame::class);
 
-Route::post('players/{player}/leave-queue', PlayerLeavesQueue::class)
-    ->name('players.leave-queue');
-Route::post('players/{player}/join-queue', JoinQueue::class)
-    ->name('players.join-queue');
-Route::patch('players/{player}', UpdatePlayer::class)
-    ->name('players.update');
+Route::prefix('players')->name('players')->group(function () {
+    Route::post('/', CreatePlayer::class)->name('.create');
+    Route::get('/{player}', GetPlayer::class)->name('.get');
+    Route::post('/{player}/join-queue', JoinQueue::class)
+        ->name('.join-queue');
+    Route::post('/{player}/leave-queue', PlayerLeavesQueue::class)
+        ->name('.leave-queue');
+    Route::patch('/{player}', UpdatePlayer::class)
+        ->name('.update');
+});
 
 Route::post('players/{player}/games/{game}/rounds/{round}/guess', PlayerMakesGuess::class)
     ->name('games.rounds.guess');

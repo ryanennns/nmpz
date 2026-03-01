@@ -3,7 +3,7 @@ export const CreatePlayerForm = () => {
         <div className="mb-2">
             <input
                 maxLength={32}
-                onChange={(e) => 0}
+                onChange={() => 0}
                 placeholder="your name"
                 className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white placeholder:text-white/40"
             />

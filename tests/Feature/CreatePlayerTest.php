@@ -11,7 +11,7 @@ class CreatePlayerTest extends TestCase
 
     public function test_player_is_created(): void
     {
-        $response = $this->postJson(route('players'), [
+        $response = $this->postJson(route('players.create'), [
             'name' => 'Test Player',
         ]);
 
@@ -30,14 +30,14 @@ class CreatePlayerTest extends TestCase
 
     public function test_name_is_required(): void
     {
-        $this->postJson(route('players'), [
+        $this->postJson(route('players.create'), [
             'name' => '',
         ])->assertStatus(422);
     }
 
     public function test_name_is_limited_to_32_characters(): void
     {
-        $this->postJson(route('players'), [
+        $this->postJson(route('players.create'), [
             'name' => str_repeat('a', 33),
         ])->assertStatus(422);
     }

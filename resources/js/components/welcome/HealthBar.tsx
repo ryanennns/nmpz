@@ -26,6 +26,7 @@ export default function HealthBar({
     } | null>(null);
 
     const prevHealthRef = useRef<number | null>(null);
+    const effectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const ghostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const damageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -33,49 +34,58 @@ export default function HealthBar({
     useEffect(() => {
         if (prevHealthRef.current !== null && health < prevHealthRef.current) {
             const damage = prevHealthRef.current - health;
-
-            // White blast → red flicker → fade
-            if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
-            setFlashKey((k) => k + 1);
-            setFlashing(true);
-            flashTimerRef.current = setTimeout(() => setFlashing(false), 960);
-
-            // Bar shudder (remount via key resets and replays CSS animation)
-            setShakeKey((k) => k + 1);
-
-            // Ghost drain bar: snap to old position, then slowly catch up
             const oldPct = Math.max(
                 0,
                 Math.min(100, (prevHealthRef.current / MAX_HP) * 100),
             );
-            setGhostPct(oldPct);
-            if (ghostTimerRef.current) clearTimeout(ghostTimerRef.current);
-            ghostTimerRef.current = setTimeout(() => {
-                setGhostPct(
-                    Math.max(0, Math.min(100, (health / MAX_HP) * 100)),
-                );
-            }, 480);
 
-            // Floating damage number
+            // White blast → red flicker → fade
+            if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+            if (ghostTimerRef.current) clearTimeout(ghostTimerRef.current);
             if (damageTimerRef.current) clearTimeout(damageTimerRef.current);
-            setDamageDisplay((prev) => ({
-                amount: damage,
-                key: (prev?.key ?? 0) + 1,
-            }));
-            damageTimerRef.current = setTimeout(
-                () => setDamageDisplay(null),
-                1200,
-            );
+            if (effectTimerRef.current) clearTimeout(effectTimerRef.current);
+
+            effectTimerRef.current = setTimeout(() => {
+                setFlashKey((k) => k + 1);
+                setFlashing(true);
+                flashTimerRef.current = setTimeout(
+                    () => setFlashing(false),
+                    960,
+                );
+
+                // Bar shudder (remount via key resets and replays CSS animation)
+                setShakeKey((k) => k + 1);
+
+                // Ghost drain bar: snap to old position, then slowly catch up
+                setGhostPct(oldPct);
+                ghostTimerRef.current = setTimeout(() => {
+                    setGhostPct(
+                        Math.max(0, Math.min(100, (health / MAX_HP) * 100)),
+                    );
+                }, 480);
+
+                // Floating damage number
+                setDamageDisplay((prev) => ({
+                    amount: damage,
+                    key: (prev?.key ?? 0) + 1,
+                }));
+                damageTimerRef.current = setTimeout(
+                    () => setDamageDisplay(null),
+                    1200,
+                );
+            }, 0);
         } else if (prevHealthRef.current === null) {
-            setGhostPct(pct);
+            if (effectTimerRef.current) clearTimeout(effectTimerRef.current);
+            effectTimerRef.current = setTimeout(() => setGhostPct(pct), 0);
         }
 
         prevHealthRef.current = health;
 
         return () => {
+            if (effectTimerRef.current) clearTimeout(effectTimerRef.current);
             if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
         };
-    }, [health]);
+    }, [health, pct]);
 
     return (
         <div className="flex items-center gap-3 font-mono">

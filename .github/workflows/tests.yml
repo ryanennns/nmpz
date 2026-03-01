@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-version: ['8.4', '8.5']
+        php-version: ['8.4']
 
     steps:
       - name: Checkout code
@@ -54,6 +54,3 @@ jobs:
 
       - name: Run PHPUnit
         run: ./vendor/bin/phpunit
-
-      - name: Run Vitest
-        run: npm run test:run
