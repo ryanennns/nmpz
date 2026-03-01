@@ -1,4 +1,6 @@
+import { Link } from '@inertiajs/react';
 import { useState } from 'react';
+import { logout } from '@/routes';
 
 export const QueueReady = ({
     playerName,
@@ -6,12 +8,14 @@ export const QueueReady = ({
     onEditName,
     isAuthenticated,
     onSignUp,
+    onSignOut,
 }: {
     playerName: string;
     onJoinQueue: () => void;
     onEditName: (name: string) => void;
     isAuthenticated: boolean;
     onSignUp: () => void;
+    onSignOut: () => void;
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [draftName, setDraftName] = useState(playerName);
@@ -29,8 +33,6 @@ export const QueueReady = ({
             onEditName(nextName);
         }
     };
-    const onSignOut = () => 0;
-
     return (
         <div className="w-72">
             <div className="mb-2 flex min-h-9 items-center justify-between gap-2 text-center text-sm text-white">
@@ -108,13 +110,14 @@ export const QueueReady = ({
                 {isAuthenticated && (
                     <>
                         <div></div>
-                        <button
-                            type="button"
+                        <Link
+                            href={logout()}
+                            as="button"
                             onClick={onSignOut}
                             className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300"
                         >
                             sign out
-                        </button>
+                        </Link>
                     </>
                 )}
             </div>

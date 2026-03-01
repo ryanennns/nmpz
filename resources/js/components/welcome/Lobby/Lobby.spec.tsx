@@ -1,3 +1,4 @@
+import type { ComponentProps, ReactNode } from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -33,6 +34,7 @@ const mocks = vi.hoisted(() => {
         localStorage: {
             get: vi.fn(),
             set: vi.fn(),
+            remove: vi.fn(),
         },
         echo: {
             channel: vi.fn(),
@@ -64,6 +66,15 @@ vi.mock('@/echo', () => ({
 
 vi.mock('@inertiajs/react', () => ({
     usePage: () => mocks.page,
+    Link: ({
+        children,
+        onClick,
+        ...props
+    }: ComponentProps<'button'> & { children: ReactNode }) => (
+        <button type="button" onClick={onClick} {...props}>
+            {children}
+        </button>
+    ),
 }));
 
 describe('Lobby', () => {
@@ -213,6 +224,27 @@ describe('Lobby', () => {
         expect(mocks.api.getAuthPlayer).toHaveBeenCalledTimes(1);
         expect(mocks.api.getPlayer).not.toHaveBeenCalled();
         expect(screen.getByText('alice')).toBeInTheDocument();
+    });
+
+    it('clears local auth state when signing out', async () => {
+        mocks.page.props.auth.user = { id: 1, name: 'alice' };
+        mocks.api.getAuthPlayer.mockResolvedValue({
+            status: 200,
+            data: { id: 'auth-player', name: 'alice' },
+        });
+
+        render(<Lobby />);
+
+        const user = userEvent.setup();
+
+        await screen.findByText('Join queue');
+        await user.click(screen.getByText('sign out'));
+
+        expect(mocks.localStorage.remove).toHaveBeenCalledWith('player_id');
+        expect(
+            await screen.findByPlaceholderText('your name'),
+        ).toBeInTheDocument();
+        expect(screen.queryByText('alice')).not.toBeInTheDocument();
     });
 
     it('transitions to sign_in phase when clicking "sign in" on NamePrompt', async () => {

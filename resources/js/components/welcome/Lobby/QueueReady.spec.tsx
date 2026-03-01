@@ -1,7 +1,20 @@
+import type { ComponentProps, ReactNode } from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QueueReady } from './QueueReady';
+
+vi.mock('@inertiajs/react', () => ({
+    Link: ({
+        children,
+        onClick,
+        ...props
+    }: ComponentProps<'button'> & { children: ReactNode }) => (
+        <button type="button" onClick={onClick} {...props}>
+            {children}
+        </button>
+    ),
+}));
 
 describe('QueueReady', () => {
     afterEach(() => {
@@ -19,6 +32,7 @@ describe('QueueReady', () => {
                 onEditName={onEditName}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}
+                onSignOut={vi.fn()}
             />,
         );
 
@@ -39,6 +53,7 @@ describe('QueueReady', () => {
                 onEditName={onEditName}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}
+                onSignOut={vi.fn()}
             />,
         );
 
@@ -61,6 +76,7 @@ describe('QueueReady', () => {
                 onEditName={vi.fn()}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}
+                onSignOut={vi.fn()}
             />,
         );
 
@@ -75,10 +91,12 @@ describe('QueueReady', () => {
                 onEditName={vi.fn()}
                 isAuthenticated={true}
                 onSignUp={vi.fn()}
+                onSignOut={vi.fn()}
             />,
         );
 
         expect(screen.queryByText('create account')).not.toBeInTheDocument();
+        expect(screen.getByText('sign out')).toBeInTheDocument();
     });
 
     it('calls onSignUp when "create account" is clicked', async () => {
@@ -91,6 +109,7 @@ describe('QueueReady', () => {
                 onEditName={vi.fn()}
                 isAuthenticated={false}
                 onSignUp={onSignUp}
+                onSignOut={vi.fn()}
             />,
         );
 
@@ -98,5 +117,25 @@ describe('QueueReady', () => {
         await user.click(screen.getByText('create account'));
 
         expect(onSignUp).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onSignOut when "sign out" is clicked', async () => {
+        const onSignOut = vi.fn();
+
+        render(
+            <QueueReady
+                playerName="ryan"
+                onJoinQueue={vi.fn()}
+                onEditName={vi.fn()}
+                isAuthenticated={true}
+                onSignUp={vi.fn()}
+                onSignOut={onSignOut}
+            />,
+        );
+
+        const user = userEvent.setup();
+        await user.click(screen.getByText('sign out'));
+
+        expect(onSignOut).toHaveBeenCalledTimes(1);
     });
 });

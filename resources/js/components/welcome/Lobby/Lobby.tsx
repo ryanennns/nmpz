@@ -22,7 +22,6 @@ export default function Lobby() {
 
     const { auth } = usePage<{ auth: { user: User | null } }>().props;
     const [user, setUser] = useState<User | null>(auth.user);
-    console.log({ user });
 
     const [helpOpen, setHelpOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -138,6 +137,14 @@ export default function Lobby() {
         }
     };
 
+    const signOut = () => {
+        setPlayer(undefined);
+        setPlayerName(undefined);
+        localStorage.remove(PLAYER_ID_KEY);
+        setUser(null);
+        setPhase('guest_signin');
+    };
+
     // fade in transition
     useEffect(() => {
         if (phase === displayPhase) {
@@ -234,6 +241,7 @@ export default function Lobby() {
                             }}
                             isAuthenticated={!!user}
                             onSignUp={() => setPhase('sign_up')}
+                            onSignOut={signOut}
                         />
                     )}
                     {displayPhase === 'queued' && (
