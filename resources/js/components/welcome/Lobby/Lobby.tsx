@@ -1,3 +1,4 @@
+import { Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
 import { QueueReady } from '@/components/welcome/Lobby/QueueReady';
@@ -16,6 +17,7 @@ export default function Lobby() {
     const localStorage = useLocalStorage();
 
     const [helpOpen, setHelpOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [playerName, setPlayerName] = useState<string | undefined>(undefined);
     const [player, setPlayer] = useState<Player | undefined>(undefined);
 
@@ -136,7 +138,17 @@ export default function Lobby() {
                     }`}
                 >
                     {displayPhase !== 'queued' && (
-                        <LobbyHeader onClick={() => setHelpOpen(true)} />
+                        <>
+                            <LobbyHeader onClick={() => setHelpOpen(true)} />
+                            <button
+                                type="button"
+                                onClick={() => setSettingsOpen(true)}
+                                aria-label="Open settings"
+                                className="group fixed bottom-4 left-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 transition hover:bg-white/20 hover:text-white"
+                            >
+                                <Settings className="h-4 w-4 transition-transform duration-300 group-hover:rotate-180" />
+                            </button>
+                        </>
                     )}
                     {displayPhase === 'guest_signin' && (
                         <NamePrompt
@@ -187,6 +199,18 @@ export default function Lobby() {
                         wouldn't trust with my life.
                     </p>
                     <p className="mt-4 font-bold">- ryan :)</p>
+                </SimpleModal>
+                <SimpleModal
+                    open={settingsOpen}
+                    onClose={() => setSettingsOpen(false)}
+                >
+                    <div className="mb-2 text-2xl text-white/80">settings</div>
+                    <p className="mb-2 leading-relaxed text-white/70">
+                        this is a placeholder settings panel for the lobby.
+                    </p>
+                    <p className="leading-relaxed text-white/50">
+                        add preferences here when the settings flow is ready.
+                    </p>
                 </SimpleModal>
             </div>
         </div>

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
 import { clsx } from 'clsx';
+import { useEffect, useRef, useState } from 'react';
 
 export default function NamePrompt({
     onSubmit,

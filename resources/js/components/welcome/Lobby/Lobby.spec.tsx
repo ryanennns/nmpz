@@ -73,7 +73,7 @@ describe('Lobby', () => {
 
         expect(screen.getByText('continue')).toBeInTheDocument();
         expect(
-            screen.getByText('have an account? sign in'),
+            screen.getByText('sign in'),
         ).toBeInTheDocument();
         expect(screen.queryByTestId('modal')).not.toBeInTheDocument();
 
