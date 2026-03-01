@@ -23,7 +23,7 @@ class StartNextRoundTest extends TestCase
     private function handle(Round $round): void
     {
         Bus::fake();
-        (new StartNextRound)->handle(new RoundFinished($round));
+        app(StartNextRound::class)->handle(new RoundFinished($round));
     }
 
     private function roundFor(Game $game, int $p1Score, int $p2Score, int $roundNumber = 1): Round

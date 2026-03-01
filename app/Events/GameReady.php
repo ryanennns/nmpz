@@ -4,6 +4,7 @@ namespace App\Events;
 
 use App\Models\Game;
 use App\Models\Player;
+use App\Presenters\GamePresenter;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -34,23 +35,7 @@ class GameReady implements ShouldBroadcastNow
         $this->game->load(['playerOne.user', 'playerTwo.user']);
 
         return [
-            'game' => [
-                'id' => $this->game->getKey(),
-                'player_one' => [
-                    'id' => $this->game->player_one_id,
-                    'user' => ['name' => $this->game->playerOne->user->name],
-                    'elo_rating' => $this->game->playerOne->elo_rating,
-                    'rank' => $this->game->playerOne->rank,
-                ],
-                'player_two' => [
-                    'id' => $this->game->player_two_id,
-                    'user' => ['name' => $this->game->playerTwo->user->name],
-                    'elo_rating' => $this->game->playerTwo->elo_rating,
-                    'rank' => $this->game->playerTwo->rank,
-                ],
-                'player_one_health' => $this->game->player_one_health,
-                'player_two_health' => $this->game->player_two_health,
-            ],
+            'game' => GamePresenter::toArray($this->game),
         ];
     }
 }

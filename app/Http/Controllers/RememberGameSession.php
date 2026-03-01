@@ -28,10 +28,6 @@ class RememberGameSession extends Controller
             return response()->json(['remembered' => false], 409);
         }
 
-        if (! in_array($player->getKey(), [$game->player_one_id, $game->player_two_id], true)) {
-            return response()->json(['remembered' => false], 403);
-        }
-
         $request->session()->put('game_id', $game->getKey());
 
         return response()->json(['remembered' => true]);

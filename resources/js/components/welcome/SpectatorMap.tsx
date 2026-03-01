@@ -1,5 +1,5 @@
 import { importLibrary } from '@googlemaps/js-api-loader';
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import type { LatLng } from '@/components/welcome/types';
 
 function svgOpponentCircle() {
@@ -14,7 +14,7 @@ function svgOpponentCircle() {
     };
 }
 
-export default function SpectatorMap({
+export default memo(function SpectatorMap({
     opponentGuess,
 }: {
     opponentGuess: LatLng | null;
@@ -46,7 +46,7 @@ export default function SpectatorMap({
             return () => observer.disconnect();
         }
 
-        init().catch(console.error);
+        init().catch(() => {});
         return () => {
             cancelled = true;
         };
@@ -80,4 +80,4 @@ export default function SpectatorMap({
             </div>
         </div>
     );
-}
+});

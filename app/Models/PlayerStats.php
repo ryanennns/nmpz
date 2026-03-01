@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PlayerStats extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
 
     protected $guarded = [];
 
@@ -30,6 +31,14 @@ class PlayerStats extends Model
             'total_distance_km' => 'float',
             'total_guesses_made' => 'integer',
             'total_guesses_missed' => 'integer',
+            'daily_current_streak' => 'integer',
+            'daily_best_streak' => 'integer',
+            'solo_games_played' => 'integer',
+            'solo_rounds_played' => 'integer',
+            'solo_total_score' => 'integer',
+            'solo_best_round_score' => 'integer',
+            'solo_perfect_rounds' => 'integer',
+            'solo_best_streak' => 'integer',
         ];
     }
 

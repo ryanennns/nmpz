@@ -10,8 +10,9 @@ export function CountdownTimer({ config }: { config: CountdownConfig }) {
     return (
         <div className="pointer-events-none absolute top-16 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-4 py-3 text-center backdrop-blur-sm">
             <div
+                key={config.value}
                 className={cn(
-                    'font-mono text-6xl font-bold tabular-nums',
+                    'countdown-tick font-mono text-6xl font-bold tabular-nums',
                     config.valueClass,
                 )}
             >

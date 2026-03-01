@@ -194,10 +194,10 @@ class PlayerMakesGuessTest extends TestCase
         $player = Player::factory()->create();
         $game = Game::factory()->create(['player_one_id' => $player->getKey()]);
 
-        $round = Round::factory()->for($game)->create();
+        $round = Round::factory()->for($game)->create(['round_number' => 1]);
         $this->postJson($this->url($player, $game, $round), ['lat' => 90, 'lng' => 180])->assertOk();
 
-        $round = Round::factory()->for($game)->create();
+        $round = Round::factory()->for($game)->create(['round_number' => 2]);
         $this->postJson($this->url($player, $game, $round), ['lat' => -90, 'lng' => -180])->assertOk();
     }
 

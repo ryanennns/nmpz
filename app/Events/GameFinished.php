@@ -31,7 +31,7 @@ class GameFinished implements ShouldBroadcastNow
     {
         $this->game->load(['playerOne', 'playerTwo']);
 
-        return [
+        $data = [
             'game_id' => $this->game->getKey(),
             'winner_id' => $this->game->winner_id,
             'player_one_health' => $this->game->player_one_health,
@@ -40,6 +40,11 @@ class GameFinished implements ShouldBroadcastNow
             'player_two_rating_change' => $this->game->player_two_rating_change,
             'player_one_elo' => $this->game->playerOne?->elo_rating,
             'player_two_elo' => $this->game->playerTwo?->elo_rating,
+            'match_format' => $this->game->match_format ?? 'classic',
+            'player_one_wins' => $this->game->player_one_wins,
+            'player_two_wins' => $this->game->player_two_wins,
         ];
+
+        return $data;
     }
 }

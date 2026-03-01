@@ -1,0 +1,23 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('rounds', function (Blueprint $table) {
+            $table->timestamp('player_one_locked_in_at')->nullable()->after('player_one_locked_in');
+            $table->timestamp('player_two_locked_in_at')->nullable()->after('player_two_locked_in');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('rounds', function (Blueprint $table) {
+            $table->dropColumn(['player_one_locked_in_at', 'player_two_locked_in_at']);
+        });
+    }
+};

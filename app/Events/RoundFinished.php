@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\Round;
+use App\Services\ScoringService;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -15,6 +16,8 @@ class RoundFinished implements ShouldBroadcastNow
 
     public function __construct(
         public readonly Round $round,
+        public readonly int $playerOneWins = 0,
+        public readonly int $playerTwoWins = 0,
     ) {}
 
     public function broadcastOn(): Channel
@@ -43,6 +46,8 @@ class RoundFinished implements ShouldBroadcastNow
             'player_two_score' => $this->round->player_two_score,
             'player_one_distance_km' => $this->playerDistanceKm('player_one'),
             'player_two_distance_km' => $this->playerDistanceKm('player_two'),
+            'player_one_wins' => $this->playerOneWins,
+            'player_two_wins' => $this->playerTwoWins,
         ];
     }
 
@@ -55,7 +60,7 @@ class RoundFinished implements ShouldBroadcastNow
             return null;
         }
 
-        return round(Round::haversineDistanceKm(
+        return round(ScoringService::haversineDistanceKm(
             $this->round->location_lat,
             $this->round->location_lng,
             $lat,

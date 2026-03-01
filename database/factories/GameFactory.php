@@ -43,4 +43,44 @@ class GameFactory extends Factory
             ]);
         });
     }
+
+    public function bestOfThree(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'match_format' => 'bo3',
+            'max_rounds' => 3,
+            'player_one_health' => 0,
+            'player_two_health' => 0,
+        ]);
+    }
+
+    public function bestOfFive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'match_format' => 'bo5',
+            'max_rounds' => 5,
+            'player_one_health' => 0,
+            'player_two_health' => 0,
+        ]);
+    }
+
+    public function bestOfSeven(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'match_format' => 'bo7',
+            'max_rounds' => 7,
+            'player_one_health' => 0,
+            'player_two_health' => 0,
+        ]);
+    }
+
+    public function rush(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'match_format' => 'rush',
+            'max_rounds' => config('game.rush_max_rounds'),
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+        ]);
+    }
 }

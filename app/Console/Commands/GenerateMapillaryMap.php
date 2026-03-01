@@ -3,11 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Location;
-use App\Models\Map;
-use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
 
-class GenerateMapillaryMap extends Command
+class GenerateMapillaryMap extends MapillaryBaseCommand
 {
     protected $signature = 'mapillary:generate-map
                             {name : Target map name}
@@ -22,9 +19,8 @@ class GenerateMapillaryMap extends Command
 
     public function handle(): int
     {
-        $token = env('VITE_MAPILLARY_ACCESS_TOKEN');
+        $token = $this->requireToken();
         if (! $token) {
-            $this->error('VITE_MAPILLARY_ACCESS_TOKEN is not set.');
             return 1;
         }
 
@@ -41,21 +37,14 @@ class GenerateMapillaryMap extends Command
             return 1;
         }
 
-        $existing = Map::query()->where('name', $name)->first();
-        if ($existing) {
-            if (! $this->option('force')) {
-                $this->error('Target map already exists. Use --force to replace it.');
-                return 1;
-            }
-            $existing->delete();
-        }
-
-        if (file_exists($outputPath) && ! $this->option('force')) {
-            $this->error('Output file already exists. Use --force to overwrite it.');
+        $map = $this->resolveOrCreateMap($name, (bool) $this->option('force'));
+        if (! $map) {
             return 1;
         }
 
-        $map = Map::query()->create(['name' => $name]);
+        if (! $this->checkOutputFile($outputPath, (bool) $this->option('force'))) {
+            return 1;
+        }
 
         $latMin = -85.0;
         $latMax = 85.0;
@@ -72,6 +61,7 @@ class GenerateMapillaryMap extends Command
         $created = 0;
         $seenImageIds = [];
         $jsonRows = [];
+        $fields = ['id', 'computed_geometry', 'geometry', 'computed_compass_angle', 'compass_angle'];
 
         for ($lat = $latMin; $lat <= $latMax; $lat += $grid) {
             for ($lng = $lngMin; $lng <= $lngMax; $lng += $grid) {
@@ -81,45 +71,28 @@ class GenerateMapillaryMap extends Command
                     return 0;
                 }
 
-                $bbox = implode(',', [
-                    $lng - $delta,
-                    $lat - $delta,
-                    $lng + $delta,
-                    $lat + $delta,
-                ]);
+                $bbox = $this->buildBbox($lat, $lng, $delta);
 
-                $response = Http::get('https://graph.mapillary.com/images', [
-                    'access_token' => $token,
-                    'fields' => 'id,computed_geometry,geometry,computed_compass_angle,compass_angle',
-                    'bbox' => $bbox,
-                    'limit' => 1,
-                ]);
-
-                if ($response->ok()) {
-                    $image = $response->json('data.0');
+                $data = $this->fetchMapillaryImages($bbox, $token, $fields, 1);
+                if (is_array($data)) {
+                    $image = $data[0] ?? null;
                     if (is_array($image) && isset($image['id'])) {
                         $imageId = (string) $image['id'];
                         if (! isset($seenImageIds[$imageId])) {
-                            $coords = $image['computed_geometry']['coordinates']
-                                ?? $image['geometry']['coordinates']
-                                ?? null;
-                            if (is_array($coords) && count($coords) === 2) {
-                                $heading = (int) round(
-                                    $image['computed_compass_angle']
-                                        ?? $image['compass_angle']
-                                        ?? 0,
-                                );
+                            $coords = $this->extractCoordinates($image);
+                            if ($coords) {
+                                $heading = $this->extractHeading($image);
 
                                 Location::query()->create([
                                     'map_id' => $map->getKey(),
-                                    'lat' => $coords[1],
-                                    'lng' => $coords[0],
+                                    'lat' => $coords['lat'],
+                                    'lng' => $coords['lng'],
                                     'heading' => $heading,
                                 ]);
 
                                 $jsonRows[] = [
-                                    'lat' => $coords[1],
-                                    'lng' => $coords[0],
+                                    'lat' => $coords['lat'],
+                                    'lng' => $coords['lng'],
                                     'heading' => $heading,
                                 ];
 

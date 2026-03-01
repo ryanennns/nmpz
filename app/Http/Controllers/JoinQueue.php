@@ -2,19 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\JoinQueueRequest;
 use App\Models\Player;
 use App\Jobs\MatchmakeQueueJob;
+use App\Services\QueueService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
 class JoinQueue extends Controller
 {
-    public function __invoke(Request $request, Player $player): JsonResponse
+    public function __invoke(JoinQueueRequest $request, Player $player, QueueService $queueService): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => ['sometimes', 'nullable', 'string', 'max:50'],
-        ]);
+        $validated = $request->validated();
 
         if (! empty($validated['name'])) {
             $player->update(['name' => $validated['name']]);
@@ -27,24 +25,20 @@ class JoinQueue extends Controller
             return response()->json(['error' => 'Player already in game'], 409);
         }
 
-        $queue = Cache::get('matchmaking_queue', []);
-        $queue = array_values(array_filter($queue, fn ($id) => $id !== $player->getKey()));
+        $queueService->add($player->getKey());
+        $queueService->recordJoinTime($player->getKey());
 
-        $queue[] = $player->getKey();
-        $queue = array_values(array_unique($queue));
-        Cache::put('matchmaking_queue', $queue, now()->addMinutes(5));
+        $mapId = $validated['map_id'] ?? null;
+        $queueService->recordMapPreference($player->getKey(), $mapId);
 
-        // Record join time for ELO-based matchmaking window expansion
-        $joinTimes = Cache::get('matchmaking_queue_times', []);
-        if (! isset($joinTimes[$player->getKey()])) {
-            $joinTimes[$player->getKey()] = time();
-            Cache::put('matchmaking_queue_times', $joinTimes, now()->addMinutes(5));
-        }
+        $matchFormat = $validated['match_format'] ?? null;
+        $queueService->recordFormatPreference($player->getKey(), $matchFormat);
+
         MatchmakeQueueJob::dispatch();
 
         return response()->json([
             'queued' => true,
-            'queue_count' => count($queue),
+            'queue_count' => count($queueService->getQueue()),
         ]);
     }
 }

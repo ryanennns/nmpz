@@ -2,13 +2,7 @@ import { useEffect, useState } from 'react';
 import RankBadge from '@/components/welcome/RankBadge';
 import type { PlayerStatsData } from '@/components/welcome/types';
 import { useApiClient } from '@/hooks/useApiClient';
-
-function formatDistance(km: number | null): string {
-    if (km === null) return '-';
-    if (km < 1) return `${Math.round(km * 1000)} m`;
-    if (km < 100) return `${km.toFixed(1)} km`;
-    return `${Math.round(km).toLocaleString()} km`;
-}
+import { formatDistance } from '@/lib/format';
 
 export default function PlayerStatsPanel({ playerId }: { playerId: string }) {
     const api = useApiClient(playerId);
@@ -37,8 +31,8 @@ export default function PlayerStatsPanel({ playerId }: { playerId: string }) {
         { label: 'Avg score', value: stats.average_score.toLocaleString() },
         { label: 'Best round', value: stats.best_round_score.toLocaleString() },
         { label: 'Perfect rounds', value: stats.perfect_rounds.toString() },
-        { label: 'Avg distance', value: formatDistance(stats.average_distance_km) },
-        { label: 'Closest guess', value: formatDistance(stats.closest_guess_km) },
+        { label: 'Avg distance', value: formatDistance(stats.average_distance_km, '-') },
+        { label: 'Closest guess', value: formatDistance(stats.closest_guess_km, '-') },
         { label: 'Damage dealt', value: stats.total_damage_dealt.toLocaleString() },
         { label: 'Damage taken', value: stats.total_damage_taken.toLocaleString() },
     ];

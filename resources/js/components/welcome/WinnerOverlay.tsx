@@ -1,4 +1,11 @@
 import type { RematchState } from '@/components/welcome/types';
+import { ANIM_SLOW, EASE_STANDARD } from '@/lib/game-constants';
+
+const stagger = (delayMs: number, visible: boolean) => ({
+    opacity: visible ? 1 : 0,
+    transform: visible ? 'translateY(0)' : 'translateY(16px)',
+    transition: `opacity ${ANIM_SLOW}ms ${EASE_STANDARD} ${delayMs}ms, transform ${ANIM_SLOW}ms ${EASE_STANDARD} ${delayMs}ms`,
+});
 
 export const WinnerOverlay = ({
     visible,
@@ -29,10 +36,17 @@ export const WinnerOverlay = ({
 }) => {
     return (
         <div
-            className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-opacity duration-500 ${visible ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
-            style={{ pointerEvents: postGameButtonsVisible ? 'auto' : 'none' }}
+            className={`absolute inset-0 z-50 flex flex-col items-center justify-center ${visible ? '' : 'pointer-events-none'}`}
+            style={{
+                opacity: visible ? 1 : 0,
+                transition: `opacity ${ANIM_SLOW}ms ${EASE_STANDARD}`,
+                pointerEvents: postGameButtonsVisible ? 'auto' : 'none',
+            }}
         >
-            <div className="font-mono text-6xl font-bold tracking-wide text-white">
+            <div
+                className="font-mono text-6xl font-bold tracking-wide text-white"
+                style={stagger(200, visible)}
+            >
                 {winnerId === null
                     ? 'no contest'
                     : winnerId === id
@@ -40,18 +54,27 @@ export const WinnerOverlay = ({
                       : 'you lost'}
             </div>
             {winnerId !== null && winnerName && (
-                <div className="mt-3 font-mono text-xs text-white/40">
+                <div
+                    className="mt-3 font-mono text-xs text-white/40"
+                    style={stagger(600, visible)}
+                >
                     winner: {winnerName}
                 </div>
             )}
             {ratingChange.my !== null && (
-                <div className={`mt-2 font-mono text-sm font-bold ${ratingChange.my > 0 ? 'text-green-400' : ratingChange.my < 0 ? 'text-red-400' : 'text-white/40'}`}>
+                <div
+                    className={`mt-2 font-mono text-sm font-bold ${ratingChange.my > 0 ? 'text-green-400' : ratingChange.my < 0 ? 'text-red-400' : 'text-white/40'}`}
+                    style={stagger(900, visible)}
+                >
                     {ratingChange.my > 0 ? '+' : ''}{ratingChange.my} ELO
                 </div>
             )}
 
             {postGameButtonsVisible && (
-                <div className="mt-8 flex flex-col items-center gap-3">
+                <div
+                    className="mt-8 flex flex-col items-center gap-3"
+                    style={stagger(0, postGameButtonsVisible)}
+                >
                     {rematchState === 'received' ? (
                         <>
                             <div className="mb-2 font-mono text-sm text-amber-400">

@@ -11,7 +11,7 @@ class UpdatePlayer extends Controller
     public function __invoke(Request $request, Player $player): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:32'],
+            'name' => ['required', 'string', 'max:' . config('game.max_name_length')],
         ]);
 
         $player->update(['name' => $validated['name']]);

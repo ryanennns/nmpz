@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { MAX_HEALTH } from '@/lib/game-constants';
 
-const MAX_HP = 5000;
+const MAX_HP = MAX_HEALTH;
 const BLOCKS = 24;
 const blockStr = '█'.repeat(BLOCKS);
 
@@ -38,7 +39,7 @@ export default function HealthBar({
             if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
             setFlashKey((k) => k + 1);
             setFlashing(true);
-            flashTimerRef.current = setTimeout(() => setFlashing(false), 960);
+            flashTimerRef.current = setTimeout(() => setFlashing(false), 800);
 
             // Bar shudder (remount via key resets and replays CSS animation)
             setShakeKey((k) => k + 1);
@@ -54,7 +55,7 @@ export default function HealthBar({
                 setGhostPct(
                     Math.max(0, Math.min(100, (health / MAX_HP) * 100)),
                 );
-            }, 480);
+            }, 600);
 
             // Floating damage number
             if (damageTimerRef.current) clearTimeout(damageTimerRef.current);
@@ -74,6 +75,8 @@ export default function HealthBar({
 
         return () => {
             if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+            if (ghostTimerRef.current) clearTimeout(ghostTimerRef.current);
+            if (damageTimerRef.current) clearTimeout(damageTimerRef.current);
         };
     }, [health]);
 

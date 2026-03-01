@@ -25,6 +25,11 @@ class Game extends Model
             'no_guess_rounds' => 'integer',
             'player_one_rematch_requested' => 'boolean',
             'player_two_rematch_requested' => 'boolean',
+            'player_one_wins' => 'integer',
+            'player_two_wins' => 'integer',
+            'max_rounds' => 'integer',
+            'allow_spectators' => 'boolean',
+            'spectator_count' => 'integer',
         ];
     }
 
@@ -53,6 +58,16 @@ class Game extends Model
         return $this->hasMany(Round::class)->orderBy('round_number');
     }
 
+    public function spectators(): HasMany
+    {
+        return $this->hasMany(Spectator::class);
+    }
+
+    public function hasPlayer(Player $player): bool
+    {
+        return in_array($player->getKey(), [$this->player_one_id, $this->player_two_id]);
+    }
+
     public function playerOneScore(): int
     {
         return (int) $this->rounds->sum('player_one_score');
@@ -61,5 +76,39 @@ class Game extends Model
     public function playerTwoScore(): int
     {
         return (int) $this->rounds->sum('player_two_score');
+    }
+
+    public function isClassic(): bool
+    {
+        return $this->match_format === 'classic' || $this->match_format === null;
+    }
+
+    public function isRush(): bool
+    {
+        return $this->match_format === 'rush';
+    }
+
+    public function isBestOfN(): bool
+    {
+        return ! $this->isClassic() && ! $this->isRush();
+    }
+
+    public function winsNeeded(): ?int
+    {
+        return match ($this->match_format) {
+            'bo3' => 2,
+            'bo5' => 3,
+            'bo7' => 4,
+            default => null,
+        };
+    }
+
+    public function roundTimeoutSeconds(): int
+    {
+        if ($this->isRush()) {
+            return config('game.rush_round_timeout_seconds');
+        }
+
+        return config('game.round_timeout_seconds');
     }
 }

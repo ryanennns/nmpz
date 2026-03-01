@@ -62,7 +62,7 @@ export default function StreetViewPanel({
             });
         }
 
-        init().catch(console.error);
+        init().catch(() => {});
         return () => {
             cancelled = true;
         };

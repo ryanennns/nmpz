@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ScoringService;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,6 +30,8 @@ class Round extends Model
             'player_two_locked_in' => 'boolean',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
+            'player_one_locked_in_at' => 'datetime',
+            'player_two_locked_in_at' => 'datetime',
         ];
     }
 
@@ -40,7 +43,7 @@ class Round extends Model
     public function evaluateScores(): void
     {
         if ($this->player_one_guess_lat !== null && $this->player_one_guess_lng !== null) {
-            $this->player_one_score = self::calculateScore(
+            $this->player_one_score = ScoringService::calculateScore(
                 $this->location_lat,
                 $this->location_lng,
                 $this->player_one_guess_lat,
@@ -49,7 +52,7 @@ class Round extends Model
         }
 
         if ($this->player_two_guess_lat !== null && $this->player_two_guess_lng !== null) {
-            $this->player_two_score = self::calculateScore(
+            $this->player_two_score = ScoringService::calculateScore(
                 $this->location_lat,
                 $this->location_lng,
                 $this->player_two_guess_lat,
@@ -57,29 +60,22 @@ class Round extends Model
             );
         }
 
-        $this->save();
-    }
+        // Apply speed bonus for rush mode
+        $game = $this->game;
+        if ($game && $game->isRush() && $this->started_at) {
+            $timeout = $game->roundTimeoutSeconds();
 
-    public static function calculateScore(float $lat1, float $lng1, float $lat2, float $lng2): int
-    {
-        $distanceKm = self::haversineDistanceKm($lat1, $lng1, $lat2, $lng2);
+            if ($this->player_one_locked_in_at && $this->player_one_score) {
+                $elapsed = (int) $this->started_at->diffInSeconds($this->player_one_locked_in_at);
+                $this->player_one_score += ScoringService::calculateSpeedBonus($elapsed, $timeout);
+            }
 
-        if ($distanceKm < 0.025) {
-            return 5000;
+            if ($this->player_two_locked_in_at && $this->player_two_score) {
+                $elapsed = (int) $this->started_at->diffInSeconds($this->player_two_locked_in_at);
+                $this->player_two_score += ScoringService::calculateSpeedBonus($elapsed, $timeout);
+            }
         }
 
-        return (int) round(5000 * exp(-$distanceKm / 2000.0));
-    }
-
-    public static function haversineDistanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
-    {
-        $earthRadiusKm = 6371.0;
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLng = deg2rad($lng2 - $lng1);
-
-        $a = sin($dLat / 2) ** 2
-            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
-
-        return $earthRadiusKm * 2 * atan2(sqrt($a), sqrt(1 - $a));
+        $this->save();
     }
 }

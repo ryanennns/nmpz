@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Game;
 use App\Models\Round;
+use App\Services\ScoringService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Foundation\Testing\WithFaker;
 
@@ -43,8 +44,8 @@ class RoundFactory extends Factory
             $round->player_one_guess_lng = $p1Lng;
             $round->player_two_guess_lat = $p2Lat;
             $round->player_two_guess_lng = $p2Lng;
-            $round->player_one_score = Round::calculateScore($round->location_lat, $round->location_lng, $p1Lat, $p1Lng);
-            $round->player_two_score = Round::calculateScore($round->location_lat, $round->location_lng, $p2Lat, $p2Lng);
+            $round->player_one_score = ScoringService::calculateScore($round->location_lat, $round->location_lng, $p1Lat, $p1Lng);
+            $round->player_two_score = ScoringService::calculateScore($round->location_lat, $round->location_lng, $p2Lat, $p2Lng);
         });
     }
 }

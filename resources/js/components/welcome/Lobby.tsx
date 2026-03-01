@@ -2,13 +2,16 @@ import axios from 'axios';
 import { MessageCircleQuestion } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
-import Leaderboard from '@/components/welcome/Leaderboard';
-import NamePrompt from '@/components/welcome/NamePrompt';
-import PlayerStatsPanel from '@/components/welcome/PlayerStatsPanel';
-import RankBadge from '@/components/welcome/RankBadge';
-import type { Player } from '@/components/welcome/types';
+import BrowsePanel from '@/components/lobby/BrowsePanel';
+import PlayerIdentity from '@/components/lobby/PlayerIdentity';
+import PlayModeSelector from '@/components/lobby/PlayModeSelector';
+import GameDetailModal from '@/components/welcome/GameDetailModal';
+import PlayerProfileModal from '@/components/welcome/PlayerProfileModal';
+import ReplayViewer from '@/components/welcome/ReplayViewer';
+import type { Player } from '@/types/player';
 import { WaitingRoom } from '@/components/welcome/WaitingRoom';
 import { useApiClient } from '@/hooks/useApiClient';
+import { FADE_TRANSITION_MS, STATS_POLL_MS, STAT_HIDDEN_MS, STAT_VISIBLE_MS } from '@/lib/game-constants';
 
 export default function Lobby({
     player,
@@ -35,9 +38,14 @@ export default function Lobby({
     const [helpOpen, setHelpOpen] = useState(false);
     const [joinError, setJoinError] = useState<string | null>(null);
     const api = useApiClient(player.id);
+    const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
+    const [selectedFormat, setSelectedFormat] = useState('classic');
+    const [detailGameId, setDetailGameId] = useState<string | null>(null);
+    const [replayGameId, setReplayGameId] = useState<string | null>(null);
+    const [profilePlayerId, setProfilePlayerId] = useState<string | null>(null);
+    const [privateLobbyOpen, setPrivateLobbyOpen] = useState(false);
+    const [playMode, setPlayMode] = useState<'none' | 'multiplayer' | 'solo'>('none');
     const [editingName, setEditingName] = useState(false);
-    const [nameDraft, setNameDraft] = useState(playerName ?? '');
-    const [lobbyTab, setLobbyTab] = useState<'none' | 'stats' | 'leaderboard'>('none');
 
     useEffect(() => {
         function onBeforeUnload() {
@@ -71,8 +79,8 @@ export default function Lobby({
                     statCycleRef.current =
                         (statCycleRef.current + 1) % messages.length;
                     cycle();
-                }, 500);
-            }, 3000);
+                }, STAT_HIDDEN_MS);
+            }, STAT_VISIBLE_MS);
         }
 
         statCycleRef.current = statCycleRef.current % messages.length;
@@ -97,13 +105,13 @@ export default function Lobby({
             };
             setStats(data);
             setQueueCount(data.queue_count);
-        }, 5000);
+        }, STATS_POLL_MS);
         return () => clearInterval(t);
     }, [queued, api]);
 
     async function fadeTransition(fn: () => void) {
         setPanelVisible(false);
-        await new Promise<void>((r) => setTimeout(r, 300));
+        await new Promise<void>((r) => setTimeout(r, FADE_TRANSITION_MS));
         fn();
         setPanelVisible(true);
     }
@@ -113,6 +121,16 @@ export default function Lobby({
         await fadeTransition(() => setQueued(false));
     }
 
+    function handleApiError(error: unknown, fallback: string) {
+        if (axios.isAxiosError(error)) {
+            setJoinError(
+                (error.response?.data as { error?: string })?.error ?? fallback,
+            );
+            return;
+        }
+        setJoinError(fallback);
+    }
+
     async function joinQueue(name?: string) {
         const trimmed = name?.trim().slice(0, 32);
         if (name && !trimmed) {
@@ -120,7 +138,11 @@ export default function Lobby({
             return;
         }
         try {
-            const res = await api.joinQueue(trimmed || undefined);
+            const res = await api.joinQueue(
+                trimmed || undefined,
+                selectedMapId ?? undefined,
+                selectedFormat !== 'classic' ? selectedFormat : undefined,
+            );
             const payload = res.data as { queue_count?: number };
             if (typeof payload.queue_count === 'number') {
                 setQueueCount(payload.queue_count);
@@ -132,14 +154,7 @@ export default function Lobby({
                 setEditingName(false);
             });
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                const message =
-                    (error.response?.data as { error?: string })?.error ??
-                    'Unable to join queue.';
-                setJoinError(message);
-                return;
-            }
-            setJoinError('Unable to join queue.');
+            handleApiError(error, 'Unable to join queue.');
         }
     }
 
@@ -157,175 +172,112 @@ export default function Lobby({
             setEditingName(false);
             setJoinError(null);
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                const message =
-                    (error.response?.data as { error?: string })?.error ??
-                    'Unable to update name.';
-                setJoinError(message);
-                return;
-            }
-            setJoinError('Unable to update name.');
+            handleApiError(error, 'Unable to update name.');
         }
     }
 
     return (
         <>
-            <div className="relative flex h-screen items-center justify-center bg-neutral-900 font-mono text-sm text-neutral-400">
+            <div className="flex min-h-screen items-center justify-center bg-neutral-900 font-mono text-sm text-neutral-400">
                 <div
-                    className={`transition-opacity duration-300 ${panelVisible ? 'opacity-100' : 'opacity-0'}`}
+                    className={`w-full transition-opacity duration-300 ${panelVisible ? 'opacity-100' : 'opacity-0'}`}
                 >
                     {queued ? (
-                        <WaitingRoom
-                            playerName={playerName}
-                            stats={stats}
-                            statVisible={statVisible}
-                            statText={statText}
-                            onClick={() => void leaveQueue()}
-                        />
+                        <div className="flex min-h-screen items-center justify-center">
+                            <WaitingRoom
+                                playerName={playerName}
+                                stats={stats}
+                                statVisible={statVisible}
+                                statText={statText}
+                                onClick={() => void leaveQueue()}
+                            />
+                        </div>
                     ) : (
-                        <div className="flex w-full max-w-sm flex-col items-center gap-4">
-                            <div className="relative text-center font-mono text-5xl text-white">
-                                <span className="font-semibold">nmpz</span>
-                                <span className="text-white/50">.dev</span>
-                                <button
-                                    type="button"
-                                    onClick={() => setHelpOpen(true)}
-                                    className="absolute -top-2 -right-6 flex h-6 w-6 items-center justify-center rounded-full text-xs text-white/70 transition hover:text-white"
-                                    aria-label="Open help"
-                                >
-                                    <MessageCircleQuestion />
-                                </button>
-                            </div>
-                            <div className="w-full rounded border border-white/10 bg-black/60 p-4 text-xs text-white/80 backdrop-blur-sm">
-                                {playerName ? (
-                                    <>
-                                        {editingName ? (
-                                            <div className="mb-2">
-                                                <input
-                                                    value={nameDraft}
-                                                    maxLength={32}
-                                                    onChange={(e) =>
-                                                        setNameDraft(
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Your name"
-                                                    className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white placeholder:text-white/40"
-                                                />
-                                                <div className="mt-2 flex gap-2">
-                                                    <button
-                                                        onClick={() =>
-                                                            void saveName(
-                                                                nameDraft,
-                                                            )
-                                                        }
-                                                        className="flex-1 rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
-                                                    >
-                                                        Save
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingName(
-                                                                false,
-                                                            );
-                                                            setNameDraft(
-                                                                playerName,
-                                                            );
-                                                            setJoinError(null);
-                                                        }}
-                                                        className="flex-1 rounded bg-white/5 px-2 py-1 text-xs text-white/70 hover:bg-white/10"
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="mb-2 flex flex-col items-center gap-1">
-                                                <div className="flex items-center gap-2 text-sm text-white">
-                                                    <span>
-                                                        {playerName.slice(0, 32)}
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setEditingName(true);
-                                                            setNameDraft(
-                                                                playerName,
-                                                            );
-                                                            setJoinError(null);
-                                                        }}
-                                                        className="rounded bg-white/10 px-2 py-0.5 text-[10px] text-white/70 hover:bg-white/20"
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                </div>
-                                                {player.elo_rating !== undefined && player.rank && (
-                                                    <RankBadge rank={player.rank} elo={player.elo_rating} />
-                                                )}
-                                            </div>
-                                        )}
-                                        {!editingName && (
-                                            <button
-                                                onClick={() => void joinQueue()}
-                                                className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
-                                            >
-                                                Join queue
-                                            </button>
-                                        )}
-                                        {joinError ? (
-                                            <div className="mt-2 text-xs text-red-300">
-                                                {joinError}
-                                            </div>
-                                        ) : null}
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="mb-2 text-sm text-white">
-                                            Enter your name
-                                        </div>
-                                        <NamePrompt
-                                            onSubmit={(name) =>
-                                                void joinQueue(name)
-                                            }
-                                        />
-                                        {joinError ? (
-                                            <div className="mt-2 text-xs text-red-300">
-                                                {joinError}
-                                            </div>
-                                        ) : null}
-                                    </>
+                        <div className="mx-auto w-full max-w-lg px-4 py-8">
+                            <div className="border border-white/15 bg-black/70 backdrop-blur-sm">
+                                {/* Title Bar */}
+                                <div className="relative border-b border-white/10 px-4 py-2 text-center">
+                                    <div className="font-mono text-lg text-white">
+                                        <span className="font-semibold">nmpz</span>
+                                        <span className="text-white/40">.dev</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setHelpOpen(true)}
+                                        className="absolute top-1/2 right-4 -translate-y-1/2 text-white/30 transition hover:text-white/60"
+                                        aria-label="Open help"
+                                    >
+                                        <MessageCircleQuestion size={16} />
+                                    </button>
+                                </div>
+
+                                <PlayerIdentity
+                                    player={player}
+                                    playerName={playerName}
+                                    onNameChange={(name) => void saveName(name)}
+                                    onJoinQueue={(name) => void joinQueue(name)}
+                                    joinError={joinError}
+                                    setJoinError={setJoinError}
+                                />
+
+                                {playerName && !editingName && (
+                                    <PlayModeSelector
+                                        playerId={player.id}
+                                        playMode={playMode}
+                                        setPlayMode={setPlayMode}
+                                        selectedMapId={selectedMapId}
+                                        setSelectedMapId={setSelectedMapId}
+                                        selectedFormat={selectedFormat}
+                                        setSelectedFormat={setSelectedFormat}
+                                        queueCount={queueCount}
+                                        privateLobbyOpen={privateLobbyOpen}
+                                        setPrivateLobbyOpen={setPrivateLobbyOpen}
+                                        onJoinQueue={() => void joinQueue()}
+                                    />
                                 )}
-                                <div className="mt-2 text-xs text-white/40">
-                                    {queueCount} player
-                                    {queueCount === 1 ? '' : 's'} queued
+
+                                {joinError && (
+                                    <div className="px-4 pb-2 text-xs text-red-400/80">
+                                        {joinError}
+                                    </div>
+                                )}
+
+                                {playerName && !editingName && (
+                                    <BrowsePanel
+                                        playerId={player.id}
+                                        onViewDetail={(id) => setDetailGameId(id)}
+                                        onViewReplay={(id) => setReplayGameId(id)}
+                                        onViewProfile={(id) => setProfilePlayerId(id)}
+                                    />
+                                )}
+
+                                {/* Status Bar */}
+                                <div className="border-t border-white/10 px-4 py-1.5 text-center text-[10px] text-white/20">
+                                    nmpz v1.0 &middot; {queueCount} in queue
                                 </div>
                             </div>
                         </div>
                     )}
                 </div>
-                {!queued && (
-                    <div className="absolute bottom-8 left-1/2 flex w-full max-w-md -translate-x-1/2 flex-col items-center gap-3">
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setLobbyTab(lobbyTab === 'stats' ? 'none' : 'stats')}
-                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'stats' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
-                            >
-                                My Stats
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setLobbyTab(lobbyTab === 'leaderboard' ? 'none' : 'leaderboard')}
-                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'leaderboard' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
-                            >
-                                Leaderboard
-                            </button>
-                        </div>
-                        {lobbyTab === 'stats' && <PlayerStatsPanel playerId={player.id} />}
-                        {lobbyTab === 'leaderboard' && <Leaderboard playerId={player.id} />}
-                    </div>
-                )}
             </div>
+            <GameDetailModal
+                gameId={detailGameId}
+                playerId={player.id}
+                open={detailGameId !== null}
+                onClose={() => setDetailGameId(null)}
+            />
+            <ReplayViewer
+                gameId={replayGameId}
+                playerId={player.id}
+                open={replayGameId !== null}
+                onClose={() => setReplayGameId(null)}
+            />
+            <PlayerProfileModal
+                targetPlayerId={profilePlayerId}
+                playerId={player.id}
+                open={profilePlayerId !== null}
+                onClose={() => setProfilePlayerId(null)}
+            />
             <SimpleModal open={helpOpen} onClose={() => setHelpOpen(false)}>
                 <div className="mb-2 text-2xl text-white/50">
                     what is <span className="text-white/80">nmpz</span>

@@ -22,7 +22,7 @@ class OpponentGuessUpdate implements ShouldBroadcastNow
 
     public function broadcastOn(): Channel
     {
-        return new Channel("game.{$this->game->getKey()}");
+        return new Channel("game.{$this->game->getKey()}.players");
     }
 
     public function broadcastAs(): string
