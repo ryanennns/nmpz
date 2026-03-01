@@ -6,56 +6,13 @@ import MapillaryImagePanel from '@/components/welcome/MapillaryImagePanel';
 import MapPicker from '@/components/welcome/MapPicker';
 import ResultsMap from '@/components/welcome/ResultsMap';
 import type { LatLng } from '@/components/welcome/types';
-
-type DailyInfo = {
-    challenge_id: string;
-    challenge_date: string;
-    round_count: number;
-    participants: number;
-    player?: {
-        completed: boolean;
-        tier: string | null;
-        total_score: number | null;
-        current_streak: number;
-        best_streak: number;
-    };
-};
-
-type RoundState = {
-    entry_id: string;
-    round_number: number;
-    total_rounds: number;
-    current_score: number;
-    round_timeout: number;
-    location: { lat: number; lng: number; heading: number } | null;
-};
-
-type GuessResult = {
-    score: number;
-    total_score: number;
-    rounds_completed: number;
-    completed: boolean;
-    timed_out: boolean;
-    location: { lat: number; lng: number };
-    next_location?: { lat: number; lng: number; heading: number } | null;
-    tier?: string;
-    streak?: { current_streak: number; best_streak: number };
-};
-
-type LeaderboardEntry = {
-    rank: number;
-    player_name: string;
-    player_id: string;
-    total_score: number;
-    tier: string | null;
-    completed_at: string;
-};
-
-type LeaderboardData = {
-    entries: LeaderboardEntry[];
-    total_participants: number;
-    challenge_date: string;
-};
+import type {
+    DailyInfo,
+    DailyRoundState,
+    DailyGuessResult,
+    DailyLeaderboardEntry,
+    DailyLeaderboardData,
+} from '@/types/daily';
 
 function tierColor(tier: string | null | undefined): string {
     if (tier === 'gold') return 'text-yellow-400';
@@ -90,9 +47,9 @@ function DailyChallengeGame({
     onNextRound,
     onClose,
 }: {
-    roundState: RoundState;
+    roundState: DailyRoundState;
     timeLeft: number | null;
-    roundResult: GuessResult | null;
+    roundResult: DailyGuessResult | null;
     guessCoords: LatLng | null;
     phase: 'guessing' | 'results';
     pinCoords: LatLng | null;
@@ -260,12 +217,12 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 export default function DailyChallengePanel({ playerId }: { playerId: string }) {
     const api = useApiClient(playerId);
     const [daily, setDaily] = useState<DailyInfo | null>(null);
-    const [roundState, setRoundState] = useState<RoundState | null>(null);
-    const [roundResult, setRoundResult] = useState<GuessResult | null>(null);
+    const [roundState, setDailyRoundState] = useState<DailyRoundState | null>(null);
+    const [roundResult, setRoundResult] = useState<DailyGuessResult | null>(null);
     const [lastGuessCoords, setLastGuessCoords] = useState<LatLng | null>(null);
-    const [completionResult, setCompletionResult] = useState<GuessResult | null>(null);
-    const [pendingNextRound, setPendingNextRound] = useState<RoundState | null>(null);
-    const [leaderboard, setLeaderboard] = useState<LeaderboardData | null>(null);
+    const [completionResult, setCompletionResult] = useState<DailyGuessResult | null>(null);
+    const [pendingNextRound, setPendingNextRound] = useState<DailyRoundState | null>(null);
+    const [leaderboard, setLeaderboard] = useState<DailyLeaderboardData | null>(null);
     const [tab, setTab] = useState<'play' | 'leaderboard'>('play');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -284,7 +241,7 @@ export default function DailyChallengePanel({ playerId }: { playerId: string }) 
     useEffect(() => {
         if (tab === 'leaderboard') {
             api.fetchDailyLeaderboard()
-                .then((res) => setLeaderboard(res.data as LeaderboardData))
+                .then((res) => setLeaderboard(res.data as DailyLeaderboardData))
                 .catch(() => {});
         }
     }, [tab]);
@@ -307,12 +264,12 @@ export default function DailyChallengePanel({ playerId }: { playerId: string }) 
         setError(null);
         try {
             const res = await api.startDailyChallenge();
-            const data = res.data as RoundState;
+            const data = res.data as DailyRoundState;
             if ((data as unknown as { error?: string }).error) {
                 setError((data as unknown as { error: string }).error);
                 return;
             }
-            setRoundState(data);
+            setDailyRoundState(data);
             setRoundResult(null);
             setCompletionResult(null);
             setPinCoords(null);
@@ -333,7 +290,7 @@ export default function DailyChallengePanel({ playerId }: { playerId: string }) 
             const coords = timedOut ? { lat: 0, lng: 0 } : pinCoords!;
             setLastGuessCoords(timedOut ? null : coords);
             const res = await api.dailyChallengeGuess(roundState.entry_id, coords);
-            const data = res.data as GuessResult;
+            const data = res.data as DailyGuessResult;
             setRoundResult(data);
             setTimeLeft(null);
             submittingRef.current = false;
@@ -364,7 +321,7 @@ export default function DailyChallengePanel({ playerId }: { playerId: string }) 
     function advanceRound() {
         if (roundResult?.completed) {
             // Done — close the overlay
-            setRoundState(null);
+            setDailyRoundState(null);
             setTimeLeft(null);
             setPinCoords(null);
             setPhase('guessing');
@@ -372,7 +329,7 @@ export default function DailyChallengePanel({ playerId }: { playerId: string }) 
                 .then((res) => setDaily(res.data as DailyInfo))
                 .catch(() => {});
         } else if (pendingNextRound) {
-            setRoundState(pendingNextRound);
+            setDailyRoundState(pendingNextRound);
             setPendingNextRound(null);
             setPinCoords(null);
             setPhase('guessing');
@@ -395,7 +352,7 @@ export default function DailyChallengePanel({ playerId }: { playerId: string }) 
     }
 
     function closeGame() {
-        setRoundState(null);
+        setDailyRoundState(null);
         setTimeLeft(null);
         setPinCoords(null);
         setPhase('guessing');

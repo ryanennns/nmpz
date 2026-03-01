@@ -35,7 +35,7 @@ class GameMessage implements ShouldBroadcastNow
         return [
             'game_id' => $this->game->getKey(),
             'player_id' => $this->player->getKey(),
-            'player_name' => $this->player->user->name,
+            'player_name' => $this->player->user?->name ?? 'Unknown',
             'message' => $this->message,
         ];
     }

@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Actions\CreateMatch;
 use App\Actions\MatchmakeQueue;
-use App\Models\Location;
-use App\Models\Map;
 use App\Models\Player;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -16,12 +14,6 @@ use Tests\TestCase;
 class MatchmakeQueueTest extends TestCase
 {
     use RefreshDatabase;
-
-    private function setupMap(): void
-    {
-        $map = Map::factory()->create(['name' => 'likeacw-mapillary']);
-        Location::factory()->for($map)->create();
-    }
 
     public function test_returns_zero_when_queue_has_fewer_than_two_players(): void
     {

@@ -7,40 +7,7 @@ import MapPicker from '@/components/welcome/MapPicker';
 import MapSelector from '@/components/welcome/MapSelector';
 import ResultsMap from '@/components/welcome/ResultsMap';
 import type { LatLng } from '@/components/welcome/types';
-
-/* ─── Types ─── */
-
-type SoloMode = 'explorer' | 'streak' | 'time_attack' | 'perfect_score';
-type StreakDifficulty = 'casual' | 'normal' | 'hardcore';
-
-type GameState = {
-    game_id: string;
-    mode: SoloMode;
-    difficulty?: string;
-    round_number: number;
-    total_rounds: number | null;
-    health: number | null;
-    current_score: number;
-    round_timeout: number | null;
-    location: { lat: number; lng: number; heading: number } | null;
-};
-
-type GuessResult = {
-    score: number;
-    speed_bonus: number;
-    total_score: number;
-    distance_km: number;
-    timed_out: boolean;
-    rounds_completed: number;
-    health: number | null;
-    damage: number;
-    game_over: boolean;
-    location: { lat: number; lng: number };
-    next_location?: { lat: number; lng: number; heading: number } | null;
-    tier?: string;
-    personal_best?: { best_score: number; best_rounds: number; is_new: boolean } | null;
-    elapsed_seconds: number;
-};
+import type { SoloMode, StreakDifficulty, SoloGameState, SoloGuessResult } from '@/types/solo';
 
 type Phase = 'mode-select' | 'configure' | 'playing' | 'results';
 
@@ -92,9 +59,9 @@ function SoloGameOverlay({
     onNextRound,
     onClose,
 }: {
-    gameState: GameState;
+    gameState: SoloGameState;
     timeLeft: number | null;
-    roundResult: GuessResult | null;
+    roundResult: SoloGuessResult | null;
     guessCoords: LatLng | null;
     gamePhase: 'guessing' | 'round-results';
     pinCoords: LatLng | null;
@@ -288,11 +255,11 @@ export default function SoloPlayPanel({ playerId }: { playerId: string }) {
     const [streakDifficulty, setStreakDifficulty] = useState<StreakDifficulty>('normal');
 
     // Game state
-    const [gameState, setGameState] = useState<GameState | null>(null);
-    const [roundResult, setRoundResult] = useState<GuessResult | null>(null);
+    const [gameState, setSoloGameState] = useState<SoloGameState | null>(null);
+    const [roundResult, setRoundResult] = useState<SoloGuessResult | null>(null);
     const [lastGuessCoords, setLastGuessCoords] = useState<LatLng | null>(null);
-    const [completionResult, setCompletionResult] = useState<GuessResult | null>(null);
-    const [pendingNextRound, setPendingNextRound] = useState<GameState | null>(null);
+    const [completionResult, setCompletionResult] = useState<SoloGuessResult | null>(null);
+    const [pendingNextRound, setPendingNextRound] = useState<SoloGameState | null>(null);
     const [pinCoords, setPinCoords] = useState<LatLng | null>(null);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [gamePhase, setGamePhase] = useState<'guessing' | 'round-results'>('guessing');
@@ -327,12 +294,12 @@ export default function SoloPlayPanel({ playerId }: { playerId: string }) {
             }
 
             const res = await api.startSoloGame(selectedMode, options);
-            const data = res.data as GameState;
+            const data = res.data as SoloGameState;
             if ((data as unknown as { error?: string }).error) {
                 setError((data as unknown as { error: string }).error);
                 return;
             }
-            setGameState(data);
+            setSoloGameState(data);
             setRoundResult(null);
             setCompletionResult(null);
             setPinCoords(null);
@@ -354,7 +321,7 @@ export default function SoloPlayPanel({ playerId }: { playerId: string }) {
             const coords = timedOut ? { lat: 0, lng: 0 } : pinCoords!;
             setLastGuessCoords(timedOut ? null : coords);
             const res = await api.soloGuess(gameState.game_id, coords);
-            const data = res.data as GuessResult;
+            const data = res.data as SoloGuessResult;
             setRoundResult(data);
             setTimeLeft(null);
             submittingRef.current = false;
@@ -382,13 +349,13 @@ export default function SoloPlayPanel({ playerId }: { playerId: string }) {
 
     function advanceRound() {
         if (roundResult?.game_over) {
-            setGameState(null);
+            setSoloGameState(null);
             setTimeLeft(null);
             setPinCoords(null);
             setGamePhase('guessing');
             setPhase('results');
         } else if (pendingNextRound) {
-            setGameState(pendingNextRound);
+            setSoloGameState(pendingNextRound);
             setPendingNextRound(null);
             setPinCoords(null);
             setGamePhase('guessing');
@@ -400,7 +367,7 @@ export default function SoloPlayPanel({ playerId }: { playerId: string }) {
         if (gameState) {
             void api.abandonSoloGame(gameState.game_id);
         }
-        setGameState(null);
+        setSoloGameState(null);
         setTimeLeft(null);
         setPinCoords(null);
         setGamePhase('guessing');

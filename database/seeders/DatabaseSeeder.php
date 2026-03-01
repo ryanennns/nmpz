@@ -8,6 +8,9 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call(MapSeeder::class);
+        $this->call([
+            MapSeeder::class,
+            AchievementSeeder::class,
+        ]);
     }
 }

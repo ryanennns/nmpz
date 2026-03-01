@@ -59,6 +59,10 @@ class SoloGameService
             ->limit($locationCount)
             ->get();
 
+        if ($locations->isEmpty()) {
+            throw new \RuntimeException('No locations available for the selected map.');
+        }
+
         return SoloGame::create([
             'player_id' => $player->getKey(),
             'map_id' => $map->getKey(),

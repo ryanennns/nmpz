@@ -18,19 +18,9 @@ class SoloGameTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function setupMap(int $locationCount = 50): Map
+    private function setupSoloAchievements(): void
     {
-        $map = Map::factory()->create(['name' => 'likeacw-mapillary']);
-        for ($i = 0; $i < $locationCount; $i++) {
-            Location::factory()->for($map)->create();
-        }
-
-        return $map;
-    }
-
-    private function setupAchievements(): void
-    {
-        $achievements = [
+        $this->seedAchievements([
             ['key' => 'solo_first_game', 'name' => 'Solo Debut', 'description' => 'Complete your first solo game'],
             ['key' => 'solo_streak_10', 'name' => 'On a Roll', 'description' => 'Survive 10 rounds in Streak mode'],
             ['key' => 'solo_streak_25', 'name' => 'Unstoppable Force', 'description' => 'Survive 25 rounds in Streak mode'],
@@ -39,18 +29,14 @@ class SoloGameTest extends TestCase
             ['key' => 'solo_explorer_100', 'name' => 'World Traveler', 'description' => 'Complete 100 rounds in Explorer mode'],
             ['key' => 'solo_marathon', 'name' => 'Marathon Runner', 'description' => 'Play 50 solo games'],
             ['key' => 'solo_perfectionist', 'name' => 'Perfectionist', 'description' => 'Earn Gold tier in Perfect Score mode'],
-        ];
-
-        foreach ($achievements as $data) {
-            Achievement::create($data);
-        }
+        ]);
     }
 
     // ─── START TESTS ───
 
     public function test_start_explorer_mode(): void
     {
-        $map = $this->setupMap();
+        $map = $this->setupMap(50);
         $player = Player::factory()->create();
 
         $response = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -76,7 +62,7 @@ class SoloGameTest extends TestCase
 
     public function test_start_streak_mode(): void
     {
-        $map = $this->setupMap();
+        $map = $this->setupMap(50);
         $player = Player::factory()->create();
 
         $response = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -96,7 +82,7 @@ class SoloGameTest extends TestCase
 
     public function test_start_streak_casual_difficulty(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $response = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -110,7 +96,7 @@ class SoloGameTest extends TestCase
 
     public function test_start_streak_hardcore_difficulty(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $response = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -124,7 +110,7 @@ class SoloGameTest extends TestCase
 
     public function test_start_time_attack_mode(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $response = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -141,7 +127,7 @@ class SoloGameTest extends TestCase
 
     public function test_start_perfect_score_mode(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $response = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -158,7 +144,7 @@ class SoloGameTest extends TestCase
 
     public function test_start_rejects_invalid_mode(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $response = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -170,7 +156,7 @@ class SoloGameTest extends TestCase
 
     public function test_start_rejects_duplicate_in_progress(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $this->postJson("/players/{$player->getKey()}/solo/start", ['mode' => 'explorer']);
@@ -182,7 +168,7 @@ class SoloGameTest extends TestCase
 
     public function test_start_uses_default_map_when_none_specified(): void
     {
-        $map = $this->setupMap();
+        $map = $this->setupMap(50);
         $player = Player::factory()->create();
 
         $response = $this->postJson("/players/{$player->getKey()}/solo/start", ['mode' => 'explorer']);
@@ -196,7 +182,7 @@ class SoloGameTest extends TestCase
 
     public function test_guess_calculates_score(): void
     {
-        $map = $this->setupMap();
+        $map = $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -225,7 +211,7 @@ class SoloGameTest extends TestCase
 
     public function test_guess_returns_distance(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -246,7 +232,7 @@ class SoloGameTest extends TestCase
 
     public function test_guess_advances_round(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -271,7 +257,7 @@ class SoloGameTest extends TestCase
 
     public function test_guess_reveals_actual_location(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -292,7 +278,7 @@ class SoloGameTest extends TestCase
 
     public function test_guess_updates_round_scores_json(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -317,7 +303,7 @@ class SoloGameTest extends TestCase
 
     public function test_guess_scores_zero_when_timed_out(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -344,7 +330,7 @@ class SoloGameTest extends TestCase
 
     public function test_guess_scores_normally_within_time(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -371,7 +357,7 @@ class SoloGameTest extends TestCase
 
     public function test_explorer_no_timer_never_times_out(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -400,7 +386,7 @@ class SoloGameTest extends TestCase
 
     public function test_streak_damage_equals_max_health_minus_score(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -424,7 +410,7 @@ class SoloGameTest extends TestCase
 
     public function test_streak_hp_decreases(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -445,7 +431,7 @@ class SoloGameTest extends TestCase
 
     public function test_streak_game_over_when_hp_reaches_zero(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -473,7 +459,7 @@ class SoloGameTest extends TestCase
 
     public function test_streak_hp_does_not_go_negative(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -500,7 +486,7 @@ class SoloGameTest extends TestCase
 
     public function test_time_attack_includes_speed_bonus(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -529,7 +515,7 @@ class SoloGameTest extends TestCase
 
     public function test_time_attack_completes_after_5_rounds(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -552,7 +538,7 @@ class SoloGameTest extends TestCase
 
     public function test_perfect_score_tier_gold(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -595,7 +581,7 @@ class SoloGameTest extends TestCase
 
     public function test_completion_sets_status_and_timestamp(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -617,7 +603,7 @@ class SoloGameTest extends TestCase
 
     public function test_completion_creates_personal_best(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -642,7 +628,7 @@ class SoloGameTest extends TestCase
 
     public function test_personal_best_updated_when_beaten(): void
     {
-        $map = $this->setupMap();
+        $map = $this->setupMap(50);
         $player = Player::factory()->create();
 
         // First game — bad scores
@@ -683,7 +669,7 @@ class SoloGameTest extends TestCase
 
     public function test_personal_best_preserved_when_not_beaten(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         // First game — perfect scores
@@ -726,7 +712,7 @@ class SoloGameTest extends TestCase
 
     public function test_completion_increments_solo_games_played(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -747,7 +733,7 @@ class SoloGameTest extends TestCase
 
     public function test_completion_updates_best_round_score(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -778,7 +764,7 @@ class SoloGameTest extends TestCase
 
     public function test_perfect_round_increments_counter(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -808,7 +794,7 @@ class SoloGameTest extends TestCase
 
     public function test_streak_updates_best_streak_stat(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -836,8 +822,8 @@ class SoloGameTest extends TestCase
 
     public function test_solo_first_game_achievement(): void
     {
-        $this->setupMap();
-        $this->setupAchievements();
+        $this->setupMap(50);
+        $this->setupSoloAchievements();
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -860,8 +846,8 @@ class SoloGameTest extends TestCase
 
     public function test_solo_streak_10_achievement(): void
     {
-        $this->setupMap();
-        $this->setupAchievements();
+        $this->setupMap(50);
+        $this->setupSoloAchievements();
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -899,8 +885,8 @@ class SoloGameTest extends TestCase
 
     public function test_solo_perfect_round_achievement(): void
     {
-        $this->setupMap();
-        $this->setupAchievements();
+        $this->setupMap(50);
+        $this->setupSoloAchievements();
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -933,8 +919,8 @@ class SoloGameTest extends TestCase
 
     public function test_solo_perfectionist_achievement(): void
     {
-        $this->setupMap();
-        $this->setupAchievements();
+        $this->setupMap(50);
+        $this->setupSoloAchievements();
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -963,7 +949,7 @@ class SoloGameTest extends TestCase
 
     public function test_abandon_sets_status(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -988,7 +974,7 @@ class SoloGameTest extends TestCase
 
     public function test_abandon_still_updates_stats(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [
@@ -1012,7 +998,7 @@ class SoloGameTest extends TestCase
 
     public function test_leaderboard_returns_top_entries(): void
     {
-        $map = $this->setupMap();
+        $map = $this->setupMap(50);
         $player1 = Player::factory()->create();
         $player2 = Player::factory()->create();
 
@@ -1050,7 +1036,7 @@ class SoloGameTest extends TestCase
 
     public function test_leaderboard_filters_by_map(): void
     {
-        $map1 = $this->setupMap();
+        $map1 = $this->setupMap(50);
         $map2 = Map::factory()->create(['name' => 'other-map']);
         Location::factory()->for($map2)->count(10)->create();
 
@@ -1090,7 +1076,7 @@ class SoloGameTest extends TestCase
 
     public function test_personal_bests_returns_grouped_by_mode(): void
     {
-        $map = $this->setupMap();
+        $map = $this->setupMap(50);
         $player = Player::factory()->create();
 
         SoloPersonalBest::create([
@@ -1122,7 +1108,7 @@ class SoloGameTest extends TestCase
 
     public function test_stats_returns_solo_stats(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
         PlayerStats::create([
             'player_id' => $player->getKey(),
@@ -1150,7 +1136,7 @@ class SoloGameTest extends TestCase
 
     public function test_cannot_guess_on_another_players_game(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player1 = Player::factory()->create();
         $player2 = Player::factory()->create();
 
@@ -1169,7 +1155,7 @@ class SoloGameTest extends TestCase
 
     public function test_cannot_guess_on_completed_game(): void
     {
-        $this->setupMap();
+        $this->setupMap(50);
         $player = Player::factory()->create();
 
         $startRes = $this->postJson("/players/{$player->getKey()}/solo/start", [

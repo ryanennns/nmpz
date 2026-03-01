@@ -11,7 +11,7 @@ class SeasonService
 {
     public function endSeason(Season $season): void
     {
-        $players = Player::all();
+        $players = Player::with('stats')->get();
 
         foreach ($players as $player) {
             $stats = $player->stats;

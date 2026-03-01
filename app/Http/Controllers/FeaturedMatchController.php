@@ -14,6 +14,8 @@ class FeaturedMatchController extends Controller
             ->where('status', GameStatus::InProgress)
             ->where('allow_spectators', true)
             ->with(['playerOne.user', 'playerTwo.user'])
+            ->orderByDesc('spectator_count')
+            ->limit(20)
             ->get()
             ->sortByDesc(function (Game $game) {
                 $combinedElo = ($game->playerOne?->elo_rating ?? 1000) + ($game->playerTwo?->elo_rating ?? 1000);

@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Actions\MatchmakeQueue;
 use App\Models\Game;
-use App\Models\Location;
-use App\Models\Map;
 use App\Models\Player;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -16,14 +14,6 @@ use Tests\TestCase;
 class MatchmakeQueueMapFormatTest extends TestCase
 {
     use RefreshDatabase;
-
-    private function setupMap(?string $name = null): Map
-    {
-        $map = Map::factory()->create(['name' => $name ?? 'likeacw-mapillary', 'is_active' => true]);
-        Location::factory()->for($map)->create();
-
-        return $map;
-    }
 
     private function queuePlayers(Player $p1, Player $p2, array $options = []): void
     {
@@ -47,7 +37,7 @@ class MatchmakeQueueMapFormatTest extends TestCase
     {
         Event::fake();
         Queue::fake();
-        $map = $this->setupMap();
+        $map = $this->setupMap(1, ['is_active' => true]);
 
         $p1 = Player::factory()->withElo(1000)->create();
         $p2 = Player::factory()->withElo(1000)->create();
@@ -63,8 +53,8 @@ class MatchmakeQueueMapFormatTest extends TestCase
 
     public function test_does_not_match_players_with_different_maps(): void
     {
-        $map1 = $this->setupMap('map-one');
-        $map2 = $this->setupMap('map-two');
+        $map1 = $this->setupMap(1, ['name' => 'map-one', 'is_active' => true]);
+        $map2 = $this->setupMap(1, ['name' => 'map-two', 'is_active' => true]);
 
         $p1 = Player::factory()->withElo(1000)->create();
         $p2 = Player::factory()->withElo(1000)->create();
@@ -82,7 +72,7 @@ class MatchmakeQueueMapFormatTest extends TestCase
     {
         Event::fake();
         Queue::fake();
-        $map = $this->setupMap();
+        $map = $this->setupMap(1, ['is_active' => true]);
 
         $p1 = Player::factory()->withElo(1000)->create();
         $p2 = Player::factory()->withElo(1000)->create();
@@ -100,8 +90,8 @@ class MatchmakeQueueMapFormatTest extends TestCase
     {
         Event::fake();
         Queue::fake();
-        $defaultMap = $this->setupMap();
-        $specificMap = $this->setupMap('specific-map');
+        $defaultMap = $this->setupMap(1, ['is_active' => true]);
+        $specificMap = $this->setupMap(1, ['name' => 'specific-map', 'is_active' => true]);
 
         $p1 = Player::factory()->withElo(1000)->create();
         $p2 = Player::factory()->withElo(1000)->create();
@@ -125,7 +115,7 @@ class MatchmakeQueueMapFormatTest extends TestCase
     {
         Event::fake();
         Queue::fake();
-        $this->setupMap();
+        $this->setupMap(1, ['is_active' => true]);
 
         $p1 = Player::factory()->withElo(1000)->create();
         $p2 = Player::factory()->withElo(1000)->create();
@@ -141,7 +131,7 @@ class MatchmakeQueueMapFormatTest extends TestCase
 
     public function test_does_not_match_players_with_different_formats(): void
     {
-        $this->setupMap();
+        $this->setupMap(1, ['is_active' => true]);
 
         $p1 = Player::factory()->withElo(1000)->create();
         $p2 = Player::factory()->withElo(1000)->create();
@@ -159,7 +149,7 @@ class MatchmakeQueueMapFormatTest extends TestCase
     {
         Event::fake();
         Queue::fake();
-        $this->setupMap();
+        $this->setupMap(1, ['is_active' => true]);
 
         $p1 = Player::factory()->withElo(1000)->create();
         $p2 = Player::factory()->withElo(1000)->create();
@@ -178,7 +168,7 @@ class MatchmakeQueueMapFormatTest extends TestCase
     {
         Event::fake();
         Queue::fake();
-        $this->setupMap();
+        $this->setupMap(1, ['is_active' => true]);
 
         $p1 = Player::factory()->withElo(1000)->create();
         $p2 = Player::factory()->withElo(1000)->create();

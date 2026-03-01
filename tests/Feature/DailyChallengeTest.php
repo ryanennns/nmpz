@@ -5,8 +5,6 @@ namespace Tests\Feature;
 use App\Models\Achievement;
 use App\Models\DailyChallenge;
 use App\Models\DailyChallengeEntry;
-use App\Models\Location;
-use App\Models\Map;
 use App\Models\Player;
 use App\Models\PlayerStats;
 use App\Services\DailyChallengeService;
@@ -17,16 +15,6 @@ use Tests\TestCase;
 class DailyChallengeTest extends TestCase
 {
     use RefreshDatabase;
-
-    private function setupMap(): Map
-    {
-        $map = Map::factory()->create(['name' => 'likeacw-mapillary']);
-        for ($i = 0; $i < 10; $i++) {
-            Location::factory()->for($map)->create();
-        }
-
-        return $map;
-    }
 
     private function completeChallenge(Player $player, DailyChallenge $challenge, int $totalScore = 20000): DailyChallengeEntry
     {

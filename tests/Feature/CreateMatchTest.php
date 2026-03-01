@@ -20,14 +20,6 @@ class CreateMatchTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function setupMap(): Map
-    {
-        $map = Map::factory()->create(['name' => 'likeacw-mapillary']);
-        Location::factory()->for($map)->create();
-
-        return $map;
-    }
-
     public function test_creates_game_with_two_players(): void
     {
         Event::fake();

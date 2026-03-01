@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Location;
-use App\Models\Map;
 use App\Models\Player;
 use App\Models\PrivateLobby;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,14 +12,6 @@ use Tests\TestCase;
 class PrivateLobbyTest extends TestCase
 {
     use RefreshDatabase;
-
-    private function setupMap(): Map
-    {
-        $map = Map::factory()->create(['name' => 'likeacw-mapillary', 'is_active' => true]);
-        Location::factory()->for($map)->create();
-
-        return $map;
-    }
 
     // --- CreatePrivateLobby ---
 
@@ -93,7 +83,7 @@ class PrivateLobbyTest extends TestCase
     {
         Event::fake();
         Queue::fake();
-        $this->setupMap();
+        $this->setupMap(1, ['is_active' => true]);
 
         $host = Player::factory()->create();
         $joiner = Player::factory()->create();
@@ -171,7 +161,7 @@ class PrivateLobbyTest extends TestCase
     {
         Event::fake();
         Queue::fake();
-        $this->setupMap();
+        $this->setupMap(1, ['is_active' => true]);
 
         $host = Player::factory()->create();
         $joiner = Player::factory()->create();
@@ -194,7 +184,7 @@ class PrivateLobbyTest extends TestCase
     {
         Event::fake();
         Queue::fake();
-        $this->setupMap();
+        $this->setupMap(1, ['is_active' => true]);
 
         $host = Player::factory()->create();
         $joiner = Player::factory()->create();

@@ -1,35 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApiClient } from '@/hooks/useApiClient';
-
-type SoloMode = 'explorer' | 'streak' | 'time_attack' | 'perfect_score';
-
-type LeaderboardEntry = {
-    rank: number;
-    player_name: string;
-    player_id: string;
-    total_score: number;
-    rounds_completed: number;
-    elapsed_seconds: number;
-    tier: string | null;
-    difficulty: string | null;
-    completed_at: string;
-};
-
-type PersonalBest = {
-    map_name: string;
-    best_score: number;
-    best_rounds: number;
-    best_time_seconds: number | null;
-};
-
-type SoloStats = {
-    solo_games_played: number;
-    solo_rounds_played: number;
-    solo_total_score: number;
-    solo_best_round_score: number;
-    solo_perfect_rounds: number;
-    solo_best_streak: number;
-};
+import type { SoloMode, SoloLeaderboardEntry, PersonalBest, SoloStats } from '@/types/solo';
 
 const MODE_TABS: { key: SoloMode; label: string; color: string }[] = [
     { key: 'streak', label: 'Streak', color: 'text-red-400' },
@@ -55,7 +26,7 @@ export default function SoloLeaderboardPanel({ playerId }: { playerId: string })
     const api = useApiClient(playerId);
     const [activeTab, setActiveTab] = useState<'leaderboard' | 'personal' | 'stats'>('leaderboard');
     const [mode, setMode] = useState<SoloMode>('streak');
-    const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+    const [entries, setEntries] = useState<SoloLeaderboardEntry[]>([]);
     const [personalBests, setPersonalBests] = useState<Record<string, PersonalBest[]>>({});
     const [soloStats, setSoloStats] = useState<SoloStats | null>(null);
     const [loading, setLoading] = useState(false);
@@ -64,7 +35,7 @@ export default function SoloLeaderboardPanel({ playerId }: { playerId: string })
         if (activeTab === 'leaderboard') {
             setLoading(true);
             api.fetchSoloLeaderboard(mode)
-                .then((res) => setEntries((res.data as { entries: LeaderboardEntry[] }).entries))
+                .then((res) => setEntries((res.data as { entries: SoloLeaderboardEntry[] }).entries))
                 .catch(() => {})
                 .finally(() => setLoading(false));
         }
