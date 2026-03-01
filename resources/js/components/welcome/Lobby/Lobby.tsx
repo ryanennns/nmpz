@@ -1,9 +1,9 @@
 import { Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
+import NamePrompt from '@/components/welcome/Lobby/NamePrompt';
 import { QueueReady } from '@/components/welcome/Lobby/QueueReady';
 import { WaitingRoom } from '@/components/welcome/Lobby/WaitingRoom';
-import NamePrompt from '@/components/welcome/NamePrompt';
 import type { Game, Player } from '@/components/welcome/types';
 import echo from '@/echo';
 import { useUnauthedApiClient } from '@/hooks/useApiClient';
