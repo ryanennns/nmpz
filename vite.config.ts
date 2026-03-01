@@ -36,9 +36,23 @@ export default defineConfig(({ mode }) => {
             jsx: 'automatic',
         },
         resolve: {
-            alias: {
-                '@': path.resolve(__dirname, 'resources/js'),
-            },
+            alias: [
+                ...(isTest
+                    ? [
+                          {
+                              find: '@/routes',
+                              replacement: path.resolve(
+                                  __dirname,
+                                  'resources/js/test/routes-stub.ts',
+                              ),
+                          },
+                      ]
+                    : []),
+                {
+                    find: '@',
+                    replacement: path.resolve(__dirname, 'resources/js'),
+                },
+            ],
         },
         server: {
             watch: {
