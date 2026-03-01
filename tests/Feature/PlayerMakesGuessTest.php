@@ -8,6 +8,7 @@ use App\Jobs\ForceEndRound;
 use App\Models\Game;
 use App\Models\Player;
 use App\Models\Round;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Date;
@@ -53,7 +54,7 @@ class PlayerMakesGuessTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseHas('rounds', [
-            'id' => $round->getKey(),
+            'id'                   => $round->getKey(),
             'player_one_guess_lat' => 48.8566,
             'player_one_guess_lng' => 2.3522,
             'player_one_locked_in' => true,
@@ -70,7 +71,7 @@ class PlayerMakesGuessTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseHas('rounds', [
-            'id' => $round->getKey(),
+            'id'                   => $round->getKey(),
             'player_two_guess_lat' => 48.8566,
             'player_two_guess_lng' => 2.3522,
             'player_one_locked_in' => false,
@@ -104,7 +105,7 @@ class PlayerMakesGuessTest extends TestCase
 
         $this->postJson($this->url($player, $game, $round), $this->lockedPayload());
 
-        Event::assertDispatched(RoundFinished::class, fn (RoundFinished $e) => $e->round->getKey() === $round->getKey());
+        Event::assertDispatched(RoundFinished::class, fn(RoundFinished $e) => $e->round->getKey() === $round->getKey());
     }
 
     public function test_round_finished_event_is_not_fired_when_only_one_player_has_locked_in(): void
@@ -126,7 +127,7 @@ class PlayerMakesGuessTest extends TestCase
 
         $this->postJson($this->url($player, $game, $round), $this->lockedPayload());
 
-        Bus::assertDispatched(ForceEndRound::class, fn (ForceEndRound $job) => $job->roundId === $round->getKey());
+        Bus::assertDispatched(ForceEndRound::class, fn(ForceEndRound $job) => $job->roundId === $round->getKey());
     }
 
     public function test_force_end_round_delay_is_min_remaining_or_fifteen_seconds(): void
@@ -236,7 +237,7 @@ class PlayerMakesGuessTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseHas('rounds', [
-            'id' => $round->getKey(),
+            'id'                   => $round->getKey(),
             'player_one_guess_lat' => null,
             'player_one_guess_lng' => null,
             'player_one_locked_in' => true,
@@ -253,7 +254,7 @@ class PlayerMakesGuessTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseHas('rounds', [
-            'id' => $round->getKey(),
+            'id'                   => $round->getKey(),
             'player_two_guess_lat' => null,
             'player_two_guess_lng' => null,
             'player_two_locked_in' => true,
@@ -332,5 +333,17 @@ class PlayerMakesGuessTest extends TestCase
         $this->postJson($this->url($player, $game, $round), ['lat' => 48.8566, 'lng' => -180.0001])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('lng');
+    }
+
+    public function test_it_checks_for_user_auth()
+    {
+        [$player, $game, $round] = $this->makeScenario();
+
+        $user = User::factory()->create();
+        $player->update(['user_id' => $user->getKey()]);
+
+        $response = $this->postJson($this->url($player, $game, $round), ['lat' => 48.8566, 'lng' => -180.0001]);
+
+        $response->assertUnauthorized();
     }
 }

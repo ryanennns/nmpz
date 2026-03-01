@@ -29,11 +29,11 @@ class GetAuthPlayerTest extends TestCase
 
     public function test_authenticated_user_gets_player_and_user_payload(): void
     {
+        $user = User::factory()->create();
         $player = Player::factory()->create([
             'name' => 'Alice',
+            'user_id' => $user->getKey()
         ]);
-
-        $user = $player->user;
 
         $this->actingAs($user)
             ->getJson('/auth/player')

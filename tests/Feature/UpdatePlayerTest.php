@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Player;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -12,7 +13,10 @@ class UpdatePlayerTest extends TestCase
 
     public function test_player_name_is_updated(): void
     {
-        $player = Player::factory()->create(['name' => 'Old Name']);
+        $player = Player::factory()->create([
+            'user_id' => User::factory()->create(),
+            'name' => 'Old Name',
+        ]);
 
         $this->patchJson(route('players.update', $player), [
             'name' => 'New Name',

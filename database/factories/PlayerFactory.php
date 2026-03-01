@@ -2,13 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Foundation\Testing\WithFaker;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Player>
- */
 class PlayerFactory extends Factory
 {
     use WithFaker;
@@ -16,7 +12,7 @@ class PlayerFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'user_id' => null,
             'name' => $this->faker->name(),
             'elo_rating' => $this->faker->numberBetween(800, 1200),
         ];

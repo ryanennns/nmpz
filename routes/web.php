@@ -11,7 +11,6 @@ use App\Http\Controllers\HomePageController;
 use App\Http\Controllers\JoinQueue;
 use App\Http\Controllers\PlayerLeavesQueue;
 use App\Http\Controllers\PlayerMakesGuess;
-use App\Http\Controllers\RememberGameSession;
 use App\Http\Controllers\SendMessage;
 use App\Http\Controllers\UpdatePlayer;
 use App\Models\Game;
@@ -38,17 +37,15 @@ Route::prefix('players')->name('players')->group(function () {
         ->name('.update');
     Route::get('/{player}/stats', GetPlayerStats::class)
         ->name('.stats');
+    Route::post('/{player}/claim', ClaimPlayer::class);
 });
 
 Route::post('players/{player}/games/{game}/rounds/{round}/guess', PlayerMakesGuess::class)
     ->name('games.rounds.guess');
 Route::post('players/{player}/games/{game}/send-message', SendMessage::class)
     ->name('games.send-message');
-Route::post('players/{player}/games/{game}/remember', RememberGameSession::class)
-    ->name('games.remember');
 
 Route::middleware('auth')->get('/auth/player', GetAuthPlayer::class);
-Route::post('/players/{player}/claim', ClaimPlayer::class);
 
 Route::get('stats', function () {
     return response()->json([

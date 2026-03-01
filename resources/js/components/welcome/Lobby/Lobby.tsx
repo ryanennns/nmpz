@@ -52,6 +52,17 @@ export default function Lobby() {
                             user: User;
                         },
                     );
+
+                    if (
+                        new URLSearchParams(window.location.search).has(
+                            'auto_queue',
+                        )
+                    ) {
+                        setPhase('queued');
+                        void api.joinQueue(res.data.player.id);
+                    } else {
+                        setPhase('queue_ready');
+                    }
                 } else {
                     console.error('Authenticated user has no player', res);
                 }

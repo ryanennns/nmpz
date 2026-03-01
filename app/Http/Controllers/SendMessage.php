@@ -12,6 +12,10 @@ class SendMessage extends Controller
 {
     public function __invoke(Request $request, Player $player, Game $game): JsonResponse
     {
+        if ($player->user()->exists() && $request->user()?->getKey() !== $player->user()->first()->getKey()) {
+            abort(401, 'nope');
+        }
+
         abort_if(
             ! in_array($player->getKey(), [$game->player_one_id, $game->player_two_id]),
             403,

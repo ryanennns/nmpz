@@ -82,13 +82,6 @@ export function useApiClient() {
             client.post(`/players/${playerId}/leave-queue`),
         updatePlayer: (playerId: string, name: string) =>
             client.patch(`/players/${playerId}`, { name }),
-        rememberGame: (playerId: string, active = true, gameId?: string) => {
-            const id = gameId ?? game?.id;
-            if (!id) return Promise.resolve(null);
-            return client.post(`/players/${playerId}/games/${id}/remember`, {
-                active,
-            });
-        },
         guess: (
             playerId: string,
             roundId: string,

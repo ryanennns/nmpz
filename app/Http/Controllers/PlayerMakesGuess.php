@@ -21,6 +21,10 @@ class PlayerMakesGuess extends Controller
         );
         abort_if($round->game_id !== $game->getKey(), 404);
 
+        if ($player->user()->exists() && $request->user()?->getKey() !== $player->user()->first()->getKey()) {
+            abort(401, 'nope');
+        }
+
         $isPlayerOne = $player->getKey() === $game->player_one_id;
 
         $validated = $request->validate([
