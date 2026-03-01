@@ -84,7 +84,7 @@ class AchievementService
         }
     }
 
-    private function award(Player $player, string $achievementKey): void
+    public function award(Player $player, string $achievementKey): void
     {
         $achievement = Achievement::query()->where('key', $achievementKey)->first();
         if (! $achievement) {

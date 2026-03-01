@@ -94,11 +94,13 @@ export function useApiClient(playerId: string) {
             );
         },
         // Daily Challenge
-        fetchDailyChallenge: () => client.get('/daily-challenge'),
+        fetchDailyChallenge: () => client.get(`/daily-challenge?player_id=${playerId}`),
         startDailyChallenge: () => client.post(`/players/${playerId}/daily-challenge/start`),
         dailyChallengeGuess: (entryId: string, coords: LatLng) =>
             client.post(`/players/${playerId}/daily-challenge/${entryId}/guess`, coords),
         fetchDailyLeaderboard: () => client.get('/daily-challenge/leaderboard'),
+        resetDailyChallenge: () => client.post(`/players/${playerId}/daily-challenge/reset`),
+        fetchDailyChallengeStats: () => client.get(`/players/${playerId}/daily-challenge/stats`),
         // Seasons
         fetchCurrentSeason: () => client.get('/seasons/current'),
         fetchSeasonLeaderboard: (seasonId: string) => client.get(`/seasons/${seasonId}/leaderboard`),

@@ -30,6 +30,8 @@ class PlayerStats extends Model
             'total_distance_km' => 'float',
             'total_guesses_made' => 'integer',
             'total_guesses_missed' => 'integer',
+            'daily_current_streak' => 'integer',
+            'daily_best_streak' => 'integer',
         ];
     }
 

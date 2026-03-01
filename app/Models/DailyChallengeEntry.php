@@ -19,6 +19,8 @@ class DailyChallengeEntry extends Model
             'round_scores' => 'array',
             'rounds_completed' => 'integer',
             'completed_at' => 'datetime',
+            'started_at' => 'datetime',
+            'round_started_at' => 'datetime',
         ];
     }
 

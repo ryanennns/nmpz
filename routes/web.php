@@ -72,6 +72,8 @@ Route::get('daily-challenge', [DailyChallengeController::class, 'today']);
 Route::post('players/{player}/daily-challenge/start', [DailyChallengeController::class, 'start']);
 Route::post('players/{player}/daily-challenge/{entry}/guess', [DailyChallengeController::class, 'guess']);
 Route::get('daily-challenge/leaderboard', [DailyChallengeController::class, 'leaderboard']);
+Route::post('players/{player}/daily-challenge/reset', [DailyChallengeController::class, 'reset']);
+Route::get('players/{player}/daily-challenge/stats', [DailyChallengeController::class, 'stats']);
 Route::get('seasons/current', [SeasonController::class, 'current']);
 Route::get('seasons/{season}/leaderboard', [SeasonController::class, 'leaderboard']);
 Route::get('seasons/history', [SeasonController::class, 'history']);

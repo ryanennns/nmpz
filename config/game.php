@@ -15,4 +15,10 @@ return [
     'rush_round_timeout_seconds' => 15,
     'rush_max_rounds' => 7,
     'rush_speed_bonus_max' => 1000,
+
+    'daily_challenge' => [
+        'tier_gold' => 20000,
+        'tier_silver' => 15000,
+        'round_timeout_seconds' => 60,
+    ],
 ];
