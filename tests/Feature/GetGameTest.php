@@ -52,7 +52,7 @@ class GetGameTest extends TestCase
 
         $response->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('welcome')
+                ->component('game')
                 ->where('player.id', $playerOne->getKey())
                 ->where('game.id', $game->getKey())
                 ->where('game.player_one.id', $playerOne->getKey())
