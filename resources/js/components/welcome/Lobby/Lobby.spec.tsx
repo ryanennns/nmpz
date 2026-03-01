@@ -163,4 +163,25 @@ describe('Lobby', () => {
         expect(assignSpy).toHaveBeenCalledWith('/games/game-9?player=player-3');
         vi.unstubAllGlobals();
     });
+
+    it('auto-queues when auto_queue param is present', async () => {
+        mocks.localStorage.get.mockReturnValue('stored-player');
+        mocks.api.getPlayer.mockResolvedValue({
+            status: 200,
+            data: { id: 'stored-player', name: 'sam' },
+        });
+        mocks.api.joinQueue.mockResolvedValue({ status: 200 });
+
+        vi.stubGlobal('location', {
+            ...window.location,
+            search: '?auto_queue=1',
+        });
+
+        render(<Lobby />);
+
+        expect(await screen.findByText('waiting for opponent')).toBeInTheDocument();
+        expect(mocks.api.joinQueue).toHaveBeenCalledWith('stored-player');
+
+        vi.unstubAllGlobals();
+    });
 });
