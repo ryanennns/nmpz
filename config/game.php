@@ -21,4 +21,16 @@ return [
         'tier_silver' => 15000,
         'round_timeout_seconds' => 60,
     ],
+
+    'solo' => [
+        'streak_hp' => ['casual' => 10000, 'normal' => 5000, 'hardcore' => 2500],
+        'streak_timeout' => 60,
+        'time_attack_rounds' => 5,
+        'time_attack_timeout' => 15,
+        'time_attack_speed_bonus_max' => 1000,
+        'perfect_score_rounds' => 10,
+        'perfect_score_timeout' => 120,
+        'perfect_score_tier_gold' => 40000,
+        'perfect_score_tier_silver' => 30000,
+    ],
 ];

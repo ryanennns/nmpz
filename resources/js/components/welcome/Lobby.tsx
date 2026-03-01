@@ -17,13 +17,15 @@ import PlayerStatsPanel from '@/components/welcome/PlayerStatsPanel';
 import RankBadge from '@/components/welcome/RankBadge';
 import ReplayViewer from '@/components/welcome/ReplayViewer';
 import SeasonPanel from '@/components/welcome/SeasonPanel';
+import SoloLeaderboardPanel from '@/components/welcome/SoloLeaderboardPanel';
+import SoloPlayPanel from '@/components/welcome/SoloPlayPanel';
 import type { Player } from '@/components/welcome/types';
 import { WaitingRoom } from '@/components/welcome/WaitingRoom';
 import { useApiClient } from '@/hooks/useApiClient';
 import { FADE_TRANSITION_MS, STATS_POLL_MS, STAT_HIDDEN_MS, STAT_VISIBLE_MS } from '@/lib/game-constants';
 
 type ActiveGroup = 'none' | 'profile' | 'community' | 'watch';
-type ProfileTab = 'stats' | 'history' | 'achievements' | 'season';
+type ProfileTab = 'stats' | 'history' | 'achievements' | 'season' | 'solo';
 type CommunityTab = 'leaderboard' | 'friends';
 
 function Divider({ label }: { label?: string }) {
@@ -79,6 +81,7 @@ export default function Lobby({
     const [replayGameId, setReplayGameId] = useState<string | null>(null);
     const [profilePlayerId, setProfilePlayerId] = useState<string | null>(null);
     const [privateLobbyOpen, setPrivateLobbyOpen] = useState(false);
+    const [playMode, setPlayMode] = useState<'none' | 'multiplayer' | 'solo'>('none');
 
     useEffect(() => {
         function onBeforeUnload() {
@@ -220,6 +223,7 @@ export default function Lobby({
         { key: 'history', label: 'history' },
         { key: 'achievements', label: 'achievements' },
         { key: 'season', label: 'season' },
+        { key: 'solo', label: 'solo' },
     ];
 
     const communitySubTabs: { key: CommunityTab; label: string }[] = [
@@ -290,6 +294,7 @@ export default function Lobby({
         ),
         'profile-achievements': <AchievementsPanel playerId={player.id} />,
         'profile-season': <SeasonPanel playerId={player.id} />,
+        'profile-solo': <SoloLeaderboardPanel playerId={player.id} />,
         'community-leaderboard': <Leaderboard playerId={player.id} />,
         'community-friends': (
             <FriendsPanel
@@ -398,49 +403,88 @@ export default function Lobby({
                                     )}
                                 </div>
 
-                                {/* ── Queue Section ── */}
+                                {/* ── Play Mode Toggle ── */}
                                 {playerName && !editingName && (
                                     <>
                                         <div className="px-4">
-                                            <Divider label="queue" />
+                                            <Divider label="play" />
                                         </div>
-                                        <div className="space-y-2 px-4 py-3 text-center">
-                                            <MapSelector
-                                                playerId={player.id}
-                                                selectedMapId={selectedMapId}
-                                                onSelect={setSelectedMapId}
-                                            />
-                                            <select
-                                                value={selectedFormat}
-                                                onChange={(e) => setSelectedFormat(e.target.value)}
-                                                className="w-full bg-white/5 px-2 py-1.5 text-center text-xs text-white focus:outline-none focus:ring-1 focus:ring-white/20"
-                                            >
-                                                <option value="classic">Classic (Health)</option>
-                                                <option value="bo3">Best of 3</option>
-                                                <option value="bo5">Best of 5</option>
-                                                <option value="bo7">Best of 7</option>
-                                            </select>
-                                            <button
-                                                onClick={() => void joinQueue()}
-                                                className="w-full border border-white/20 py-2 text-sm text-white transition hover:bg-white/5"
-                                            >
-                                                [ join queue ]
-                                            </button>
-                                            <button
-                                                onClick={() => setPrivateLobbyOpen(!privateLobbyOpen)}
-                                                className="w-full border border-white/10 py-1.5 text-xs text-white/50 transition hover:bg-white/5"
-                                            >
-                                                [ private match ]
-                                            </button>
-                                            {privateLobbyOpen && (
-                                                <PrivateLobbyPanel
-                                                    playerId={player.id}
-                                                    onClose={() => setPrivateLobbyOpen(false)}
-                                                />
-                                            )}
-                                            <div className="text-[10px] text-white/25">
-                                                {queueCount} player{queueCount === 1 ? '' : 's'} queued
+                                        <div className="px-4 py-3">
+                                            <div className="flex justify-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPlayMode(playMode === 'multiplayer' ? 'none' : 'multiplayer')}
+                                                    className={`flex-1 border px-3 py-1.5 text-xs transition ${
+                                                        playMode === 'multiplayer'
+                                                            ? 'border-white/25 bg-white/10 text-white'
+                                                            : 'border-white/10 text-white/35 hover:bg-white/5 hover:text-white/50'
+                                                    }`}
+                                                >
+                                                    Multiplayer
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPlayMode(playMode === 'solo' ? 'none' : 'solo')}
+                                                    className={`flex-1 border px-3 py-1.5 text-xs transition ${
+                                                        playMode === 'solo'
+                                                            ? 'border-white/25 bg-white/10 text-white'
+                                                            : 'border-white/10 text-white/35 hover:bg-white/5 hover:text-white/50'
+                                                    }`}
+                                                >
+                                                    Solo
+                                                </button>
                                             </div>
+
+                                            {/* Multiplayer content */}
+                                            {playMode === 'multiplayer' && (
+                                                <div className="mt-3 space-y-2 text-center">
+                                                    <MapSelector
+                                                        playerId={player.id}
+                                                        selectedMapId={selectedMapId}
+                                                        onSelect={setSelectedMapId}
+                                                    />
+                                                    <select
+                                                        value={selectedFormat}
+                                                        onChange={(e) => setSelectedFormat(e.target.value)}
+                                                        className="w-full bg-white/5 px-2 py-1.5 text-center text-xs text-white focus:outline-none focus:ring-1 focus:ring-white/20"
+                                                    >
+                                                        <option value="classic">Classic (Health)</option>
+                                                        <option value="bo3">Best of 3</option>
+                                                        <option value="bo5">Best of 5</option>
+                                                        <option value="bo7">Best of 7</option>
+                                                    </select>
+                                                    <button
+                                                        onClick={() => void joinQueue()}
+                                                        className="w-full border border-white/20 py-2 text-sm text-white transition hover:bg-white/5"
+                                                    >
+                                                        [ join queue ]
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setPrivateLobbyOpen(!privateLobbyOpen)}
+                                                        className="w-full border border-white/10 py-1.5 text-xs text-white/50 transition hover:bg-white/5"
+                                                    >
+                                                        [ private match ]
+                                                    </button>
+                                                    {privateLobbyOpen && (
+                                                        <PrivateLobbyPanel
+                                                            playerId={player.id}
+                                                            onClose={() => setPrivateLobbyOpen(false)}
+                                                        />
+                                                    )}
+                                                    <div className="text-[10px] text-white/25">
+                                                        {queueCount} player{queueCount === 1 ? '' : 's'} queued
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Solo content */}
+                                            {playMode === 'solo' && (
+                                                <div className="mt-3 space-y-3">
+                                                    <SoloPlayPanel playerId={player.id} />
+                                                    <Divider label="daily" />
+                                                    <DailyChallengePanel playerId={player.id} />
+                                                </div>
+                                            )}
                                         </div>
                                     </>
                                 )}
@@ -450,18 +494,6 @@ export default function Lobby({
                                     <div className="px-4 pb-2 text-xs text-red-400/80">
                                         {joinError}
                                     </div>
-                                )}
-
-                                {/* ── Daily Challenge Section ── */}
-                                {playerName && !editingName && (
-                                    <>
-                                        <div className="px-4">
-                                            <Divider label="daily" />
-                                        </div>
-                                        <div className="px-4 py-3">
-                                            <DailyChallengePanel playerId={player.id} />
-                                        </div>
-                                    </>
                                 )}
 
                                 {/* ── Browse Section ── */}

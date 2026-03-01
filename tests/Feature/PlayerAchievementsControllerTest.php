@@ -26,7 +26,7 @@ class PlayerAchievementsControllerTest extends TestCase
         $response = $this->getJson("/players/{$player->getKey()}/achievements");
 
         $response->assertOk();
-        $response->assertJsonCount(14);
+        $response->assertJsonCount(22);
     }
 
     public function test_earned_achievements_have_earned_at(): void

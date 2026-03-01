@@ -25,6 +25,7 @@ use App\Http\Controllers\PlayerProfileController;
 use App\Http\Controllers\ReplayController;
 use App\Http\Controllers\SeasonController;
 use App\Http\Controllers\SendReaction;
+use App\Http\Controllers\SoloGameController;
 use App\Http\Controllers\SendSpectatorChat;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\UpdatePlayer;
@@ -88,5 +89,13 @@ Route::post('players/{player}/games/{game}/reaction', SendReaction::class);
 Route::post('games/{game}/spectator-chat', SendSpectatorChat::class);
 Route::get('games/featured', FeaturedMatchController::class);
 Route::get('games/{game}/replay', ReplayController::class);
+
+// Solo Play
+Route::post('players/{player}/solo/start', [SoloGameController::class, 'start']);
+Route::post('players/{player}/solo/{solo_game}/guess', [SoloGameController::class, 'guess']);
+Route::post('players/{player}/solo/{solo_game}/abandon', [SoloGameController::class, 'abandon']);
+Route::get('solo/leaderboard', [SoloGameController::class, 'leaderboard']);
+Route::get('players/{player}/solo/personal-bests', [SoloGameController::class, 'personalBests']);
+Route::get('players/{player}/solo/stats', [SoloGameController::class, 'stats']);
 
 require __DIR__.'/settings.php';

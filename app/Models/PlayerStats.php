@@ -32,6 +32,12 @@ class PlayerStats extends Model
             'total_guesses_missed' => 'integer',
             'daily_current_streak' => 'integer',
             'daily_best_streak' => 'integer',
+            'solo_games_played' => 'integer',
+            'solo_rounds_played' => 'integer',
+            'solo_total_score' => 'integer',
+            'solo_best_round_score' => 'integer',
+            'solo_perfect_rounds' => 'integer',
+            'solo_best_streak' => 'integer',
         ];
     }
 
