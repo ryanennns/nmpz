@@ -40,7 +40,13 @@ describe('SignUpForm', () => {
     it('calls onSuccess when claim returns 201', async () => {
         const onSuccess = vi.fn();
         const api = makeApi({
-            claimPlayer: vi.fn().mockResolvedValue({ status: 201 }),
+            claimPlayer: vi.fn().mockResolvedValue({
+                status: 201,
+                data: {
+                    player: { id: 'player-1' },
+                    user: { id: 1, email: 'new@example.com' },
+                },
+            }),
         });
 
         render(
