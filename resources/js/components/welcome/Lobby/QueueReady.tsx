@@ -1,9 +1,11 @@
 import { Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { logout } from '@/routes';
+import { PlayerStats } from './PlayerStats';
 
 export const QueueReady = ({
     playerName,
+    playerId,
     onJoinQueue,
     onEditName,
     isAuthenticated,
@@ -11,6 +13,7 @@ export const QueueReady = ({
     onSignOut,
 }: {
     playerName: string;
+    playerId?: string;
     onJoinQueue: () => void;
     onEditName: (name: string) => void;
     isAuthenticated: boolean;
@@ -94,6 +97,11 @@ export const QueueReady = ({
             >
                 Join queue
             </button>
+            {isAuthenticated && playerId && (
+                <div className="mt-3">
+                    <PlayerStats playerId={playerId} />
+                </div>
+            )}
             <div className="flex shrink items-center justify-between rounded py-1 text-xs text-zinc-600">
                 {!isAuthenticated && (
                     <>

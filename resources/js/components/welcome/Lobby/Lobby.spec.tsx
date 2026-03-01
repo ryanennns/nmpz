@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => {
             getAuthPlayer: vi.fn(),
             signIn: vi.fn(),
             claimPlayer: vi.fn(),
+            getPlayerStats: vi.fn(),
         },
         stats: {
             fetchStats: vi.fn(),
@@ -83,6 +84,15 @@ describe('Lobby', () => {
         mocks.localStorage.get.mockReturnValue(null);
         mocks.echo.channel.mockReturnValue(mocks.channelMock);
         mocks.page.props.auth.user = null;
+        mocks.api.getPlayerStats.mockResolvedValue({
+            data: {
+                wins: 0,
+                losses: 0,
+                draws: 0,
+                elo: 1000,
+                recent_matches: [],
+            },
+        });
         Object.keys(mocks.listenHandlers).forEach((key) => {
             delete mocks.listenHandlers[key];
         });

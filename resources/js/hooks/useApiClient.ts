@@ -63,6 +63,8 @@ export const useUnauthedApiClient = () => {
                 password,
                 password_confirmation: passwordConfirmation,
             }),
+        getPlayerStats: (playerId: string) =>
+            client.get(`/players/${playerId}/stats`),
     };
 };
 

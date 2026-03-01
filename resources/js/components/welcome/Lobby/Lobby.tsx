@@ -234,6 +234,7 @@ export default function Lobby() {
                     {displayPhase === 'queue_ready' && (
                         <QueueReady
                             playerName={player?.name || ''}
+                            playerId={player?.id}
                             onJoinQueue={() => {
                                 setPhase('queued');
                                 void api.joinQueue(player!.id);

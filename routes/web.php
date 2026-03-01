@@ -6,6 +6,7 @@ use App\Http\Controllers\GameSummaryController;
 use App\Http\Controllers\GetAuthPlayer;
 use App\Http\Controllers\GetGame;
 use App\Http\Controllers\GetPlayer;
+use App\Http\Controllers\GetPlayerStats;
 use App\Http\Controllers\HomePageController;
 use App\Http\Controllers\JoinQueue;
 use App\Http\Controllers\PlayerLeavesQueue;
@@ -35,6 +36,8 @@ Route::prefix('players')->name('players')->group(function () {
         ->name('.leave-queue');
     Route::patch('/{player}', UpdatePlayer::class)
         ->name('.update');
+    Route::get('/{player}/stats', GetPlayerStats::class)
+        ->name('.stats');
 });
 
 Route::post('players/{player}/games/{game}/rounds/{round}/guess', PlayerMakesGuess::class)

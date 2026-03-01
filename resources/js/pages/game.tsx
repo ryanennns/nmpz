@@ -225,7 +225,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                   health: isPlayerOne ? health.p2 : health.p1,
                   score: isPlayerOne ? roundScores.p2 : roundScores.p1,
                   barColor: isPlayerOne ? 'red' : ('blue' as PlayerColour),
-                  name: 'oops',
+                  name: player.name,
               },
           }
         : null;
