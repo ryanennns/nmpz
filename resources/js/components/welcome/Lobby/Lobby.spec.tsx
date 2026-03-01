@@ -161,6 +161,19 @@ describe('Lobby', () => {
         expect(screen.getByText('sam')).toBeInTheDocument();
     });
 
+    it('removes the stored player key when getPlayer fails', async () => {
+        mocks.localStorage.get.mockReturnValue('bunk-player');
+        mocks.api.getPlayer.mockRejectedValue(new Error('not found'));
+
+        render(<Lobby />);
+
+        await waitFor(() => {
+            expect(mocks.localStorage.remove).toHaveBeenCalledWith('player_id');
+        });
+
+        expect(screen.getByText('continue')).toBeInTheDocument();
+    });
+
     it('redirects when a game is ready', async () => {
         mocks.api.createPlayer.mockResolvedValue({
             status: 201,

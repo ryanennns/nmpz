@@ -25,7 +25,6 @@ export default function Lobby() {
 
     const [helpOpen, setHelpOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [playerName, setPlayerName] = useState<string | undefined>(undefined);
     const [player, setPlayer] = useState<Player | undefined>(undefined);
 
     const [error, setError] = useState<string | undefined>(undefined);
@@ -38,7 +37,6 @@ export default function Lobby() {
 
     const syncAuthenticatedPlayer = (data: { player: Player; user: User }) => {
         setPlayer(data.player);
-        setPlayerName(data.player.name);
         setUser(data.user);
         setPhase('queue_ready');
     };
@@ -61,26 +59,21 @@ export default function Lobby() {
         } else {
             const key = localStorage.get(PLAYER_ID_KEY);
             if (key) {
-                api.getPlayer(key).then((data) => {
-                    if (data.status !== 200) {
-                        setError('get fucked');
+                api.getPlayer(key)
+                    .then((data) => {
+                        setPlayer(data.data);
 
-                        return;
-                    }
-
-                    setPlayer(data.data);
-                    setPlayerName(data.data.name);
-
-                    const autoQueue = new URLSearchParams(
-                        window.location.search,
-                    ).has('auto_queue');
-                    if (autoQueue) {
-                        setPhase('queued');
-                        void api.joinQueue(data.data.id);
-                    } else {
-                        setPhase('queue_ready');
-                    }
-                });
+                        const autoQueue = new URLSearchParams(
+                            window.location.search,
+                        ).has('auto_queue');
+                        if (autoQueue) {
+                            setPhase('queued');
+                            void api.joinQueue(data.data.id);
+                        } else {
+                            setPhase('queue_ready');
+                        }
+                    })
+                    .catch(() => localStorage.remove(PLAYER_ID_KEY));
             }
         }
 
@@ -116,8 +109,6 @@ export default function Lobby() {
     }, [localStorage, player, player?.id]);
 
     const submitPlayerName = async (name: string) => {
-        setPlayerName(name);
-
         const response = await api.createPlayer(name);
 
         if (response.status !== 201) {
@@ -132,13 +123,11 @@ export default function Lobby() {
 
     const updatePlayerName = async (name: string) => {
         if (!player) {
-            setPlayerName(name);
             return;
         }
 
         try {
             await api.updatePlayer(player.id, name);
-            setPlayerName(name);
             setPlayer((currentPlayer) =>
                 currentPlayer ? { ...currentPlayer, name } : currentPlayer,
             );
@@ -151,7 +140,6 @@ export default function Lobby() {
         setPhase('guest_signin');
         setTimeout(() => {
             setPlayer(undefined);
-            setPlayerName(undefined);
             localStorage.remove(PLAYER_ID_KEY);
             setUser(null);
         }, 500);
@@ -238,7 +226,6 @@ export default function Lobby() {
                             onBack={() => setPhase('queue_ready')}
                             onSuccess={(player, user) => {
                                 setPlayer(player);
-                                setPlayerName(player.name);
                                 setUser(user);
                                 setPhase('queue_ready');
                             }}
@@ -246,7 +233,7 @@ export default function Lobby() {
                     )}
                     {displayPhase === 'queue_ready' && (
                         <QueueReady
-                            playerName={playerName || ''}
+                            playerName={player?.name || ''}
                             onJoinQueue={() => {
                                 setPhase('queued');
                                 void api.joinQueue(player!.id);
@@ -261,7 +248,7 @@ export default function Lobby() {
                     )}
                     {displayPhase === 'queued' && (
                         <WaitingRoom
-                            playerName={playerName || ''}
+                            playerName={player?.name || ''}
                             onLeaveQueue={() => {
                                 setPhase('queue_ready');
                                 void api.leaveQueue(player!.id);
