@@ -48,7 +48,7 @@ export default function SimpleModal({
     if (!mounted) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center" data-testid="modal">
             <button
                 type="button"
                 className={
@@ -57,6 +57,7 @@ export default function SimpleModal({
                 }
                 onClick={onClose}
                 aria-label="Close modal"
+                data-testid="close-modal"
             />
             <div
                 className={
@@ -67,7 +68,6 @@ export default function SimpleModal({
                 <button
                     type="button"
                     onClick={onClose}
-                    aria-label="Close modal"
                     className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded border border-white/20 text-xs text-white/70 transition hover:border-white/40 hover:text-white"
                 >
                     <X />

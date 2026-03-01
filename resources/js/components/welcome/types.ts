@@ -1,7 +1,7 @@
 export type Player = {
     id: string;
-    name?: string | null;
-    user: { name: string };
+    name: string;
+    user?: { name: string };
 };
 
 export type Round = {

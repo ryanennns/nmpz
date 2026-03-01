@@ -24,9 +24,12 @@ export default function MapillaryImagePanel({
     location: Location;
     onHeadingChange?: (heading: number) => void;
 }) {
+    const token = import.meta.env.VITE_MAPILLARY_ACCESS_TOKEN as string;
     const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(Boolean(token));
+    const [error, setError] = useState<string | null>(
+        token ? null : 'Missing Mapillary access token.',
+    );
     const headingCallbackRef = useRef(onHeadingChange);
 
     useEffect(() => {
@@ -34,10 +37,7 @@ export default function MapillaryImagePanel({
     }, [onHeadingChange]);
 
     useEffect(() => {
-        const token = import.meta.env.VITE_MAPILLARY_ACCESS_TOKEN as string;
         if (!token) {
-            setError('Missing Mapillary access token.');
-            setLoading(false);
             return;
         }
 
@@ -49,9 +49,11 @@ export default function MapillaryImagePanel({
             ? `https://graph.mapillary.com/${imageId}?access_token=${token}&fields=${fields}`
             : `https://graph.mapillary.com/images?access_token=${token}&fields=${fields}&bbox=${buildBbox(location.lat, location.lng)}&limit=1`;
 
-        setLoading(true);
-        setError(null);
-        setImageUrl(null);
+        queueMicrotask(() => {
+            setLoading(true);
+            setError(null);
+            setImageUrl(null);
+        });
 
         fetch(url, { signal: controller.signal })
             .then(async (res) => {
@@ -93,7 +95,13 @@ export default function MapillaryImagePanel({
             });
 
         return () => controller.abort();
-    }, [location.heading, location.lat, location.lng, location.image_id]);
+    }, [
+        location.heading,
+        location.lat,
+        location.lng,
+        location.image_id,
+        token,
+    ]);
 
     return (
         <div className="absolute inset-0 bg-neutral-900">

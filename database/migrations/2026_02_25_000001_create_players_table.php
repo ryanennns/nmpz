@@ -10,7 +10,10 @@ return new class extends Migration
     {
         Schema::create('players', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')
+                ->nullable()
+                ->constrained()
+                ->cascadeOnDelete();
             $table->unsignedSmallInteger('elo_rating')->default(1000);
             $table->timestamps();
         });

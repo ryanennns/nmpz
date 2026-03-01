@@ -91,14 +91,6 @@ class MatchmakeQueue
 
         GameReady::dispatch($game, $playerOne);
         GameReady::dispatch($game, $playerTwo);
-
-        $p1Health = $game->player_one_health;
-        $p2Health = $game->player_two_health;
-
-        dispatch(function () use ($round, $p1Health, $p2Health) {
-            $round->forceFill(['started_at' => now()])->save();
-            RoundStarted::dispatch($round, $p1Health, $p2Health);
-            ForceEndRound::dispatch($round->getKey())->delay(now()->addSeconds(60));
-        })->delay(now()->addSeconds(2));
+        ForceEndRound::dispatch($round->getKey())->delay(now()->addSeconds(60));
     }
 }

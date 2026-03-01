@@ -1,11 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import process from 'node:process';
 import { VectorTile } from '@mapbox/vector-tile';
 import Pbf from 'pbf';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const args = parseArgs(process.argv.slice(2));
 
@@ -38,7 +35,6 @@ console.log(
 
 const tileStats = [];
 let tilesWithCoverage = 0;
-let totalWeight = 0;
 
 for (let y = 0; y < tileCount; y++) {
     for (let x = 0; x < tileCount; x++) {
@@ -71,7 +67,6 @@ for (let y = 0; y < tileCount; y++) {
         const latCenter = tileCenterLat(zoom, y);
         const lngCenter = tileCenterLng(zoom, x);
         const weight = Math.max(0.01, Math.cos((latCenter * Math.PI) / 180));
-        totalWeight += weight;
         tilesWithCoverage += 1;
         tileStats.push({
             x,
@@ -189,7 +184,7 @@ async function loadTile(z, x, y, token, cacheDir) {
     try {
         const cached = await fs.promises.readFile(filePath);
         return new Uint8Array(cached);
-    } catch (err) {
+    } catch {
         // Cache miss
     }
 
@@ -217,7 +212,7 @@ async function fetchTile(z, x, y, token) {
             }
             const arrayBuffer = await res.arrayBuffer();
             return new Uint8Array(arrayBuffer);
-        } catch (err) {
+        } catch {
             if (attempt >= 3) {
                 return null;
             }

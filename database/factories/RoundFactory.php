@@ -17,7 +17,11 @@ class RoundFactory extends Factory
         return [
             'game_id' => Game::factory(),
             'location_id' => Location::factory(),
-            'round_number' => $this->faker->numberBetween(1, 5),
+            'round_number' => fn (array $attributes) => isset($attributes['game_id'])
+                ? ((int) Round::query()
+                    ->where('game_id', $attributes['game_id'])
+                    ->max('round_number')) + 1
+                : 1,
             'player_one_guess_lat' => null,
             'player_one_guess_lng' => null,
             'player_two_guess_lat' => null,

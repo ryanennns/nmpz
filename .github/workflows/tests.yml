@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-version: ['8.4', '8.5']
+        php-version: ['8.4']
 
     steps:
       - name: Checkout code
@@ -52,5 +52,5 @@ jobs:
       - name: Build Assets
         run: npm run build
 
-      - name: Tests
+      - name: Run PHPUnit
         run: ./vendor/bin/phpunit

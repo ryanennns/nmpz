@@ -190,6 +190,9 @@ class PlayerMakesGuessTest extends TestCase
 
     public function test_boundary_lat_and_lng_values_are_valid(): void
     {
+        Round::truncate();
+        Game::truncate();
+
         Event::fake();
         $player = Player::factory()->create();
         $game = Game::factory()->create(['player_one_id' => $player->getKey()]);
