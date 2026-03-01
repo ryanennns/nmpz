@@ -215,7 +215,10 @@ describe('Lobby', () => {
         mocks.page.props.auth.user = { id: 1, name: 'alice' };
         mocks.api.getAuthPlayer.mockResolvedValue({
             status: 200,
-            data: { id: 'auth-player', name: 'alice' },
+            data: {
+                player: { id: 'auth-player', name: 'alice' },
+                user: { id: 1, name: 'alice' },
+            },
         });
 
         render(<Lobby />);
@@ -230,7 +233,10 @@ describe('Lobby', () => {
         mocks.page.props.auth.user = { id: 1, name: 'alice' };
         mocks.api.getAuthPlayer.mockResolvedValue({
             status: 200,
-            data: { id: 'auth-player', name: 'alice' },
+            data: {
+                player: { id: 'auth-player', name: 'alice' },
+                user: { id: 1, name: 'alice' },
+            },
         });
 
         render(<Lobby />);
@@ -240,7 +246,9 @@ describe('Lobby', () => {
         await screen.findByText('Join queue');
         await user.click(screen.getByText('sign out'));
 
-        expect(mocks.localStorage.remove).toHaveBeenCalledWith('player_id');
+        await waitFor(() => {
+            expect(mocks.localStorage.remove).toHaveBeenCalledWith('player_id');
+        });
         expect(
             await screen.findByPlaceholderText('your name'),
         ).toBeInTheDocument();

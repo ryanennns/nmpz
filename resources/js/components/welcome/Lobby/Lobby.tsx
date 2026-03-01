@@ -36,14 +36,24 @@ export default function Lobby() {
     const [displayPhase, setDisplayPhase] = useState(phase);
     const [phaseVisible, setPhaseVisible] = useState(false);
 
+    const syncAuthenticatedPlayer = (data: { player: Player; user: User }) => {
+        setPlayer(data.player);
+        setPlayerName(data.player.name);
+        setUser(data.user);
+        setPhase('queue_ready');
+    };
+
     // on mount
     useEffect(() => {
         if (auth.user) {
             api.getAuthPlayer().then((res) => {
                 if (res.status === 200) {
-                    setPlayer(res.data);
-                    setPlayerName(res.data.name);
-                    setPhase('queue_ready');
+                    syncAuthenticatedPlayer(
+                        res.data as {
+                            player: Player;
+                            user: User;
+                        },
+                    );
                 } else {
                     console.error('Authenticated user has no player', res);
                 }
@@ -138,11 +148,13 @@ export default function Lobby() {
     };
 
     const signOut = () => {
-        setPlayer(undefined);
-        setPlayerName(undefined);
-        localStorage.remove(PLAYER_ID_KEY);
-        setUser(null);
         setPhase('guest_signin');
+        setTimeout(() => {
+            setPlayer(undefined);
+            setPlayerName(undefined);
+            localStorage.remove(PLAYER_ID_KEY);
+            setUser(null);
+        }, 500);
     };
 
     // fade in transition
@@ -209,9 +221,12 @@ export default function Lobby() {
                             onBack={() => setPhase('guest_signin')}
                             onSuccess={() => {
                                 api.getAuthPlayer().then((res) => {
-                                    setPlayer(res.data);
-                                    setPlayerName(res.data.name);
-                                    setPhase('queue_ready');
+                                    syncAuthenticatedPlayer(
+                                        res.data as {
+                                            player: Player;
+                                            user: User;
+                                        },
+                                    );
                                 });
                             }}
                         />

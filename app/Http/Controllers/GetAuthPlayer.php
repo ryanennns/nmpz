@@ -15,6 +15,9 @@ class GetAuthPlayer extends Controller
             return response()->json(null, 404);
         }
 
-        return response()->json($player->toArray());
+        return response()->json([
+            'player' => $player->toArray(),
+            'user' => $request->user()->toArray(),
+        ]);
     }
 }
