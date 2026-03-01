@@ -12,6 +12,9 @@ import MapPicker from '@/components/welcome/MapPicker';
 import ResultsMap from '@/components/welcome/ResultsMap';
 import ShimmerText from '@/components/welcome/ShimmerText';
 import AchievementToast from '@/components/welcome/AchievementToast';
+import ReactionBar from '@/components/welcome/ReactionBar';
+import ReactionToast from '@/components/welcome/ReactionToast';
+import type { ReactionEvent } from '@/components/welcome/ReactionToast';
 import SeriesScore from '@/components/welcome/SeriesScore';
 import SpectatorMap from '@/components/welcome/SpectatorMap';
 import { StandardCompass } from '@/components/welcome/StandardCompass';
@@ -108,6 +111,8 @@ function WelcomePage({
     const [mapHovered, setMapHovered] = useState(false);
     const [achievementToast, setAchievementToast] = useState<{ name: string; description: string } | null>(null);
     const [wins, setWins] = useState({ p1: game?.player_one_wins ?? 0, p2: game?.player_two_wins ?? 0 });
+    const [reactionToasts, setReactionToasts] = useState<ReactionEvent[]>([]);
+    const reactionSeqRef = useRef(0);
     const guessRef = useRef<() => void>(() => {});
     const lastRememberedGameId = useRef<string | null>(null);
     const api = useApiClient(player.id);
@@ -217,6 +222,17 @@ function WelcomePage({
         setBlackoutVisible: endSequence.setBlackoutVisible,
         scheduleEndSequence: endSequence.scheduleEndSequence,
         clearEndSequenceTimers: endSequence.clearEndSequenceTimers,
+        onReaction: (data) => {
+            const name = data.player_id === game?.player_one.id
+                ? game.player_one.user.name
+                : data.player_id === game?.player_two.id
+                  ? game.player_two.user.name
+                  : 'Player';
+            setReactionToasts((prev) => [
+                ...prev,
+                { id: reactionSeqRef.current++, playerName: name, reaction: data.reaction },
+            ]);
+        },
         resetGameState,
         roundStartedAtRef,
         playerId: player.id,
@@ -516,6 +532,12 @@ function WelcomePage({
                                                 void sendMessage()
                                             }
                                         />
+                                        <div className="pointer-events-auto rounded bg-black/50 px-2 py-1.5 backdrop-blur-sm">
+                                            <ReactionBar
+                                                onReact={(r) => void api.sendReaction(r)}
+                                                disabled={gameOver}
+                                            />
+                                        </div>
                                     </div>
                                     {countdownConfig && (
                                         <CountdownTimer
@@ -635,6 +657,22 @@ function WelcomePage({
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                             )}
                         </button>
+
+                        {reactionToasts.length > 0 && (
+                            <div className="pointer-events-none absolute top-1/2 left-8 z-30 flex -translate-y-1/2 flex-col items-start gap-1.5">
+                                {reactionToasts.slice(-3).map((rt) => (
+                                    <ReactionToast
+                                        key={rt.id}
+                                        event={rt}
+                                        onDone={() =>
+                                            setReactionToasts((prev) =>
+                                                prev.filter((e) => e.id !== rt.id),
+                                            )
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        )}
 
                         <div
                             className={`pointer-events-none absolute inset-0 z-40 bg-black transition-opacity duration-500 ${endSequence.blackoutVisible ? 'opacity-100' : 'opacity-0'}`}

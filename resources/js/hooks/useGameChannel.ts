@@ -5,6 +5,7 @@ import type {
     GameEvent,
     GameFinishedData,
     GameMessageData,
+    GameReactionData,
     Message,
     PlayerGuessedData,
     RematchAcceptedData,
@@ -78,6 +79,7 @@ type GameChannelDeps = {
     clearEndSequenceTimers: () => void;
     resetGameState: () => void;
     roundStartedAtRef: MutableRefObject<Date | null>;
+    onReaction: (data: GameReactionData) => void;
     playerId: string;
     playSound: (name: SoundName) => void;
 };
@@ -110,6 +112,7 @@ export function useGameChannel(deps: GameChannelDeps) {
         setBlackoutVisible,
         scheduleEndSequence,
         clearEndSequenceTimers,
+        onReaction,
         resetGameState,
         roundStartedAtRef,
         playerId,
@@ -322,6 +325,14 @@ export function useGameChannel(deps: GameChannelDeps) {
                 if (data.player_id !== playerId) {
                     setRematchState('declined');
                 }
+            },
+        );
+
+        channel.listen(
+            '.GameReaction',
+            (data: GameReactionData) => {
+                pushEvent(eventSeqRef, setEvents, 'GameReaction', data);
+                onReaction(data);
             },
         );
 

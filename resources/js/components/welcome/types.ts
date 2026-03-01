@@ -44,9 +44,16 @@ export type GameEvent = {
         | 'RoundFinished'
         | 'RoundStarted'
         | 'GameFinished'
-        | 'GameMessage';
+        | 'GameMessage'
+        | 'GameReaction';
     ts: string;
     data: unknown;
+};
+
+export type GameReactionData = {
+    game_id: string;
+    player_id: string;
+    reaction: string;
 };
 
 export type LatLng = { lat: number; lng: number };

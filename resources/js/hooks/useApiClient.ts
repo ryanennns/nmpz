@@ -86,6 +86,13 @@ export function useApiClient(playerId: string) {
         cancelPrivateLobby: (lobbyId: string) =>
             client.post(`/players/${playerId}/private-lobby/${lobbyId}/cancel`),
         fetchLiveGames: () => client.get('/games/live'),
+        sendReaction: (reaction: string) => {
+            if (!game) return Promise.resolve(null);
+            return client.post(
+                `/players/${playerId}/games/${game.id}/reaction`,
+                { reaction },
+            );
+        },
         client,
     };
 }
