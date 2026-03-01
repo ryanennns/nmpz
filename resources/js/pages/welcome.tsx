@@ -368,7 +368,7 @@ function WelcomePage({
         setWinnerName(winnerName);
 
         scheduleEndSequence(() => {
-            window.location.assign('/');
+            window.location.assign(game ? `/games/${game.id}/summary` : '/');
         });
     }
 
@@ -847,7 +847,7 @@ function WelcomePage({
 
                     {/* Bottom-left: event feed */}
                     <div
-                        className={`absolute bottom-4 left-4 z-10 w-80 space-y-2 text-xs ${panel}`}
+                        className={`absolute bottom-4 left-4 z-10 w-60 space-y-2 text-xs ${panel}`}
                     >
                         {round && (
                             <>

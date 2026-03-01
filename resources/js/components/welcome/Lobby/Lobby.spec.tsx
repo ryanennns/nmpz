@@ -160,7 +160,7 @@ describe('Lobby', () => {
         expect(handler).toBeDefined();
         handler?.({ game: { id: 'game-9' } });
 
-        expect(assignSpy).toHaveBeenCalledWith('/game/game-9?player=player-3');
+        expect(assignSpy).toHaveBeenCalledWith('/games/game-9?player=player-3');
         vi.unstubAllGlobals();
     });
 });
