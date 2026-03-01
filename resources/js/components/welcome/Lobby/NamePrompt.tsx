@@ -3,9 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 
 export default function NamePrompt({
     onSubmit,
+    onSignIn,
     error = false,
 }: {
     onSubmit: (name: string) => void;
+    onSignIn: () => void;
     error?: boolean;
 }) {
     const [name, setName] = useState('');
@@ -48,8 +50,10 @@ export default function NamePrompt({
             </button>
             <div className="flex shrink items-center justify-between rounded px-2 py-1 text-xs text-zinc-600">
                 have an account?
-                <button className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300">
-                    {' '}
+                <button
+                    onClick={onSignIn}
+                    className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300"
+                >
                     sign in
                 </button>
             </div>

@@ -49,6 +49,20 @@ export const useUnauthedApiClient = () => {
         leaveQueue: (playerId: string) =>
             client.post(`/players/${playerId}/leave-queue`),
         getPlayer: (playerId: string) => client.get(`/players/${playerId}`),
+        signIn: (email: string, password: string) =>
+            client.post('/login', { email, password }),
+        getAuthPlayer: () => client.get('/auth/player'),
+        claimPlayer: (
+            playerId: string,
+            email: string,
+            password: string,
+            passwordConfirmation: string,
+        ) =>
+            client.post(`/players/${playerId}/claim`, {
+                email,
+                password,
+                password_confirmation: passwordConfirmation,
+            }),
     };
 };
 

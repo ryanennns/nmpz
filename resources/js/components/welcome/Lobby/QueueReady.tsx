@@ -4,10 +4,14 @@ export const QueueReady = ({
     playerName,
     onJoinQueue,
     onEditName,
+    isAuthenticated,
+    onSignUp,
 }: {
     playerName: string;
     onJoinQueue: () => void;
     onEditName: (name: string) => void;
+    isAuthenticated: boolean;
+    onSignUp: () => void;
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [draftName, setDraftName] = useState(playerName);
@@ -25,6 +29,7 @@ export const QueueReady = ({
             onEditName(nextName);
         }
     };
+    const onSignOut = () => 0;
 
     return (
         <div className="w-72">
@@ -87,6 +92,32 @@ export const QueueReady = ({
             >
                 Join queue
             </button>
+            <div className="flex shrink items-center justify-between rounded py-1 text-xs text-zinc-600">
+                {!isAuthenticated && (
+                    <>
+                        <div></div>
+                        <button
+                            type="button"
+                            onClick={onSignUp}
+                            className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300"
+                        >
+                            create account
+                        </button>
+                    </>
+                )}
+                {isAuthenticated && (
+                    <>
+                        <div></div>
+                        <button
+                            type="button"
+                            onClick={onSignOut}
+                            className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300"
+                        >
+                            sign out
+                        </button>
+                    </>
+                )}
+            </div>
         </div>
     );
 };
