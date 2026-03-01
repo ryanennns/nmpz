@@ -52,5 +52,8 @@ jobs:
       - name: Build Assets
         run: npm run build
 
-      - name: Tests
+      - name: Run PHPUnit
         run: ./vendor/bin/phpunit
+
+      - name: Run Vitest
+        run: npm run test:run
