@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Player } from '@/components/welcome/types';
 import type { useUnauthedApiClient } from '@/hooks/useApiClient';
 import type { User } from '@/types';
+import AuthForm, { AuthField, getValidationErrors } from './AuthForm';
 
 export default function SignUpForm({
     playerId,
@@ -30,67 +31,40 @@ export default function SignUpForm({
             );
             onSuccess(data.data.player as Player, data.data.user as User);
         } catch (err: unknown) {
-            const axiosErr = err as {
-                response?: {
-                    status: number;
-                    data: { errors?: Record<string, string[]> };
-                };
-            };
-            if (axiosErr?.response?.status === 422) {
-                setErrors(axiosErr.response.data.errors ?? {});
+            const validationErrors = getValidationErrors(err);
+            if (validationErrors) {
+                setErrors(validationErrors);
             }
         }
     };
 
     return (
-        <div className="flex w-72 flex-col gap-3">
-            <input
+        <AuthForm
+            submitLabel="create account"
+            onSubmit={submit}
+            onBack={onBack}
+        >
+            <AuthField
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={setEmail}
                 placeholder="email"
-                className="w-full rounded border border-white/10 bg-black/40 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
+                error={errors.email?.[0]}
             />
-            {errors.email && (
-                <p className="text-xs text-red-400">{errors.email[0]}</p>
-            )}
-            <input
+            <AuthField
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={setPassword}
                 placeholder="password"
-                className="w-full rounded border border-white/10 bg-black/40 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
+                error={errors.password?.[0]}
             />
-            {errors.password && (
-                <p className="text-xs text-red-400">{errors.password[0]}</p>
-            )}
-            <input
+            <AuthField
                 type="password"
                 value={passwordConfirmation}
-                onChange={(e) => setPasswordConfirmation(e.target.value)}
+                onChange={setPasswordConfirmation}
                 placeholder="confirm password"
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        void submit();
-                    }
-                }}
-                className="w-full rounded border border-white/10 bg-black/40 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
+                error={errors.password_confirmation?.[0]}
             />
-            <button
-                onClick={() => void submit()}
-                className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
-            >
-                create account
-            </button>
-            <div className="flex shrink items-center justify-between rounded text-xs text-zinc-600">
-                <button
-                    onClick={onBack}
-                    className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300"
-                >
-                    back
-                </button>
-            </div>
-        </div>
+        </AuthForm>
     );
 }
