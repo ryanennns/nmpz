@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import type { RoundSummary } from '@/components/welcome/types';
 import { formatDistance } from '@/lib/format';
+import { EASE_STANDARD, ANIM_SLOW } from '@/lib/game-constants';
 
 export default function RoundSummaryPanel({
     summary,
@@ -12,6 +14,13 @@ export default function RoundSummaryPanel({
     opponentColor: string;
     opponentName: string;
 }) {
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setVisible(true), 600);
+        return () => clearTimeout(timer);
+    }, []);
+
     const rows: { label: string; me: string; opponent: string }[] = [
         {
             label: 'Distance',
@@ -36,7 +45,14 @@ export default function RoundSummaryPanel({
     ];
 
     return (
-        <div className="absolute bottom-20 left-1/2 z-20 -translate-x-1/2 rounded border border-white/10 bg-black/80 px-2 py-4 font-mono text-xs backdrop-blur-sm">
+        <div
+            className="absolute bottom-20 left-1/2 z-20 rounded border border-white/10 bg-black/80 px-2 py-4 font-mono text-xs backdrop-blur-sm"
+            style={{
+                opacity: visible ? 1 : 0,
+                transform: visible ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(16px)',
+                transition: `opacity ${ANIM_SLOW}ms ${EASE_STANDARD}, transform ${ANIM_SLOW}ms ${EASE_STANDARD}`,
+            }}
+        >
             <table className="w-full" style={{ borderSpacing: 0 }}>
                 <thead>
                     <tr className="text-white/40">

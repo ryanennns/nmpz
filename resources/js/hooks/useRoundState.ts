@@ -8,7 +8,7 @@ import type {
     RoundData,
     RoundResult,
 } from '@/components/welcome/types';
-import { MAX_HEALTH, ROUND_TIMEOUT_SECONDS } from '@/lib/game-constants';
+import { ANIM_NORMAL, MAX_HEALTH, ROUND_TIMEOUT_SECONDS } from '@/lib/game-constants';
 
 export function roundRemainingSeconds(startedAt: Date | null) {
     if (!startedAt || Number.isNaN(startedAt.getTime())) return null;
@@ -59,6 +59,8 @@ export function useRoundState(deps: {
         null,
     );
     const [opponentLiveGuess, setOpponentLiveGuess] = useState<{ lat: number; lng: number } | null>(null);
+    const [roundTransitionPhase, setRoundTransitionPhase] = useState<'none' | 'results-out'>('none');
+    const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const applyRoundData = useCallback((data: RoundData) => {
         const startedAt = data.started_at
@@ -90,7 +92,7 @@ export function useRoundState(deps: {
         setPin(null);
     }, [roundStartedAtRef, setUrgentCountdown, setHealth]);
 
-    // Apply buffered RoundStarted data once countdown expires
+    // Apply buffered RoundStarted data once countdown expires (with crossfade)
     useEffect(() => {
         if (pendingRoundData === null) return;
         if (countdown !== null && countdown > 0) return;
@@ -98,7 +100,15 @@ export function useRoundState(deps: {
         const data = pendingRoundData;
         setPendingRoundData(null);
         setCountdown(null);
-        applyRoundData(data);
+
+        // Fade out results, then apply new round
+        setRoundTransitionPhase('results-out');
+        if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = setTimeout(() => {
+            applyRoundData(data);
+            setRoundTransitionPhase('none');
+            transitionTimerRef.current = null;
+        }, ANIM_NORMAL);
     }, [countdown, pendingRoundData, setCountdown, applyRoundData]);
 
     const resetRoundState = useCallback(() => {
@@ -111,6 +121,11 @@ export function useRoundState(deps: {
         setRoundScores({ p1: null, p2: null });
         setRoundDistances({ p1: null, p2: null });
         setOpponentLiveGuess(null);
+        setRoundTransitionPhase('none');
+        if (transitionTimerRef.current) {
+            clearTimeout(transitionTimerRef.current);
+            transitionTimerRef.current = null;
+        }
     }, []);
 
     return {
@@ -134,6 +149,7 @@ export function useRoundState(deps: {
         setPendingRoundData,
         opponentLiveGuess,
         setOpponentLiveGuess,
+        roundTransitionPhase,
         roundStartedAtRef,
         applyRoundData,
         resetRoundState,

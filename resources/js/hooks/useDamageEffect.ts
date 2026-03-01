@@ -21,17 +21,6 @@ export function useDamageEffect(
         ) {
             setMyDamageKey((k) => k + 1);
             playSound?.('damage-taken');
-            const el = gameContainerRef.current;
-            if (el) {
-                el.classList.remove('screen-shake');
-                void el.offsetWidth;
-                el.classList.add('screen-shake');
-                el.addEventListener(
-                    'animationend',
-                    () => el.classList.remove('screen-shake'),
-                    { once: true },
-                );
-            }
         }
         prevMyHealthRef.current = myHealth;
     }, [myHealth, hasGame]);

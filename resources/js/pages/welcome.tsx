@@ -46,7 +46,7 @@ import { useKeyBindings } from '@/hooks/useKeyBindings';
 import { useMatchmakingChannel } from '@/hooks/useMatchmakingChannel';
 import { deriveGameState, useRoundState } from '@/hooks/useRoundState';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
-import { MAX_HEALTH, URGENT_COUNTDOWN_THRESHOLD } from '@/lib/game-constants';
+import { ANIM_NORMAL, ANIM_SLOW, EASE_STANDARD, MAX_HEALTH, URGENT_COUNTDOWN_THRESHOLD } from '@/lib/game-constants';
 import { cn } from '@/lib/utils';
 
 setOptions({
@@ -142,6 +142,7 @@ function WelcomePage({
         roundDistances, setRoundDistances,
         setPendingRoundData,
         opponentLiveGuess, setOpponentLiveGuess,
+        roundTransitionPhase,
         roundStartedAtRef,
         applyRoundData,
         resetRoundState,
@@ -469,8 +470,34 @@ function WelcomePage({
                                 className="damage-vignette pointer-events-none absolute inset-0 z-30"
                             />
                         )}
-                        {roundFinished && roundResult ? (
-                            <>
+                        {/* Panorama layer — always mounted when location exists */}
+                        {location && (
+                            <div
+                                className="absolute inset-0"
+                                style={{
+                                    opacity: roundFinished ? 0 : 1,
+                                    transition: `opacity ${ANIM_NORMAL}ms ${EASE_STANDARD}`,
+                                    zIndex: roundFinished ? 0 : 1,
+                                }}
+                            >
+                                <MapillaryImagePanel
+                                    key={`${location.lat},${location.lng}`}
+                                    location={location}
+                                    onHeadingChange={setHeading}
+                                />
+                            </div>
+                        )}
+
+                        {/* Results layer — fades in on round finish, fades out on transition */}
+                        {roundFinished && roundResult && (
+                            <div
+                                className="results-enter absolute inset-0"
+                                style={{
+                                    opacity: roundTransitionPhase === 'results-out' ? 0 : 1,
+                                    transition: `opacity ${ANIM_NORMAL}ms ${EASE_STANDARD}`,
+                                    zIndex: 2,
+                                }}
+                            >
                                 <ResultsMap
                                     key={`result-${round?.id ?? 'pending'}`}
                                     result={roundResult}
@@ -483,14 +510,11 @@ function WelcomePage({
                                         opponentName={playerConfig.opponent.name}
                                     />
                                 )}
-                            </>
-                        ) : location ? (
-                            <MapillaryImagePanel
-                                key={`${location.lat},${location.lng}`}
-                                location={location}
-                                onHeadingChange={setHeading}
-                            />
-                        ) : (
+                            </div>
+                        )}
+
+                        {/* Waiting state — no location yet */}
+                        {!location && !roundFinished && (
                             <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 text-sm text-neutral-500">
                                 <ShimmerText>
                                     Waiting for round to start
@@ -508,6 +532,12 @@ function WelcomePage({
                                                 me?.score !== null && (
                                                     <div
                                                         className={`${me?.color} mb-3 font-mono text-6xl font-bold tabular-nums`}
+                                                        style={{
+                                                            opacity: 1,
+                                                            transform: 'translateY(0)',
+                                                            transition: `all ${ANIM_SLOW}ms ${EASE_STANDARD} ${ANIM_NORMAL}ms`,
+                                                            animation: `tuiFadeIn ${ANIM_SLOW}ms ${EASE_STANDARD} ${ANIM_NORMAL}ms both`,
+                                                        }}
                                                     >
                                                         {me?.score?.toLocaleString()}
                                                     </div>
@@ -559,6 +589,11 @@ function WelcomePage({
                                             opponent?.score !== null && (
                                                 <div
                                                     className={`${opponent?.color} mb-3 font-mono text-6xl font-bold tabular-nums`}
+                                                    style={{
+                                                        opacity: 1,
+                                                        transform: 'translateY(0)',
+                                                        animation: `tuiFadeIn ${ANIM_SLOW}ms ${EASE_STANDARD} ${ANIM_NORMAL}ms both`,
+                                                    }}
                                                 >
                                                     {opponent?.score?.toLocaleString()}
                                                 </div>
@@ -685,7 +720,8 @@ function WelcomePage({
                         )}
 
                         <div
-                            className={`pointer-events-none absolute inset-0 z-40 bg-black transition-opacity duration-500 ${endSequence.blackoutVisible ? 'opacity-100' : 'opacity-0'}`}
+                            className={`pointer-events-none absolute inset-0 z-40 bg-black ${endSequence.blackoutVisible ? 'opacity-100' : 'opacity-0'}`}
+                            style={{ transition: `opacity 800ms ${EASE_STANDARD}` }}
                         />
                         <WinnerOverlay
                             visible={endSequence.winnerOverlayVisible}

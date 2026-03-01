@@ -138,26 +138,12 @@
         color: #ffffff;
         text-shadow:
             0 0 10px #fff,
-            0 0 24px #fff;
+            0 0 20px #fff;
     }
-    18% {
-        opacity: 1;
-        color: #f87171;
-        text-shadow:
-            0 0 8px #f87171,
-            0 0 18px rgba(248, 113, 113, 0.6);
-    }
-    38% {
-        opacity: 1;
-        color: #ffffff;
-        text-shadow:
-            0 0 14px #fff,
-            0 0 28px #fff;
-    }
-    62% {
+    40% {
         opacity: 0.9;
         color: #f87171;
-        text-shadow: 0 0 6px #f87171;
+        text-shadow: 0 0 8px #f87171;
     }
     100% {
         opacity: 0;
@@ -167,7 +153,7 @@
 }
 
 .health-flash {
-    animation: health-flash 950ms ease-in-out forwards;
+    animation: health-flash 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Floating damage number */
@@ -202,77 +188,27 @@
 /* Health bar / panel shake on hit */
 @keyframes panel-shake {
     0% {
-        transform: translateX(0) rotate(0deg);
+        transform: translateX(0);
     }
-    10% {
-        transform: translateX(-7px) rotate(-0.8deg);
+    15% {
+        transform: translateX(-3px);
     }
-    24% {
-        transform: translateX(7px) rotate(0.8deg);
+    30% {
+        transform: translateX(3px);
     }
-    36% {
-        transform: translateX(-5px) rotate(-0.5deg);
+    50% {
+        transform: translateX(-2px);
     }
-    48% {
-        transform: translateX(5px) rotate(0.5deg);
-    }
-    60% {
-        transform: translateX(-3px) rotate(-0.2deg);
-    }
-    72% {
-        transform: translateX(3px) rotate(0.2deg);
-    }
-    84% {
-        transform: translateX(-1px);
+    70% {
+        transform: translateX(1px);
     }
     100% {
-        transform: translateX(0) rotate(0deg);
+        transform: translateX(0);
     }
 }
 
 .panel-shake {
-    animation: panel-shake 500ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-}
-
-/* Full-screen shake when player takes damage */
-@keyframes screen-shake {
-    0% {
-        transform: translate(0, 0) rotate(0deg);
-    }
-    8% {
-        transform: translate(-9px, -5px) rotate(-0.5deg);
-    }
-    18% {
-        transform: translate(9px, 4px) rotate(0.5deg);
-    }
-    28% {
-        transform: translate(-7px, 3px) rotate(-0.35deg);
-    }
-    38% {
-        transform: translate(7px, -3px) rotate(0.35deg);
-    }
-    48% {
-        transform: translate(-4px, 2px) rotate(-0.15deg);
-    }
-    58% {
-        transform: translate(4px, -2px) rotate(0.15deg);
-    }
-    68% {
-        transform: translate(-2px, 1px);
-    }
-    78% {
-        transform: translate(2px, -1px);
-    }
-    88% {
-        transform: translate(-1px, 0);
-    }
-    100% {
-        transform: translate(0, 0) rotate(0deg);
-    }
-}
-
-.screen-shake {
-    animation: screen-shake 580ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    animation: panel-shake 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Red vignette flash when player takes damage */
@@ -280,8 +216,8 @@
     0% {
         opacity: 0;
     }
-    10% {
-        opacity: 1;
+    12% {
+        opacity: 0.85;
     }
     100% {
         opacity: 0;
@@ -289,10 +225,10 @@
 }
 
 .damage-vignette {
-    animation: damage-vignette 800ms ease-out forwards;
+    animation: damage-vignette 1200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
     background: radial-gradient(
         ellipse at center,
-        transparent 30%,
+        transparent 40%,
         rgba(210, 30, 30, 0.55) 75%,
         rgba(180, 10, 10, 0.75) 100%
     );
@@ -367,14 +303,16 @@
 @keyframes tuiFadeIn {
     0% {
         opacity: 0;
+        transform: translateY(4px);
     }
     100% {
         opacity: 1;
+        transform: translateY(0);
     }
 }
 
 .tui-fade-in {
-    animation: tuiFadeIn 500ms ease-out;
+    animation: tuiFadeIn 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tui-scroll::-webkit-scrollbar {
@@ -399,6 +337,36 @@
 .map-lock,
 .map-lock * {
     cursor: crosshair !important;
+}
+
+/* Results panel entrance */
+@keyframes results-enter {
+    0% {
+        opacity: 0;
+        transform: scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.results-enter {
+    animation: results-enter 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Countdown tick pop */
+@keyframes countdown-tick {
+    0% {
+        transform: scale(1.15);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.countdown-tick {
+    animation: countdown-tick 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @layer base {

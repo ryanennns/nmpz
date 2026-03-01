@@ -1,3 +1,10 @@
+// Animation timing vocabulary
+export const ANIM_FAST = 200;
+export const ANIM_NORMAL = 400;
+export const ANIM_SLOW = 800;
+export const ANIM_DRAMATIC = 1200;
+export const EASE_STANDARD = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
 export const MAX_HEALTH = 5000;
 export const ROUND_TIMEOUT_SECONDS = 60;
 export const URGENT_COUNTDOWN_THRESHOLD = 15;

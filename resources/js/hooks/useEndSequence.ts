@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
-const END_MAP_HOLD_MS = 3000;
-const END_FADE_MS = 500;
+const END_MAP_HOLD_MS = 4000;
+const END_FADE_MS = 800;
+const END_BEAT_MS = 600;
+const END_BUTTONS_DELAY_MS = 2000;
 
 export function useEndSequence() {
     const [blackoutVisible, setBlackoutVisible] = useState(false);
@@ -28,13 +30,18 @@ export function useEndSequence() {
             setBlackoutVisible(true);
 
             const t2 = window.setTimeout(() => {
-                setWinnerOverlayVisible(true);
+                // Beat in darkness before winner text
+                const t2b = window.setTimeout(() => {
+                    setWinnerOverlayVisible(true);
 
-                const t3 = window.setTimeout(() => {
-                    setPostGameButtonsVisible(true);
-                }, 1500);
+                    const t3 = window.setTimeout(() => {
+                        setPostGameButtonsVisible(true);
+                    }, END_BUTTONS_DELAY_MS);
 
-                endTimersRef.current.push(t3);
+                    endTimersRef.current.push(t3);
+                }, END_BEAT_MS);
+
+                endTimersRef.current.push(t2b);
             }, END_FADE_MS);
 
             endTimersRef.current.push(t2);
