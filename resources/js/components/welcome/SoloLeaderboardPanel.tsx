@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApiClient } from '@/hooks/useApiClient';
+import { tierBg } from '@/lib/tier';
 import type { SoloMode, SoloLeaderboardEntry, PersonalBest, SoloStats } from '@/types/solo';
 
 const MODE_TABS: { key: SoloMode; label: string; color: string }[] = [
@@ -8,13 +9,6 @@ const MODE_TABS: { key: SoloMode; label: string; color: string }[] = [
     { key: 'perfect_score', label: 'Perfect', color: 'text-yellow-400' },
     { key: 'explorer', label: 'Explorer', color: 'text-green-400' },
 ];
-
-function tierBg(tier: string | null): string {
-    if (tier === 'gold') return 'bg-yellow-400/20 text-yellow-400';
-    if (tier === 'silver') return 'bg-gray-300/20 text-gray-300';
-    if (tier === 'bronze') return 'bg-amber-700/20 text-amber-700';
-    return '';
-}
 
 function formatTime(seconds: number): string {
     const m = Math.floor(seconds / 60);

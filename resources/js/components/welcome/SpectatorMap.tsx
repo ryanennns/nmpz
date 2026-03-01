@@ -46,7 +46,7 @@ export default memo(function SpectatorMap({
             return () => observer.disconnect();
         }
 
-        init().catch(console.error);
+        init().catch(() => {});
         return () => {
             cancelled = true;
         };

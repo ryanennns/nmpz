@@ -2,16 +2,12 @@
 
 namespace App\Services;
 
+use App\CacheKeys;
 use Illuminate\Support\Facades\Cache;
 
 class QueueService
 {
-    private const CACHE_QUEUE = 'matchmaking_queue';
-    private const CACHE_TIMES = 'matchmaking_queue_times';
-    private const CACHE_MAP_PREFS = 'matchmaking_queue_maps';
-    private const CACHE_FORMAT_PREFS = 'matchmaking_queue_formats';
     private const CACHE_TTL_MINUTES = 5;
-    public const LOCK_KEY = 'matchmaking_queue_lock';
 
     public function add(string $playerId): void
     {
@@ -31,12 +27,12 @@ class QueueService
 
     public function getQueue(): array
     {
-        return Cache::get(self::CACHE_QUEUE, []);
+        return Cache::get(CacheKeys::MATCHMAKING_QUEUE, []);
     }
 
     public function setQueue(array $queue): void
     {
-        Cache::put(self::CACHE_QUEUE, $queue, now()->addMinutes(self::CACHE_TTL_MINUTES));
+        Cache::put(CacheKeys::MATCHMAKING_QUEUE, $queue, now()->addMinutes(self::CACHE_TTL_MINUTES));
     }
 
     public function recordJoinTime(string $playerId): void
@@ -50,12 +46,12 @@ class QueueService
 
     public function getJoinTimes(): array
     {
-        return Cache::get(self::CACHE_TIMES, []);
+        return Cache::get(CacheKeys::MATCHMAKING_QUEUE_TIMES, []);
     }
 
     public function setJoinTimes(array $joinTimes): void
     {
-        Cache::put(self::CACHE_TIMES, $joinTimes, now()->addMinutes(self::CACHE_TTL_MINUTES));
+        Cache::put(CacheKeys::MATCHMAKING_QUEUE_TIMES, $joinTimes, now()->addMinutes(self::CACHE_TTL_MINUTES));
     }
 
     public function recordMapPreference(string $playerId, ?string $mapId): void
@@ -71,12 +67,12 @@ class QueueService
 
     public function getMapPreferences(): array
     {
-        return Cache::get(self::CACHE_MAP_PREFS, []);
+        return Cache::get(CacheKeys::MATCHMAKING_QUEUE_MAPS, []);
     }
 
     public function setMapPreferences(array $prefs): void
     {
-        Cache::put(self::CACHE_MAP_PREFS, $prefs, now()->addMinutes(self::CACHE_TTL_MINUTES));
+        Cache::put(CacheKeys::MATCHMAKING_QUEUE_MAPS, $prefs, now()->addMinutes(self::CACHE_TTL_MINUTES));
     }
 
     public function recordFormatPreference(string $playerId, ?string $format): void
@@ -92,12 +88,12 @@ class QueueService
 
     public function getFormatPreferences(): array
     {
-        return Cache::get(self::CACHE_FORMAT_PREFS, []);
+        return Cache::get(CacheKeys::MATCHMAKING_QUEUE_FORMATS, []);
     }
 
     public function setFormatPreferences(array $prefs): void
     {
-        Cache::put(self::CACHE_FORMAT_PREFS, $prefs, now()->addMinutes(self::CACHE_TTL_MINUTES));
+        Cache::put(CacheKeys::MATCHMAKING_QUEUE_FORMATS, $prefs, now()->addMinutes(self::CACHE_TTL_MINUTES));
     }
 
     public function cleanupMatchedPlayers(array $matchedIds): void
@@ -121,7 +117,7 @@ class QueueService
 
     public function acquireLock(int $seconds = 10): mixed
     {
-        $lock = Cache::lock(self::LOCK_KEY, $seconds);
+        $lock = Cache::lock(CacheKeys::MATCHMAKING_QUEUE_LOCK, $seconds);
 
         return $lock->get() ? $lock : null;
     }

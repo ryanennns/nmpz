@@ -65,7 +65,7 @@ export default memo(function MapPicker({
             return () => observer.disconnect();
         }
 
-        init().catch(console.error);
+        init().catch(() => {});
         return () => {
             cancelled = true;
         };

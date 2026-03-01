@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\CacheKeys;
 use App\Models\Season;
 use App\Models\SeasonResult;
 use Illuminate\Http\JsonResponse;
@@ -31,7 +32,7 @@ class SeasonController extends Controller
     {
         $seasonId = $season->getKey();
 
-        $data = Cache::remember("season_leaderboard_{$seasonId}", 600, function () use ($season, $seasonId) {
+        $data = Cache::remember(CacheKeys::seasonLeaderboard($seasonId), 600, function () use ($season, $seasonId) {
             $results = SeasonResult::query()
                 ->where('season_id', $seasonId)
                 ->with('player.user')

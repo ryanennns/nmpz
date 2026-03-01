@@ -1,121 +1,41 @@
-import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { useEffect, useRef } from 'react';
 import type {
-    Game,
-    GameEvent,
     GameFinishedData,
     GameMessageData,
     GameReactionData,
-    Message,
     PlayerGuessedData,
     RematchAcceptedData,
     RematchDeclinedData,
     RematchRequestedData,
     OpponentGuessUpdateData,
-    RematchState,
-    Round,
     RoundData,
     RoundFinishedData,
-    RoundResult,
-} from '@/components/welcome/types';
+} from '@/types/game';
 import echo from '@/echo';
-import { roundRemainingSeconds } from '@/hooks/useRoundState';
-import type { SoundName } from '@/hooks/useSoundEffects';
 import {
-    HEALTH_DEDUCT_DELAY_MS,
-    MAX_EVENTS,
-    MAX_MESSAGES,
-    NEXT_ROUND_COUNTDOWN,
-    URGENT_COUNTDOWN_THRESHOLD,
-} from '@/lib/game-constants';
+    handlePlayerGuessed,
+    handleRoundFinished,
+    handleRoundStarted,
+    handleGameMessage,
+    handleGameFinished,
+    handleOpponentGuessUpdate,
+    handleRematchRequested,
+    handleRematchAccepted,
+    handleRematchDeclined,
+    handleGameReaction,
+} from '@/hooks/game-channel/handlers';
+import type { GameChannelDeps } from '@/hooks/game-channel/types';
 
-function pushEvent(
-    seqRef: MutableRefObject<number>,
-    setEvents: Dispatch<SetStateAction<GameEvent[]>>,
-    name: GameEvent['name'],
-    data: unknown,
-) {
-    setEvents((prev) => [
-        {
-            id: seqRef.current++,
-            name,
-            ts: new Date().toISOString().substring(11, 23),
-            data,
-        },
-        ...prev.slice(0, MAX_EVENTS - 1),
-    ]);
-}
-
-type GameChannelDeps = {
-    game: Game | null;
-    setGame: (game: Game) => void;
-    setRound: Dispatch<SetStateAction<Round | null>>;
-    setRoundFinished: Dispatch<SetStateAction<boolean>>;
-    setCountdown: Dispatch<SetStateAction<number | null>>;
-    setUrgentCountdown: Dispatch<SetStateAction<number | null>>;
-    setRoundScores: Dispatch<
-        SetStateAction<{ p1: number | null; p2: number | null }>
-    >;
-    setRoundDistances: Dispatch<
-        SetStateAction<{ p1: number | null; p2: number | null }>
-    >;
-    setHealth: Dispatch<SetStateAction<{ p1: number; p2: number }>>;
-    setRoundResult: Dispatch<SetStateAction<RoundResult | null>>;
-    setPendingRoundData: Dispatch<SetStateAction<RoundData | null>>;
-    setEvents: Dispatch<SetStateAction<GameEvent[]>>;
-    setMessages: Dispatch<SetStateAction<Message[]>>;
-    setGameOver: Dispatch<SetStateAction<boolean>>;
-    setWinnerId: (id: string | null) => void;
-    setWinnerName: (name: string | null) => void;
-    setRematchState: Dispatch<SetStateAction<RematchState>>;
-    setOpponentLiveGuess: Dispatch<SetStateAction<{ lat: number; lng: number } | null>>;
-    setRatingChange: Dispatch<SetStateAction<{ my: number | null; opponent: number | null }>>;
-    setWins: Dispatch<SetStateAction<{ p1: number; p2: number }>>;
-    setPostGameButtonsVisible: (v: boolean) => void;
-    setWinnerOverlayVisible: (v: boolean) => void;
-    setPageVisible: (v: boolean) => void;
-    setBlackoutVisible: (v: boolean) => void;
-    scheduleEndSequence: () => void;
-    clearEndSequenceTimers: () => void;
-    resetGameState: () => void;
-    roundStartedAtRef: MutableRefObject<Date | null>;
-    onReaction: (data: GameReactionData) => void;
-    playerId: string;
-    playSound: (name: SoundName) => void;
-};
+export type { GameChannelDeps };
 
 export function useGameChannel(deps: GameChannelDeps) {
     const {
-        game,
-        setGame,
-        setRound,
-        setRoundFinished,
-        setCountdown,
-        setUrgentCountdown,
-        setRoundScores,
-        setRoundDistances,
-        setHealth,
-        setRoundResult,
-        setPendingRoundData,
-        setEvents,
-        setMessages,
-        setGameOver,
-        setWinnerId,
-        setWinnerName,
-        setRematchState,
-        setOpponentLiveGuess,
-        setRatingChange,
-        setWins,
-        setPostGameButtonsVisible,
-        setWinnerOverlayVisible,
-        setPageVisible,
-        setBlackoutVisible,
-        scheduleEndSequence,
-        clearEndSequenceTimers,
-        onReaction,
-        resetGameState,
-        roundStartedAtRef,
-        playerId,
+        game, setGame, setRound, setRoundFinished, setCountdown, setUrgentCountdown,
+        setRoundScores, setRoundDistances, setHealth, setRoundResult, setPendingRoundData,
+        setEvents, setMessages, setGameOver, setWinnerId, setWinnerName, setRematchState,
+        setOpponentLiveGuess, setRatingChange, setWins, setPostGameButtonsVisible,
+        setWinnerOverlayVisible, setPageVisible, setBlackoutVisible, scheduleEndSequence,
+        clearEndSequenceTimers, onReaction, resetGameState, roundStartedAtRef, playerId,
         playSound,
     } = deps;
 
@@ -127,214 +47,35 @@ export function useGameChannel(deps: GameChannelDeps) {
         const channel = echo.channel(`game.${game.id}`);
         const playersChannel = echo.channel(`game.${game.id}.players`);
 
-        channel.listen(
-            '.PlayerGuessed',
-            (data: PlayerGuessedData) => {
-                pushEvent(eventSeqRef, setEvents,'PlayerGuessed', data);
-                setRound((prev) =>
-                    prev
-                        ? {
-                              ...prev,
-                              player_one_locked_in: data.player_one_locked_in,
-                              player_two_locked_in: data.player_two_locked_in,
-                          }
-                        : null,
-                );
-                if (data.player_id !== playerId) {
-                    playSound('opponent-locked');
-                }
-                if (data.player_one_locked_in !== data.player_two_locked_in) {
-                    const remaining = roundRemainingSeconds(
-                        roundStartedAtRef.current,
-                    );
-                    setUrgentCountdown(
-                        remaining === null ? URGENT_COUNTDOWN_THRESHOLD : Math.min(remaining, URGENT_COUNTDOWN_THRESHOLD),
-                    );
-                }
-            },
-        );
+        channel.listen('.PlayerGuessed', (data: PlayerGuessedData) =>
+            handlePlayerGuessed(data, eventSeqRef, setEvents, setRound, setUrgentCountdown, roundStartedAtRef, playerId, playSound));
 
-        channel.listen(
-            '.RoundFinished',
-            (data: RoundFinishedData) => {
-                pushEvent(eventSeqRef, setEvents,'RoundFinished', data);
-                playSound('round-end');
-                setRoundFinished(true);
-                setOpponentLiveGuess(null);
-                setUrgentCountdown(null);
-                setCountdown(NEXT_ROUND_COUNTDOWN);
-                const p1Score = data.player_one_score ?? 0;
-                const p2Score = data.player_two_score ?? 0;
-                setRoundScores({ p1: p1Score, p2: p2Score });
-                setRoundDistances({
-                    p1: data.player_one_distance_km ?? null,
-                    p2: data.player_two_distance_km ?? null,
-                });
-                const damage = Math.abs(p1Score - p2Score);
-                window.setTimeout(() => {
-                    setHealth((prev) => {
-                        if (p1Score < p2Score)
-                            return { p1: prev.p1 - damage, p2: prev.p2 };
-                        if (p2Score < p1Score)
-                            return { p1: prev.p1, p2: prev.p2 - damage };
-                        return prev;
-                    });
-                }, HEALTH_DEDUCT_DELAY_MS);
-                const locLat = Number(data.location_lat);
-                const locLng = Number(data.location_lng);
-                if (!Number.isFinite(locLat) || !Number.isFinite(locLng)) {
-                    setRoundResult(null);
-                    return;
-                }
-                setRoundResult({
-                    location: { lat: locLat, lng: locLng },
-                    p1Guess:
-                        data.player_one_guess_lat != null &&
-                        data.player_one_guess_lng != null
-                            ? {
-                                  lat: Number(data.player_one_guess_lat),
-                                  lng: Number(data.player_one_guess_lng),
-                              }
-                            : null,
-                    p2Guess:
-                        data.player_two_guess_lat != null &&
-                        data.player_two_guess_lng != null
-                            ? {
-                                  lat: Number(data.player_two_guess_lat),
-                                  lng: Number(data.player_two_guess_lng),
-                              }
-                            : null,
-                });
-            },
-        );
+        channel.listen('.RoundFinished', (data: RoundFinishedData) =>
+            handleRoundFinished(data, eventSeqRef, setEvents, setRoundFinished, setOpponentLiveGuess, setUrgentCountdown, setCountdown, setRoundScores, setRoundDistances, setHealth, setRoundResult, playSound));
 
-        // RoundStarted and OpponentGuessUpdate are on the players-only channel
-        // so spectators cannot see live locations or guess coordinates
-        playersChannel.listen(
-            '.RoundStarted',
-            (data: RoundData) => {
-                pushEvent(eventSeqRef, setEvents,'RoundStarted', data);
-                if (data.player_one_wins !== undefined && data.player_two_wins !== undefined) {
-                    setWins({ p1: data.player_one_wins, p2: data.player_two_wins });
-                }
-                setPendingRoundData(data);
-            },
-        );
+        playersChannel.listen('.RoundStarted', (data: RoundData) =>
+            handleRoundStarted(data, eventSeqRef, setEvents, setWins, setPendingRoundData));
 
-        channel.listen(
-            '.GameMessage',
-            (data: GameMessageData) => {
-                pushEvent(eventSeqRef, setEvents,'GameMessage', data);
-                setMessages((prev) =>
-                    [
-                        ...prev,
-                        {
-                            id: eventSeqRef.current++,
-                            name: data.player_name ?? 'Player',
-                            text: data.message ?? '',
-                            ts: new Date().toISOString().substring(11, 19),
-                        },
-                    ].slice(-MAX_MESSAGES),
-                );
-            },
-        );
+        channel.listen('.GameMessage', (data: GameMessageData) =>
+            handleGameMessage(data, eventSeqRef, setEvents, setMessages));
 
-        channel.listen(
-            '.GameFinished',
-            (data: GameFinishedData) => {
-                pushEvent(eventSeqRef, setEvents,'GameFinished', data);
-                setCountdown(null);
-                setUrgentCountdown(null);
-                roundStartedAtRef.current = null;
-                setHealth({
-                    p1: data.player_one_health,
-                    p2: data.player_two_health,
-                });
-                setGameOver(true);
+        channel.listen('.GameFinished', (data: GameFinishedData) =>
+            handleGameFinished(data, game, eventSeqRef, setEvents, setCountdown, setUrgentCountdown, roundStartedAtRef, setHealth, setGameOver, setRatingChange, setWinnerId, setWinnerName, playerId, playSound, scheduleEndSequence));
 
-                // Capture ELO rating changes
-                const isP1 = playerId === game.player_one.id;
-                setRatingChange({
-                    my: isP1 ? data.player_one_rating_change : data.player_two_rating_change,
-                    opponent: isP1 ? data.player_two_rating_change : data.player_one_rating_change,
-                });
+        playersChannel.listen('.OpponentGuessUpdate', (data: OpponentGuessUpdateData) =>
+            handleOpponentGuessUpdate(data, playerId, setOpponentLiveGuess));
 
-                const wId = data.winner_id;
-                setWinnerId(wId);
-                const name =
-                    wId === game.player_one.id
-                        ? game.player_one.user.name
-                        : wId === game.player_two.id
-                          ? game.player_two.user.name
-                          : null;
-                setWinnerName(name);
-                playSound(wId === playerId ? 'win-jingle' : 'lose-sound');
+        channel.listen('.RematchRequested', (data: RematchRequestedData) =>
+            handleRematchRequested(data, playerId, setRematchState));
 
-                scheduleEndSequence();
-            },
-        );
+        channel.listen('.RematchAccepted', (data: RematchAcceptedData) =>
+            handleRematchAccepted(data, clearEndSequenceTimers, setRematchState, setPostGameButtonsVisible, setWinnerOverlayVisible, setPageVisible, setBlackoutVisible, resetGameState, setGame, setHealth));
 
-        playersChannel.listen(
-            '.OpponentGuessUpdate',
-            (data: OpponentGuessUpdateData) => {
-                if (data.player_id !== playerId) {
-                    setOpponentLiveGuess({ lat: data.lat, lng: data.lng });
-                }
-            },
-        );
+        channel.listen('.RematchDeclined', (data: RematchDeclinedData) =>
+            handleRematchDeclined(data, playerId, setRematchState));
 
-        channel.listen(
-            '.RematchRequested',
-            (data: RematchRequestedData) => {
-                if (data.player_id !== playerId) {
-                    setRematchState('received');
-                }
-            },
-        );
-
-        channel.listen(
-            '.RematchAccepted',
-            (data: RematchAcceptedData) => {
-                clearEndSequenceTimers();
-                setRematchState('none');
-                // Skip the full dismiss animation — directly swap to new game
-                // to avoid tearing down the channel and missing RoundStarted
-                setPostGameButtonsVisible(false);
-                setWinnerOverlayVisible(false);
-                setPageVisible(false);
-                window.setTimeout(() => {
-                    resetGameState();
-                    setGame(data.new_game);
-                    setHealth({
-                        p1: data.new_game.player_one_health,
-                        p2: data.new_game.player_two_health,
-                    });
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            setPageVisible(true);
-                            setBlackoutVisible(false);
-                        });
-                    });
-                }, 500);
-            },
-        );
-
-        channel.listen(
-            '.RematchDeclined',
-            (data: RematchDeclinedData) => {
-                if (data.player_id !== playerId) {
-                    setRematchState('declined');
-                }
-            },
-        );
-
-        channel.listen(
-            '.GameReaction',
-            (data: GameReactionData) => {
-                pushEvent(eventSeqRef, setEvents, 'GameReaction', data);
-                onReaction(data);
-            },
-        );
+        channel.listen('.GameReaction', (data: GameReactionData) =>
+            handleGameReaction(data, eventSeqRef, setEvents, onReaction));
 
         return () => {
             clearEndSequenceTimers();
@@ -342,6 +83,4 @@ export function useGameChannel(deps: GameChannelDeps) {
             echo.leaveChannel(`game.${game.id}.players`);
         };
     }, [game?.id]);
-
 }
-

@@ -9,6 +9,7 @@ use App\Models\Map;
 use App\Models\Player;
 use App\Models\PlayerStats;
 use Carbon\Carbon;
+use App\CacheKeys;
 use Illuminate\Support\Facades\Cache;
 
 class DailyChallengeService
@@ -306,7 +307,7 @@ class DailyChallengeService
         $challenge = $this->getOrCreateForDate();
         $challengeId = $challenge->getKey();
 
-        return Cache::remember("daily_leaderboard_{$challengeId}", 300, function () use ($challenge, $challengeId) {
+        return Cache::remember(CacheKeys::dailyLeaderboard($challengeId), 300, function () use ($challenge, $challengeId) {
             $totalParticipants = DailyChallengeEntry::query()
                 ->where('daily_challenge_id', $challengeId)
                 ->whereNotNull('completed_at')

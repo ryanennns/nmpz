@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\CacheKeys;
 use App\Models\PlayerStats;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
@@ -10,7 +11,7 @@ class LeaderboardController extends Controller
 {
     public function __invoke(): JsonResponse
     {
-        $entries = Cache::remember('leaderboard_main', 300, function () {
+        $entries = Cache::remember(CacheKeys::LEADERBOARD_MAIN, 300, function () {
             return PlayerStats::query()
                 ->where('games_played', '>=', 3)
                 ->orderByDesc('games_won')

@@ -376,7 +376,7 @@ class SoloGameService
 
     public function getLeaderboard(string $mode, ?string $mapId = null): array
     {
-        $cacheKey = "solo_leaderboard_{$mode}_" . ($mapId ?? 'all');
+        $cacheKey = \App\CacheKeys::soloLeaderboard($mode, $mapId);
 
         return Cache::remember($cacheKey, 300, function () use ($mode, $mapId) {
             $query = SoloGame::query()

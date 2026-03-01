@@ -1,3 +1,5 @@
+import type { LatLng, Location } from './shared';
+
 export type DailyInfo = {
     challenge_id: string;
     challenge_date: string;
@@ -18,7 +20,7 @@ export type DailyRoundState = {
     total_rounds: number;
     current_score: number;
     round_timeout: number;
-    location: { lat: number; lng: number; heading: number } | null;
+    location: Location | null;
 };
 
 export type DailyGuessResult = {
@@ -27,8 +29,8 @@ export type DailyGuessResult = {
     rounds_completed: number;
     completed: boolean;
     timed_out: boolean;
-    location: { lat: number; lng: number };
-    next_location?: { lat: number; lng: number; heading: number } | null;
+    location: LatLng;
+    next_location?: Location | null;
     tier?: string;
     streak?: { current_streak: number; best_streak: number };
 };

@@ -1,32 +1,21 @@
-import { setOptions } from '@googlemaps/js-api-loader';
 import { Head } from '@inertiajs/react';
-import axios from 'axios';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import SpectatorSidebar from '@/components/game/SpectatorSidebar';
 import HealthBar from '@/components/welcome/HealthBar';
 import RankBadge from '@/components/welcome/RankBadge';
 import ResultsMap from '@/components/welcome/ResultsMap';
 import SeriesScore from '@/components/welcome/SeriesScore';
 import ShimmerText from '@/components/welcome/ShimmerText';
-import type {
-    Game,
-    GameDetailRound,
-    Message,
-    Rank,
-    RoundResult,
-} from '@/components/welcome/types';
+import type { Game, GameDetailRound, RoundResult } from '@/types/game';
+import type { Message } from '@/types/shared';
+import type { Rank } from '@/types/player';
 import echo from '@/echo';
+import { createClient } from '@/hooks/api/client';
 import { useSpectatorChannel } from '@/hooks/useSpectatorChannel';
+import { initGoogleMaps } from '@/lib/google-maps';
 import { MAX_HEALTH, MAX_MESSAGES } from '@/lib/game-constants';
 
-setOptions({
-    key: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
-    v: 'weekly',
-});
-
-function getCsrfToken() {
-    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-    return match ? decodeURIComponent(match[1]) : '';
-}
+initGoogleMaps();
 
 export default function Spectate({
     game,
@@ -71,6 +60,7 @@ export default function Spectate({
     const [completedRounds] = useState(initialCompletedRounds);
     const [chatText, setChatText] = useState('');
     const specMsgSeqRef = useRef(0);
+    const apiClient = useMemo(() => createClient(), []);
 
     useSpectatorChannel({
         gameId: game.id,
@@ -119,15 +109,9 @@ export default function Spectate({
         if (!chatText.trim()) return;
         const name = spectator_name || 'Spectator';
         try {
-            await axios.post(`/games/${game.id}/spectator-chat`, {
+            await apiClient.post(`/games/${game.id}/spectator-chat`, {
                 player_name: name,
                 message: chatText.trim(),
-            }, {
-                headers: {
-                    'X-XSRF-TOKEN': getCsrfToken(),
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                },
             });
             setChatText('');
         } catch {
@@ -261,85 +245,14 @@ export default function Spectate({
                     </div>
 
                     {/* Right sidebar: completed rounds + chat */}
-                    <div className="flex w-72 flex-col border-l border-white/10 bg-black/40">
-                        <div className="flex-1 overflow-y-auto p-3">
-                            <div className="mb-2 text-[10px] font-semibold uppercase text-white/30">Completed Rounds</div>
-                            {completedRounds.length === 0 ? (
-                                <div className="text-xs text-white/20">No rounds completed yet</div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {completedRounds.map((r) => (
-                                        <div key={r.round_number} className="rounded bg-white/5 px-2 py-1.5 text-[10px]">
-                                            <div className="mb-1 text-white/40">Round {r.round_number}</div>
-                                            <div className="flex justify-between">
-                                                <span className="text-blue-400">{r.player_one_score}</span>
-                                                <span className="text-white/20">-</span>
-                                                <span className="text-red-400">{r.player_two_score}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Player chat messages */}
-                        <div className="border-t border-white/10 p-3">
-                            <div className="mb-1 text-[10px] font-semibold uppercase text-white/30">Player Chat</div>
-                            <div className="max-h-24 overflow-y-auto">
-                                {messages.length === 0 ? (
-                                    <div className="text-[10px] text-white/20">No messages</div>
-                                ) : (
-                                    messages.map((m) => (
-                                        <div key={m.id} className="text-[10px] text-white/60">
-                                            <span className="text-white/40">{m.ts}</span>{' '}
-                                            <span className="text-white/80">{m.name}:</span>{' '}
-                                            {m.text}
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Spectator chat */}
-                        <div className="border-t border-white/10 p-3">
-                            <div className="mb-1 text-[10px] font-semibold uppercase text-white/30">Spectator Chat</div>
-                            <div className="mb-2 max-h-24 overflow-y-auto">
-                                {spectatorMessages.length === 0 ? (
-                                    <div className="text-[10px] text-white/20">No spectator messages</div>
-                                ) : (
-                                    spectatorMessages.map((m) => (
-                                        <div key={m.id} className="text-[10px] text-green-400/70">
-                                            <span className="text-green-400/40">{m.ts}</span>{' '}
-                                            <span className="text-green-400/80">{m.name}:</span>{' '}
-                                            {m.text}
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                            <form
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    void sendSpectatorMessage();
-                                }}
-                                className="flex gap-1"
-                            >
-                                <input
-                                    value={chatText}
-                                    onChange={(e) => setChatText(e.target.value)}
-                                    maxLength={200}
-                                    placeholder="Say something..."
-                                    className="flex-1 rounded bg-white/10 px-2 py-1 text-[10px] text-white placeholder:text-white/30"
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={!chatText.trim()}
-                                    className="rounded bg-green-500/20 px-2 py-1 text-[10px] text-green-400 transition hover:bg-green-500/30 disabled:opacity-30"
-                                >
-                                    Send
-                                </button>
-                            </form>
-                        </div>
-                    </div>
+                    <SpectatorSidebar
+                        completedRounds={completedRounds}
+                        messages={messages}
+                        spectatorMessages={spectatorMessages}
+                        chatText={chatText}
+                        setChatText={setChatText}
+                        onSendMessage={() => void sendSpectatorMessage()}
+                    />
                 </div>
             </div>
         </>

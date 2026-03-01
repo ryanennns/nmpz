@@ -17,3 +17,4 @@ export const STAT_VISIBLE_MS = 3000;
 export const STAT_HIDDEN_MS = 500;
 export const FADE_TRANSITION_MS = 300;
 export const STATS_POLL_MS = 5000;
+export const GUESS_THROTTLE_MS = 300;

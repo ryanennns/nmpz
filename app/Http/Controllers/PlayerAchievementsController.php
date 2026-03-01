@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\CacheKeys;
 use App\Models\Achievement;
 use App\Models\Player;
 use App\Models\PlayerAchievement;
@@ -12,7 +13,7 @@ class PlayerAchievementsController extends Controller
 {
     public function __invoke(Player $player): JsonResponse
     {
-        $allAchievements = Cache::remember('achievements_all', 86400, fn () => Achievement::all());
+        $allAchievements = Cache::remember(CacheKeys::ACHIEVEMENTS_ALL, 86400, fn () => Achievement::all());
         $earned = PlayerAchievement::query()
             ->where('player_id', $player->getKey())
             ->get()

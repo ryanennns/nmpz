@@ -1,3 +1,5 @@
+import type { LatLng, Location } from './shared';
+
 export type SoloMode = 'explorer' | 'streak' | 'time_attack' | 'perfect_score';
 export type StreakDifficulty = 'casual' | 'normal' | 'hardcore';
 
@@ -10,7 +12,7 @@ export type SoloGameState = {
     health: number | null;
     current_score: number;
     round_timeout: number | null;
-    location: { lat: number; lng: number; heading: number } | null;
+    location: Location | null;
 };
 
 export type SoloGuessResult = {
@@ -23,8 +25,8 @@ export type SoloGuessResult = {
     health: number | null;
     damage: number;
     game_over: boolean;
-    location: { lat: number; lng: number };
-    next_location?: { lat: number; lng: number; heading: number } | null;
+    location: LatLng;
+    next_location?: Location | null;
     tier?: string;
     personal_best?: { best_score: number; best_rounds: number; is_new: boolean } | null;
     elapsed_seconds: number;

@@ -65,7 +65,7 @@ class GuessService
         $myLocked = $isPlayerOne ? $round->player_one_locked_in : $round->player_two_locked_in;
 
         if ($opponentLocked && ! $myLocked) {
-            $cacheKey = "opponent_guess_throttle:{$round->getKey()}:{$player->getKey()}";
+            $cacheKey = \App\CacheKeys::opponentGuessThrottle($round->getKey(), $player->getKey());
             if (! Cache::has($cacheKey)) {
                 Cache::put($cacheKey, true, now()->addMilliseconds(500));
                 OpponentGuessUpdate::dispatch($game, $player->getKey(), (float) $validated['lat'], (float) $validated['lng']);

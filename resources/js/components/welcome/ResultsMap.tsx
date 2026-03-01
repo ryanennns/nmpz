@@ -104,7 +104,7 @@ export default memo(function ResultsMap({ result }: { result: RoundResult }) {
             map.fitBounds(bounds, 80);
         }
 
-        init().catch(console.error);
+        init().catch(() => {});
         return () => {
             cancelled = true;
         };

@@ -120,7 +120,7 @@ class AchievementService
 
     private function resolveAchievement(string $key): ?Achievement
     {
-        $achievements = Cache::remember('achievements_by_key', 86400, function () {
+        $achievements = Cache::remember(\App\CacheKeys::ACHIEVEMENTS_BY_KEY, 86400, function () {
             return Achievement::all()->keyBy('key');
         });
 
@@ -129,6 +129,6 @@ class AchievementService
 
     public static function clearCache(): void
     {
-        Cache::forget('achievements_by_key');
+        Cache::forget(\App\CacheKeys::ACHIEVEMENTS_BY_KEY);
     }
 }
