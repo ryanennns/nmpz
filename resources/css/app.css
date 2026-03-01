@@ -364,6 +364,36 @@
     }
 }
 
+@keyframes tuiFadeIn {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.tui-fade-in {
+    animation: tuiFadeIn 500ms ease-out;
+}
+
+.tui-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+
+.tui-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tui-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+.tui-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 .streetview-lock,
 .streetview-lock *,
 .map-lock,
