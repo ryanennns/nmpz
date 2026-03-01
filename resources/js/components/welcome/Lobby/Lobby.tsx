@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
 import { QueueReady } from '@/components/welcome/Lobby/QueueReady';
+import { WaitingRoom } from '@/components/welcome/Lobby/WaitingRoom';
 import NamePrompt from '@/components/welcome/NamePrompt';
 import type { Game, Player } from '@/components/welcome/types';
-import { WaitingRoom } from '@/components/welcome/WaitingRoom';
 import echo from '@/echo';
 import { useUnauthedApiClient } from '@/hooks/useApiClient';
 import { PLAYER_ID_KEY, useLocalStorage } from '@/hooks/useLocalStorage';
