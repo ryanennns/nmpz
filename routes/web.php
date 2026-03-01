@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\ClaimPlayer;
 use App\Http\Controllers\CreatePlayer;
 use App\Http\Controllers\GameSummaryController;
+use App\Http\Controllers\GetAuthPlayer;
 use App\Http\Controllers\GetGame;
 use App\Http\Controllers\GetPlayer;
 use App\Http\Controllers\HomePageController;
@@ -41,6 +43,9 @@ Route::post('players/{player}/games/{game}/send-message', SendMessage::class)
     ->name('games.send-message');
 Route::post('players/{player}/games/{game}/remember', RememberGameSession::class)
     ->name('games.remember');
+
+Route::middleware('auth')->get('/auth/player', GetAuthPlayer::class);
+Route::post('/players/{player}/claim', ClaimPlayer::class);
 
 Route::get('stats', function () {
     return response()->json([

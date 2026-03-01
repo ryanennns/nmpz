@@ -1,13 +1,17 @@
+import { usePage } from '@inertiajs/react';
 import { Settings } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
 import NamePrompt from '@/components/welcome/Lobby/NamePrompt';
 import { QueueReady } from '@/components/welcome/Lobby/QueueReady';
+import SignInForm from '@/components/welcome/Lobby/SignInForm';
+import SignUpForm from '@/components/welcome/Lobby/SignUpForm';
 import { WaitingRoom } from '@/components/welcome/Lobby/WaitingRoom';
 import type { Game, Player } from '@/components/welcome/types';
 import echo from '@/echo';
 import { useUnauthedApiClient } from '@/hooks/useApiClient';
 import { PLAYER_ID_KEY, useLocalStorage } from '@/hooks/useLocalStorage';
+import type { User } from '@/types/auth';
 import { LobbyHeader } from './LobbyHeader';
 
 const PHASE_TRANSITION_MS = 200;
@@ -16,6 +20,10 @@ export default function Lobby() {
     const api = useUnauthedApiClient();
     const localStorage = useLocalStorage();
 
+    const { auth } = usePage<{ auth: { user: User | null } }>().props;
+    const [user, setUser] = useState<User | null>(auth.user);
+    console.log({ user });
+
     const [helpOpen, setHelpOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [playerName, setPlayerName] = useState<string | undefined>(undefined);
@@ -23,7 +31,7 @@ export default function Lobby() {
 
     const [error, setError] = useState<string | undefined>(undefined);
     const [phase, setPhase] = useState<
-        'guest_signin' | 'queue_ready' | 'queued'
+        'guest_signin' | 'queue_ready' | 'queued' | 'sign_in' | 'sign_up'
     >('guest_signin');
 
     const [displayPhase, setDisplayPhase] = useState(phase);
@@ -31,26 +39,40 @@ export default function Lobby() {
 
     // on mount
     useEffect(() => {
-        const key = localStorage.get(PLAYER_ID_KEY);
-        if (key) {
-            api.getPlayer(key).then((data) => {
-                if (data.status !== 200) {
-                    setError('get fucked');
-
-                    return;
-                }
-
-                setPlayer(data.data);
-                setPlayerName(data.data.name);
-
-                const autoQueue = new URLSearchParams(window.location.search).has('auto_queue');
-                if (autoQueue) {
-                    setPhase('queued');
-                    void api.joinQueue(data.data.id);
-                } else {
+        if (auth.user) {
+            api.getAuthPlayer().then((res) => {
+                if (res.status === 200) {
+                    setPlayer(res.data);
+                    setPlayerName(res.data.name);
                     setPhase('queue_ready');
+                } else {
+                    console.error('Authenticated user has no player', res);
                 }
             });
+        } else {
+            const key = localStorage.get(PLAYER_ID_KEY);
+            if (key) {
+                api.getPlayer(key).then((data) => {
+                    if (data.status !== 200) {
+                        setError('get fucked');
+
+                        return;
+                    }
+
+                    setPlayer(data.data);
+                    setPlayerName(data.data.name);
+
+                    const autoQueue = new URLSearchParams(
+                        window.location.search,
+                    ).has('auto_queue');
+                    if (autoQueue) {
+                        setPhase('queued');
+                        void api.joinQueue(data.data.id);
+                    } else {
+                        setPhase('queue_ready');
+                    }
+                });
+            }
         }
 
         const fadeInFrame = window.requestAnimationFrame(() => {
@@ -138,6 +160,14 @@ export default function Lobby() {
         };
     }, [displayPhase, phase]);
 
+    const shouldDisplayHeader = useMemo(() => {
+        return (
+            displayPhase !== 'queued' &&
+            displayPhase !== 'sign_in' &&
+            displayPhase !== 'sign_up'
+        );
+    }, [displayPhase]);
+
     return (
         <div className="flex h-[100vh] items-center justify-center font-mono">
             <div className="flex w-72 max-w-sm flex-col items-center gap-4">
@@ -146,7 +176,7 @@ export default function Lobby() {
                         phaseVisible ? 'opacity-100' : 'opacity-0'
                     }`}
                 >
-                    {displayPhase !== 'queued' && (
+                    {shouldDisplayHeader && (
                         <>
                             <LobbyHeader onClick={() => setHelpOpen(true)} />
                             <button
@@ -162,7 +192,34 @@ export default function Lobby() {
                     {displayPhase === 'guest_signin' && (
                         <NamePrompt
                             onSubmit={submitPlayerName}
+                            onSignIn={() => setPhase('sign_in')}
                             error={!!error}
+                        />
+                    )}
+                    {displayPhase === 'sign_in' && (
+                        <SignInForm
+                            api={api}
+                            onBack={() => setPhase('guest_signin')}
+                            onSuccess={() => {
+                                api.getAuthPlayer().then((res) => {
+                                    setPlayer(res.data);
+                                    setPlayerName(res.data.name);
+                                    setPhase('queue_ready');
+                                });
+                            }}
+                        />
+                    )}
+                    {displayPhase === 'sign_up' && (
+                        <SignUpForm
+                            api={api}
+                            playerId={player!.id}
+                            onBack={() => setPhase('queue_ready')}
+                            onSuccess={(player, user) => {
+                                setPlayer(player);
+                                setPlayerName(player.name);
+                                setUser(user);
+                                setPhase('queue_ready');
+                            }}
                         />
                     )}
                     {displayPhase === 'queue_ready' && (
@@ -175,6 +232,8 @@ export default function Lobby() {
                             onEditName={(name) => {
                                 void updatePlayerName(name);
                             }}
+                            isAuthenticated={!!user}
+                            onSignUp={() => setPhase('sign_up')}
                         />
                     )}
                     {displayPhase === 'queued' && (

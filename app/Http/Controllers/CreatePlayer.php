@@ -12,7 +12,10 @@ class CreatePlayer extends Controller
     {
         $validated = $request->validate(['name' => 'required|string|max:32']);
 
-        $p = Player::query()->create(['name' => $validated['name']]);
+        $p = Player::query()->create([
+            'name' => $validated['name'],
+            'user_id' => $request->user()?->id,
+        ]);
 
         return response()->json($p->toArray(), 201);
     }

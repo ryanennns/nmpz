@@ -23,6 +23,9 @@ const mocks = vi.hoisted(() => {
             joinQueue: vi.fn(),
             leaveQueue: vi.fn(),
             getPlayer: vi.fn(),
+            getAuthPlayer: vi.fn(),
+            signIn: vi.fn(),
+            claimPlayer: vi.fn(),
         },
         stats: {
             fetchStats: vi.fn(),
@@ -37,6 +40,11 @@ const mocks = vi.hoisted(() => {
         },
         channelMock,
         listenHandlers,
+        page: {
+            props: {
+                auth: { user: null as { id: number; name: string } | null },
+            },
+        },
     };
 });
 
@@ -54,11 +62,16 @@ vi.mock('@/echo', () => ({
     default: mocks.echo,
 }));
 
+vi.mock('@inertiajs/react', () => ({
+    usePage: () => mocks.page,
+}));
+
 describe('Lobby', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.localStorage.get.mockReturnValue(null);
         mocks.echo.channel.mockReturnValue(mocks.channelMock);
+        mocks.page.props.auth.user = null;
         Object.keys(mocks.listenHandlers).forEach((key) => {
             delete mocks.listenHandlers[key];
         });
@@ -179,9 +192,89 @@ describe('Lobby', () => {
 
         render(<Lobby />);
 
-        expect(await screen.findByText('waiting for opponent')).toBeInTheDocument();
+        expect(
+            await screen.findByText('waiting for opponent'),
+        ).toBeInTheDocument();
         expect(mocks.api.joinQueue).toHaveBeenCalledWith('stored-player');
 
         vi.unstubAllGlobals();
+    });
+
+    it('loads player via getAuthPlayer when auth.user is present', async () => {
+        mocks.page.props.auth.user = { id: 1, name: 'alice' };
+        mocks.api.getAuthPlayer.mockResolvedValue({
+            status: 200,
+            data: { id: 'auth-player', name: 'alice' },
+        });
+
+        render(<Lobby />);
+
+        expect(await screen.findByText('Join queue')).toBeInTheDocument();
+        expect(mocks.api.getAuthPlayer).toHaveBeenCalledTimes(1);
+        expect(mocks.api.getPlayer).not.toHaveBeenCalled();
+        expect(screen.getByText('alice')).toBeInTheDocument();
+    });
+
+    it('transitions to sign_in phase when clicking "sign in" on NamePrompt', async () => {
+        render(<Lobby />);
+
+        const user = userEvent.setup();
+        await user.click(screen.getByText('sign in'));
+
+        expect(await screen.findByPlaceholderText('email')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('password')).toBeInTheDocument();
+    });
+
+    it('returns to guest_signin when clicking back on SignInForm', async () => {
+        render(<Lobby />);
+
+        const user = userEvent.setup();
+        await user.click(screen.getByText('sign in'));
+        await screen.findByPlaceholderText('email');
+
+        await user.click(screen.getByText('back'));
+
+        expect(
+            await screen.findByPlaceholderText('your name'),
+        ).toBeInTheDocument();
+    });
+
+    it('transitions to sign_up phase when clicking "create account" on QueueReady', async () => {
+        mocks.api.createPlayer.mockResolvedValue({
+            status: 201,
+            data: { id: 'player-4', name: 'bob' },
+        });
+
+        render(<Lobby />);
+        const user = userEvent.setup();
+        await user.type(screen.getByPlaceholderText('your name'), 'bob');
+        await user.click(screen.getByText('continue'));
+
+        await screen.findByText('Join queue');
+        await user.click(screen.getByText('create account'));
+
+        expect(
+            await screen.findByPlaceholderText('confirm password'),
+        ).toBeInTheDocument();
+    });
+
+    it('returns to queue_ready when clicking back on SignUpForm', async () => {
+        mocks.api.createPlayer.mockResolvedValue({
+            status: 201,
+            data: { id: 'player-5', name: 'bob' },
+        });
+
+        render(<Lobby />);
+        const user = userEvent.setup();
+        await user.type(screen.getByPlaceholderText('your name'), 'bob');
+        await user.click(screen.getByText('continue'));
+
+        await screen.findByText('Join queue');
+        await user.click(screen.getByText('create account'));
+
+        await screen.findByPlaceholderText('confirm password');
+        await user.click(screen.getByText('back'));
+
+        expect(await screen.findByText('Join queue')).toBeInTheDocument();
     });
 });
