@@ -3,14 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Enums\GameStatus;
+use App\Models\Game;
 use App\Models\Location;
 use App\Models\Player;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class GetGame extends Controller
 {
-    public function __invoke(Request $request, Game $game)
+    public function __invoke(Request $request, Game $game): Response
     {
         $validated = $request->validate(['player' => 'required|string|exists:players,id']);
         $player = Player::query()->find($validated['player']);
