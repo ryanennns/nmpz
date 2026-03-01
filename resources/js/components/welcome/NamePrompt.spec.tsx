@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import NamePrompt from './NamePrompt';
 
 describe('NamePrompt', () => {
-    afterEach(() => cleanup())
+    afterEach(() => cleanup());
 
     it('submits a trimmed name', async () => {
         const onSubmit = vi.fn();

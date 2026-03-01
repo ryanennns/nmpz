@@ -13,7 +13,6 @@ vi.mock('@/hooks/useApiClient', () => ({
 
 describe('WaitingRoom', () => {
     beforeEach(() => {
-        vi.useFakeTimers();
         fetchStats.mockResolvedValue({
             data: {
                 games_in_progress: 2,
@@ -43,7 +42,7 @@ describe('WaitingRoom', () => {
 
         expect(screen.getByText('ryan')).toBeInTheDocument();
 
-        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        const user = userEvent.setup();
         await user.click(screen.getByText('leave queue'));
 
         expect(onLeaveQueue).toHaveBeenCalledTimes(1);
@@ -51,6 +50,8 @@ describe('WaitingRoom', () => {
 
     it('polls stats when active', async () => {
         const onLeaveQueue = vi.fn();
+
+        vi.useFakeTimers();
 
         render(
             <WaitingRoom

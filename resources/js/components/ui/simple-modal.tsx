@@ -68,7 +68,6 @@ export default function SimpleModal({
                 <button
                     type="button"
                     onClick={onClose}
-                    aria-label="Close modal"
                     className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded border border-white/20 text-xs text-white/70 transition hover:border-white/40 hover:text-white"
                 >
                     <X />
