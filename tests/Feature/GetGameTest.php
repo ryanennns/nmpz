@@ -82,7 +82,7 @@ class GetGameTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_request_is_rejected_when_game_is_not_in_progress(): void
+    public function test_request_is_redirected_when_game_is_not_in_progress(): void
     {
         $player = Player::factory()->create();
         $game = Game::factory()->create([
@@ -91,6 +91,6 @@ class GetGameTest extends TestCase
         ]);
 
         $this->get("/games/{$game->getKey()}?player={$player->getKey()}")
-            ->assertStatus(422);
+            ->assertStatus(302);
     }
 }

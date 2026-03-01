@@ -12,10 +12,14 @@ use Inertia\Response;
 
 class GetGame extends Controller
 {
-    public function __invoke(Request $request, Game $game): Response
+    public function __invoke(Request $request, Game $game)
     {
         $validated = $request->validate(['player' => 'required|string|exists:players,id']);
         $player = Player::query()->find($validated['player']);
+
+        if ($game->status !== GameStatus::InProgress) {
+            return redirect("/games/$game->id/summary");
+        }
 
         if (
             $game->status !== GameStatus::InProgress
