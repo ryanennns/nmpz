@@ -97,9 +97,12 @@ export function PlayerStats({ playerId }: { playerId: string }) {
                         recent matches
                     </div>
                     {stats.recent_matches.map((match) => (
-                        <div
+                        <a
                             key={match.game_id}
-                            className="flex items-center justify-between text-xs text-white/40"
+                            href={`/games/${match.game_id}/summary`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex cursor-pointer items-center justify-between text-xs text-white/40 transition-colors hover:text-white/70"
                         >
                             <div className="flex items-center gap-2">
                                 <span
@@ -112,7 +115,7 @@ export function PlayerStats({ playerId }: { playerId: string }) {
                             <span className="text-[10px] text-white/20">
                                 {formatRelativeTime(match.played_at)}
                             </span>
-                        </div>
+                        </a>
                     ))}
                 </div>
             )}
