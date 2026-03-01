@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CreatePlayer;
+use App\Http\Controllers\GameSummaryController;
 use App\Http\Controllers\GetGame;
 use App\Http\Controllers\GetPlayer;
 use App\Http\Controllers\HomePageController;
@@ -18,7 +19,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomePageController::class);
 
-Route::get('game/{game}', GetGame::class);
+Route::prefix('games')->group(function () {
+    Route::get('/{game}', GetGame::class);
+    Route::get('/{game}/summary', GameSummaryController::class);
+});
 
 Route::prefix('players')->name('players')->group(function () {
     Route::post('/', CreatePlayer::class)->name('.create');
