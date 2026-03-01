@@ -7,6 +7,7 @@ import { GameProvider, useGameContext } from '@/components/welcome/GameContext';
 import HealthBar from '@/components/welcome/HealthBar';
 import MapillaryImagePanel from '@/components/welcome/MapillaryImagePanel';
 import MapPicker from '@/components/welcome/MapPicker';
+import { PostGameButtons } from '@/components/welcome/PostGameButtons';
 import ResultsMap from '@/components/welcome/ResultsMap';
 import ShimmerText from '@/components/welcome/ShimmerText';
 import { StandardCompass } from '@/components/welcome/StandardCompass';
@@ -188,6 +189,7 @@ function WelcomePage({
     const [winnerOverlayVisible, setWinnerOverlayVisible] = useState(false);
     const [blackoutVisible, setBlackoutVisible] = useState(false);
     const [pageVisible, setPageVisible] = useState(true);
+    const [showPostGame, setShowPostGame] = useState(false);
     const guessRef = useRef<() => void>(() => {});
     const roundStartedAtRef = useRef<Date | null>(
         roundStartedAtFromData(roundData),
@@ -368,8 +370,25 @@ function WelcomePage({
         setWinnerName(winnerName);
 
         scheduleEndSequence(() => {
-            window.location.assign(game ? `/games/${game.id}/summary` : '/');
+            setShowPostGame(true);
         });
+    }
+
+    function fadeToBlackThen(url: string) {
+        setBlackoutVisible(true);
+        window.setTimeout(() => window.location.assign(url), END_FADE_MS);
+    }
+
+    function handleHome() {
+        fadeToBlackThen('/');
+    }
+
+    function handleRequeue() {
+        fadeToBlackThen('/?auto_queue=1');
+    }
+
+    function handleSummary() {
+        if (game) fadeToBlackThen(`/games/${game.id}/summary`);
     }
 
     // Countdown tick (next round)
@@ -913,6 +932,13 @@ function WelcomePage({
                             </div>
                         </div>
                     )}
+
+                    <PostGameButtons
+                        visible={showPostGame}
+                        onHome={handleHome}
+                        onRequeue={handleRequeue}
+                        onSummary={handleSummary}
+                    />
 
                     {/* Fade to black overlay */}
                     <div

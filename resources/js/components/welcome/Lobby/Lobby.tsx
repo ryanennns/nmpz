@@ -41,8 +41,15 @@ export default function Lobby() {
                 }
 
                 setPlayer(data.data);
-                setPhase('queue_ready');
                 setPlayerName(data.data.name);
+
+                const autoQueue = new URLSearchParams(window.location.search).has('auto_queue');
+                if (autoQueue) {
+                    setPhase('queued');
+                    void api.joinQueue(data.data.id);
+                } else {
+                    setPhase('queue_ready');
+                }
             });
         }
 
