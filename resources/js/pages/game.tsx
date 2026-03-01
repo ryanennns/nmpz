@@ -128,7 +128,7 @@ function CountdownTimer({
     );
 }
 
-export default function Welcome({
+export default function GamePage({
     player,
     game,
     round_data: roundData,
@@ -139,18 +139,12 @@ export default function Welcome({
 }) {
     return (
         <GameProvider game={game}>
-            <WelcomePage player={player} roundData={roundData} />
+            <Game player={player} roundData={roundData} />
         </GameProvider>
     );
 }
 
-function WelcomePage({
-    player,
-    roundData,
-}: {
-    player: Player;
-    roundData: RoundData;
-}) {
+function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
     const { game, setGame } = useGameContext();
     const [round, setRound] = useState<Round | null>(() =>
         roundFromData(roundData),

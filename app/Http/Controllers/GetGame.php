@@ -63,7 +63,7 @@ class GetGame extends Controller
             'player_two_locked_in' => $round->player_two_locked_in,
         ];
 
-        return Inertia::render('welcome', [
+        return Inertia::render('game', [
             'player' => $player,
             'game' => $gameArray,
             'round_data' => $roundData,
