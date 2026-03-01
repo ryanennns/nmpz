@@ -33,12 +33,10 @@ class PlayerProfileController extends Controller
             ->where('games.status', GameStatus::Completed->value)
             ->where(fn ($q) => $q->where('player_one_id', $playerId)->orWhere('player_two_id', $playerId))
             ->groupBy('games.map_id', 'maps.display_name', 'maps.name')
-            ->select([
-                'games.map_id',
-                DB::raw('COALESCE(maps.display_name, maps.name, \'Unknown\') as map_name'),
-                DB::raw('COUNT(*) as total_games'),
-                DB::raw("SUM(CASE WHEN games.winner_id = '{$playerId}' THEN 1 ELSE 0 END) as wins"),
-            ])
+            ->selectRaw(
+                'games.map_id, COALESCE(maps.display_name, maps.name, ?) as map_name, COUNT(*) as total_games, SUM(CASE WHEN games.winner_id = ? THEN 1 ELSE 0 END) as wins',
+                ['Unknown', $playerId],
+            )
             ->get()
             ->map(fn ($row) => [
                 'map_name' => $row->map_name,

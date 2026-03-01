@@ -145,6 +145,7 @@ class GameCompletionService
         // Check if max rounds reached
         $roundsPlayed = $game->rounds()->count();
         if ($game->max_rounds && $roundsPlayed >= $game->max_rounds) {
+            $game->loadMissing('rounds');
             $p1Score = $game->playerOneScore();
             $p2Score = $game->playerTwoScore();
 

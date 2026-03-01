@@ -17,7 +17,7 @@ class GameHistoryController extends Controller
             ->where('status', GameStatus::Completed)
             ->where(fn ($q) => $q->where('player_one_id', $player->getKey())
                 ->orWhere('player_two_id', $player->getKey()))
-            ->with(['playerOne.user', 'playerTwo.user', 'map'])
+            ->with(['playerOne.user', 'playerTwo.user', 'map', 'rounds'])
             ->orderByDesc('updated_at')
             ->paginate(20);
 
