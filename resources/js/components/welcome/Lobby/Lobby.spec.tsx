@@ -72,9 +72,7 @@ describe('Lobby', () => {
         render(<Lobby />);
 
         expect(screen.getByText('continue')).toBeInTheDocument();
-        expect(
-            screen.getByText('sign in'),
-        ).toBeInTheDocument();
+        expect(screen.getByText('sign in')).toBeInTheDocument();
         expect(screen.queryByTestId('modal')).not.toBeInTheDocument();
 
         const user = userEvent.setup();
