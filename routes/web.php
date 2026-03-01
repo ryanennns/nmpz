@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\GameStatus;
+use App\Http\Controllers\CreatePlayer;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\GetPlayer;
 use App\Http\Controllers\HomePageController;
@@ -22,17 +23,7 @@ use Inertia\Inertia;
 Route::get('/', HomePageController::class);
 Route::get('/game', GameController::class)->name('home');
 
-Route::post('players', function (Illuminate\Http\Request $request) {
-    $validated = $request->validate([
-        'name' => 'required|string|max:32',
-    ]);
-
-    $p = Player::query()->create([
-        'name' => $validated['name'],
-    ]);
-
-    return response()->json($p->toArray(), 201);
-});
+Route::post('players', CreatePlayer::class)->name('players');
 Route::get('players/{player}', GetPlayer::class);
 
 Route::get('game/{game}', function (Illuminate\Http\Request $request, Game $game) {
