@@ -24,6 +24,7 @@ class GameSummaryController extends Controller
             'location' => $round->location ? [
                 'lat' => $round->location->lat,
                 'lng' => $round->location->lng,
+                'image_id' => $round->location->image_id,
             ] : null,
             'player_one_guess' => ($round->player_one_guess_lat !== null && $round->player_one_guess_lng !== null) ? [
                 'lat' => $round->player_one_guess_lat,

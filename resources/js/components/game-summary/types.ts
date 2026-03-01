@@ -8,7 +8,7 @@ export type SummaryRound = {
     round_number: number;
     player_one_score: number | null;
     player_two_score: number | null;
-    location: { lat: number; lng: number } | null;
+    location: { lat: number; lng: number; image_id?: string | null } | null;
     player_one_guess: { lat: number; lng: number } | null;
     player_two_guess: { lat: number; lng: number } | null;
 };
