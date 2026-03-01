@@ -87,6 +87,7 @@ class MatchmakeQueue
             'game_id' => $game->getKey(),
             'round_number' => 1,
             'location_id' => $location->getKey(),
+            'started_at' => now(),
         ]);
 
         GameReady::dispatch($game, $playerOne);
