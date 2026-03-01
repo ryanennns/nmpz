@@ -9,6 +9,7 @@ use App\Events\RoundStarted;
 use App\Jobs\ForceEndRound;
 use App\Models\Game;
 use App\Models\Location;
+use App\Models\Player;
 use App\Models\Round;
 
 class StartNextRound
@@ -16,17 +17,21 @@ class StartNextRound
     public function handle(RoundFinished $event): void
     {
         $finished = $event->round;
-        $game = Game::find($finished->game_id);
+        $game = Game::query()->find($finished->game_id);
 
         $this->deductHealth($game, $finished);
 
         if ($game->player_one_health <= 0 || $game->player_two_health <= 0) {
+            $winnerId = $game->player_one_health >= $game->player_two_health
+                ? $game->player_one_id
+                : $game->player_two_id;
+
             $game->update([
                 'status' => GameStatus::Completed,
-                'winner_id' => $game->player_one_health >= $game->player_two_health
-                    ? $game->player_one_id
-                    : $game->player_two_id,
+                'winner_id' => $winnerId,
             ]);
+
+            $this->updateElo($game->playerOne, $game->playerTwo, $winnerId);
 
             GameFinished::dispatch($game);
 
@@ -51,6 +56,8 @@ class StartNextRound
                 'status' => GameStatus::Completed,
                 'winner_id' => null,
             ]);
+
+            $this->updateElo($game->playerOne, $game->playerTwo, null);
 
             GameFinished::dispatch($game);
 
@@ -88,6 +95,33 @@ class StartNextRound
         }
 
         $game->save();
+    }
+
+    private function updateElo(Player $playerOne, Player $playerTwo, ?string $winnerId): void
+    {
+        $k = 32;
+
+        $expectedOne = 1 / (1 + 10 ** (($playerTwo->elo_rating - $playerOne->elo_rating) / 400));
+        $expectedTwo = 1 - $expectedOne;
+
+        if ($winnerId === null) {
+            $scoreOne = 0.5;
+            $scoreTwo = 0.5;
+        } elseif ($winnerId === $playerOne->getKey()) {
+            $scoreOne = 1;
+            $scoreTwo = 0;
+        } else {
+            $scoreOne = 0;
+            $scoreTwo = 1;
+        }
+
+        $playerOne->update([
+            'elo_rating' => (int) round($playerOne->elo_rating + $k * ($scoreOne - $expectedOne)),
+        ]);
+
+        $playerTwo->update([
+            'elo_rating' => (int) round($playerTwo->elo_rating + $k * ($scoreTwo - $expectedTwo)),
+        ]);
     }
 
     private function pickLocation(Game $game, int $roundNumber): Location

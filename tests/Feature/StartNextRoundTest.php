@@ -301,4 +301,123 @@ class StartNextRoundTest extends TestCase
         Event::assertDispatched(GameFinished::class);
         $this->assertSame(-3000, $game->fresh()->player_two_health); // 1000 - 4000
     }
+
+    // --- ELO updates ---
+
+    public function test_winner_elo_increases_and_loser_elo_decreases(): void
+    {
+        Event::fake();
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+        ]);
+
+        $game->playerOne->update(['elo_rating' => 1000]);
+        $game->playerTwo->update(['elo_rating' => 1000]);
+
+        $this->handle($this->roundFor($game, 5000, 0));
+
+        // Equal ratings: expected = 0.5, K=32, winner gets +16, loser gets -16
+        $this->assertSame(1016, $game->playerOne->fresh()->elo_rating);
+        $this->assertSame(984, $game->playerTwo->fresh()->elo_rating);
+    }
+
+    public function test_elo_change_is_smaller_when_higher_rated_player_wins(): void
+    {
+        Event::fake();
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+        ]);
+
+        $game->playerOne->update(['elo_rating' => 1400]);
+        $game->playerTwo->update(['elo_rating' => 1000]);
+
+        $this->handle($this->roundFor($game, 5000, 0));
+
+        $p1Elo = $game->playerOne->fresh()->elo_rating;
+        $p2Elo = $game->playerTwo->fresh()->elo_rating;
+
+        // Higher rated player winning should gain less than 16
+        $this->assertLessThan(16, $p1Elo - 1400);
+        $this->assertGreaterThan(0, $p1Elo - 1400);
+        // Lower rated player losing should lose less than 16
+        $this->assertGreaterThan(-16, $p2Elo - 1000);
+        $this->assertLessThan(0, $p2Elo - 1000);
+    }
+
+    public function test_elo_change_is_larger_when_lower_rated_player_wins(): void
+    {
+        Event::fake();
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+        ]);
+
+        $game->playerOne->update(['elo_rating' => 1000]);
+        $game->playerTwo->update(['elo_rating' => 1400]);
+
+        $this->handle($this->roundFor($game, 5000, 0));
+
+        $p1Elo = $game->playerOne->fresh()->elo_rating;
+        $p2Elo = $game->playerTwo->fresh()->elo_rating;
+
+        // Lower rated player winning should gain more than 16
+        $this->assertGreaterThan(16, $p1Elo - 1000);
+        // Higher rated player losing should lose more than 16
+        $this->assertLessThan(-16, $p2Elo - 1400);
+    }
+
+    public function test_draw_adjusts_elo_toward_opponent(): void
+    {
+        Event::fake();
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+            'no_guess_rounds' => 2,
+        ]);
+
+        $game->playerOne->update(['elo_rating' => 1200]);
+        $game->playerTwo->update(['elo_rating' => 1000]);
+
+        $round = Round::factory()->for($game)->create([
+            'round_number' => 1,
+            'player_one_guess_lat' => null,
+            'player_one_guess_lng' => null,
+            'player_two_guess_lat' => null,
+            'player_two_guess_lng' => null,
+        ]);
+
+        $this->handle($round);
+
+        $p1Elo = $game->playerOne->fresh()->elo_rating;
+        $p2Elo = $game->playerTwo->fresh()->elo_rating;
+
+        // Higher-rated player should lose elo in a draw
+        $this->assertLessThan(1200, $p1Elo);
+        // Lower-rated player should gain elo in a draw
+        $this->assertGreaterThan(1000, $p2Elo);
+    }
+
+    public function test_elo_is_unchanged_when_game_continues(): void
+    {
+        Event::fake();
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+        ]);
+
+        $game->playerOne->update(['elo_rating' => 1000]);
+        $game->playerTwo->update(['elo_rating' => 1000]);
+
+        $this->handle($this->roundFor($game, 3000, 2000));
+
+        $this->assertSame(1000, $game->playerOne->fresh()->elo_rating);
+        $this->assertSame(1000, $game->playerTwo->fresh()->elo_rating);
+    }
 }
