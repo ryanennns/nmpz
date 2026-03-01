@@ -5,9 +5,11 @@ import { useApiClient } from '@/hooks/useApiClient';
 export default function GameHistoryPanel({
     playerId,
     onViewDetail,
+    onViewReplay,
 }: {
     playerId: string;
     onViewDetail: (gameId: string) => void;
+    onViewReplay?: (gameId: string) => void;
 }) {
     const api = useApiClient(playerId);
     const [entries, setEntries] = useState<GameHistoryEntry[]>([]);
@@ -42,19 +44,21 @@ export default function GameHistoryPanel({
             ) : (
                 <div className="max-h-64 space-y-1 overflow-y-auto">
                     {entries.map((e) => (
-                        <button
+                        <div
                             key={e.game_id}
-                            type="button"
-                            onClick={() => onViewDetail(e.game_id)}
                             className="flex w-full items-center justify-between rounded px-2 py-1 text-xs transition hover:bg-white/5"
                         >
-                            <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => onViewDetail(e.game_id)}
+                                className="flex flex-1 items-center gap-2 text-left"
+                            >
                                 <span className={`font-bold uppercase ${resultColor(e.result)}`}>
                                     {e.result === 'win' ? 'W' : e.result === 'loss' ? 'L' : 'D'}
                                 </span>
                                 <span className="text-white/80">vs {e.opponent_name}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
+                            </button>
+                            <div className="flex items-center gap-2">
                                 <span className="text-white/50">
                                     {e.my_score.toLocaleString()} - {e.opponent_score.toLocaleString()}
                                 </span>
@@ -63,8 +67,18 @@ export default function GameHistoryPanel({
                                         {e.rating_change > 0 ? '+' : ''}{e.rating_change}
                                     </span>
                                 )}
+                                {onViewReplay && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onViewReplay(e.game_id)}
+                                        className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/50 transition hover:bg-white/20 hover:text-white"
+                                        title="View Replay"
+                                    >
+                                        Replay
+                                    </button>
+                                )}
                             </div>
-                        </button>
+                        </div>
                     ))}
                 </div>
             )}

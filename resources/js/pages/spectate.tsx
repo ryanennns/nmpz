@@ -1,6 +1,7 @@
 import { setOptions } from '@googlemaps/js-api-loader';
 import { Head } from '@inertiajs/react';
-import { useState } from 'react';
+import axios from 'axios';
+import { useEffect, useRef, useState } from 'react';
 import HealthBar from '@/components/welcome/HealthBar';
 import RankBadge from '@/components/welcome/RankBadge';
 import ResultsMap from '@/components/welcome/ResultsMap';
@@ -13,22 +14,30 @@ import type {
     Rank,
     RoundResult,
 } from '@/components/welcome/types';
+import echo from '@/echo';
 import { useSpectatorChannel } from '@/hooks/useSpectatorChannel';
-import { MAX_HEALTH } from '@/lib/game-constants';
+import { MAX_HEALTH, MAX_MESSAGES } from '@/lib/game-constants';
 
 setOptions({
     key: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
     v: 'weekly',
 });
 
+function getCsrfToken() {
+    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
 export default function Spectate({
     game,
     completed_rounds: initialCompletedRounds,
     current_round_number: initialRoundNumber,
+    spectator_name,
 }: {
     game: Game;
     completed_rounds: GameDetailRound[];
     current_round_number: number | null;
+    spectator_name?: string;
 }) {
     const [health, setHealth] = useState({
         p1: game.player_one_health,
@@ -49,6 +58,7 @@ export default function Spectate({
         initialRoundNumber,
     );
     const [messages, setMessages] = useState<Message[]>([]);
+    const [spectatorMessages, setSpectatorMessages] = useState<Message[]>([]);
     const [gameOver, setGameOver] = useState(false);
     const [winnerId, setWinnerId] = useState<string | null>(null);
     const [winnerName, setWinnerName] = useState<string | null>(null);
@@ -59,6 +69,8 @@ export default function Spectate({
         p2: game.player_two_wins ?? 0,
     });
     const [completedRounds] = useState(initialCompletedRounds);
+    const [chatText, setChatText] = useState('');
+    const specMsgSeqRef = useRef(0);
 
     useSpectatorChannel({
         gameId: game.id,
@@ -81,6 +93,47 @@ export default function Spectate({
         setPlayerTwoLocked,
         setWins,
     });
+
+    // Listen for spectator chat on the spectators channel
+    useEffect(() => {
+        const specChannel = echo.channel(`game.${game.id}.spectators`);
+        specChannel.listen('.SpectatorChatMessage', (data: { player_name: string; message: string }) => {
+            setSpectatorMessages((prev) =>
+                [
+                    ...prev,
+                    {
+                        id: specMsgSeqRef.current++,
+                        name: data.player_name,
+                        text: data.message,
+                        ts: new Date().toISOString().substring(11, 19),
+                    },
+                ].slice(-MAX_MESSAGES),
+            );
+        });
+        return () => {
+            echo.leaveChannel(`game.${game.id}.spectators`);
+        };
+    }, [game.id]);
+
+    async function sendSpectatorMessage() {
+        if (!chatText.trim()) return;
+        const name = spectator_name || 'Spectator';
+        try {
+            await axios.post(`/games/${game.id}/spectator-chat`, {
+                player_name: name,
+                message: chatText.trim(),
+            }, {
+                headers: {
+                    'X-XSRF-TOKEN': getCsrfToken(),
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
+            });
+            setChatText('');
+        } catch {
+            // silently fail
+        }
+    }
 
     const isBo = game.match_format && game.match_format !== 'classic';
     const p1Rank = game.player_one.rank as Rank | undefined;
@@ -229,10 +282,10 @@ export default function Spectate({
                             )}
                         </div>
 
-                        {/* Chat messages */}
+                        {/* Player chat messages */}
                         <div className="border-t border-white/10 p-3">
-                            <div className="mb-1 text-[10px] font-semibold uppercase text-white/30">Chat</div>
-                            <div className="max-h-32 overflow-y-auto">
+                            <div className="mb-1 text-[10px] font-semibold uppercase text-white/30">Player Chat</div>
+                            <div className="max-h-24 overflow-y-auto">
                                 {messages.length === 0 ? (
                                     <div className="text-[10px] text-white/20">No messages</div>
                                 ) : (
@@ -245,6 +298,46 @@ export default function Spectate({
                                     ))
                                 )}
                             </div>
+                        </div>
+
+                        {/* Spectator chat */}
+                        <div className="border-t border-white/10 p-3">
+                            <div className="mb-1 text-[10px] font-semibold uppercase text-white/30">Spectator Chat</div>
+                            <div className="mb-2 max-h-24 overflow-y-auto">
+                                {spectatorMessages.length === 0 ? (
+                                    <div className="text-[10px] text-white/20">No spectator messages</div>
+                                ) : (
+                                    spectatorMessages.map((m) => (
+                                        <div key={m.id} className="text-[10px] text-green-400/70">
+                                            <span className="text-green-400/40">{m.ts}</span>{' '}
+                                            <span className="text-green-400/80">{m.name}:</span>{' '}
+                                            {m.text}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    void sendSpectatorMessage();
+                                }}
+                                className="flex gap-1"
+                            >
+                                <input
+                                    value={chatText}
+                                    onChange={(e) => setChatText(e.target.value)}
+                                    maxLength={200}
+                                    placeholder="Say something..."
+                                    className="flex-1 rounded bg-white/10 px-2 py-1 text-[10px] text-white placeholder:text-white/30"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={!chatText.trim()}
+                                    className="rounded bg-green-500/20 px-2 py-1 text-[10px] text-green-400 transition hover:bg-green-500/30 disabled:opacity-30"
+                                >
+                                    Send
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>

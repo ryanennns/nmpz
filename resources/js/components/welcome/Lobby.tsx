@@ -3,15 +3,20 @@ import { MessageCircleQuestion } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
 import AchievementsPanel from '@/components/welcome/AchievementsPanel';
+import DailyChallengePanel from '@/components/welcome/DailyChallengePanel';
+import FriendsPanel from '@/components/welcome/FriendsPanel';
 import GameDetailModal from '@/components/welcome/GameDetailModal';
 import GameHistoryPanel from '@/components/welcome/GameHistoryPanel';
 import Leaderboard from '@/components/welcome/Leaderboard';
 import LiveGamesList from '@/components/welcome/LiveGamesList';
 import MapSelector from '@/components/welcome/MapSelector';
 import NamePrompt from '@/components/welcome/NamePrompt';
+import PlayerProfileModal from '@/components/welcome/PlayerProfileModal';
 import PrivateLobbyPanel from '@/components/welcome/PrivateLobbyPanel';
 import PlayerStatsPanel from '@/components/welcome/PlayerStatsPanel';
 import RankBadge from '@/components/welcome/RankBadge';
+import ReplayViewer from '@/components/welcome/ReplayViewer';
+import SeasonPanel from '@/components/welcome/SeasonPanel';
 import type { Player } from '@/components/welcome/types';
 import { WaitingRoom } from '@/components/welcome/WaitingRoom';
 import { useApiClient } from '@/hooks/useApiClient';
@@ -44,10 +49,12 @@ export default function Lobby({
     const api = useApiClient(player.id);
     const [editingName, setEditingName] = useState(false);
     const [nameDraft, setNameDraft] = useState(playerName ?? '');
-    const [lobbyTab, setLobbyTab] = useState<'none' | 'stats' | 'leaderboard' | 'history' | 'achievements' | 'watch'>('none');
+    const [lobbyTab, setLobbyTab] = useState<'none' | 'stats' | 'leaderboard' | 'history' | 'achievements' | 'watch' | 'daily' | 'season' | 'friends'>('none');
     const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
     const [selectedFormat, setSelectedFormat] = useState('classic');
     const [detailGameId, setDetailGameId] = useState<string | null>(null);
+    const [replayGameId, setReplayGameId] = useState<string | null>(null);
+    const [profilePlayerId, setProfilePlayerId] = useState<string | null>(null);
     const [privateLobbyOpen, setPrivateLobbyOpen] = useState(false);
 
     useEffect(() => {
@@ -348,43 +355,27 @@ export default function Lobby({
                     )}
                 </div>
                 {!queued && (
-                    <div className="absolute bottom-8 left-1/2 flex w-full max-w-md -translate-x-1/2 flex-col items-center gap-3">
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setLobbyTab(lobbyTab === 'stats' ? 'none' : 'stats')}
-                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'stats' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
-                            >
-                                My Stats
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setLobbyTab(lobbyTab === 'leaderboard' ? 'none' : 'leaderboard')}
-                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'leaderboard' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
-                            >
-                                Leaderboard
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setLobbyTab(lobbyTab === 'history' ? 'none' : 'history')}
-                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'history' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
-                            >
-                                History
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setLobbyTab(lobbyTab === 'achievements' ? 'none' : 'achievements')}
-                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'achievements' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
-                            >
-                                Achievements
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setLobbyTab(lobbyTab === 'watch' ? 'none' : 'watch')}
-                                className={`rounded px-3 py-1 text-xs transition ${lobbyTab === 'watch' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
-                            >
-                                Watch
-                            </button>
+                    <div className="absolute bottom-8 left-1/2 flex w-full max-w-lg -translate-x-1/2 flex-col items-center gap-3">
+                        <div className="flex flex-wrap justify-center gap-1.5">
+                            {([
+                                ['stats', 'Stats'],
+                                ['leaderboard', 'Leaderboard'],
+                                ['history', 'History'],
+                                ['achievements', 'Achievements'],
+                                ['watch', 'Watch'],
+                                ['daily', 'Daily'],
+                                ['season', 'Season'],
+                                ['friends', 'Friends'],
+                            ] as const).map(([key, label]) => (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setLobbyTab(lobbyTab === key ? 'none' : key)}
+                                    className={`rounded px-2.5 py-1 text-xs transition ${lobbyTab === key ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'}`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
                         </div>
                         {lobbyTab === 'stats' && <PlayerStatsPanel playerId={player.id} />}
                         {lobbyTab === 'leaderboard' && <Leaderboard playerId={player.id} />}
@@ -392,6 +383,7 @@ export default function Lobby({
                             <GameHistoryPanel
                                 playerId={player.id}
                                 onViewDetail={(id) => setDetailGameId(id)}
+                                onViewReplay={(id) => setReplayGameId(id)}
                             />
                         )}
                         {lobbyTab === 'achievements' && (
@@ -399,6 +391,18 @@ export default function Lobby({
                         )}
                         {lobbyTab === 'watch' && (
                             <LiveGamesList playerId={player.id} />
+                        )}
+                        {lobbyTab === 'daily' && (
+                            <DailyChallengePanel playerId={player.id} />
+                        )}
+                        {lobbyTab === 'season' && (
+                            <SeasonPanel playerId={player.id} />
+                        )}
+                        {lobbyTab === 'friends' && (
+                            <FriendsPanel
+                                playerId={player.id}
+                                onViewProfile={(id) => setProfilePlayerId(id)}
+                            />
                         )}
                     </div>
                 )}
@@ -408,6 +412,18 @@ export default function Lobby({
                 playerId={player.id}
                 open={detailGameId !== null}
                 onClose={() => setDetailGameId(null)}
+            />
+            <ReplayViewer
+                gameId={replayGameId}
+                playerId={player.id}
+                open={replayGameId !== null}
+                onClose={() => setReplayGameId(null)}
+            />
+            <PlayerProfileModal
+                targetPlayerId={profilePlayerId}
+                playerId={player.id}
+                open={profilePlayerId !== null}
+                onClose={() => setProfilePlayerId(null)}
             />
             <SimpleModal open={helpOpen} onClose={() => setHelpOpen(false)}>
                 <div className="mb-2 text-2xl text-white/50">

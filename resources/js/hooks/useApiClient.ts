@@ -93,6 +93,36 @@ export function useApiClient(playerId: string) {
                 { reaction },
             );
         },
+        // Daily Challenge
+        fetchDailyChallenge: () => client.get('/daily-challenge'),
+        startDailyChallenge: () => client.post(`/players/${playerId}/daily-challenge/start`),
+        dailyChallengeGuess: (entryId: string, coords: LatLng) =>
+            client.post(`/players/${playerId}/daily-challenge/${entryId}/guess`, coords),
+        fetchDailyLeaderboard: () => client.get('/daily-challenge/leaderboard'),
+        // Seasons
+        fetchCurrentSeason: () => client.get('/seasons/current'),
+        fetchSeasonLeaderboard: (seasonId: string) => client.get(`/seasons/${seasonId}/leaderboard`),
+        fetchSeasonHistory: () => client.get('/seasons/history'),
+        // Player Profiles
+        fetchPlayerProfile: (targetPlayerId: string) => client.get(`/players/${targetPlayerId}/profile`),
+        // Friends
+        fetchFriends: () => client.get(`/players/${playerId}/friends`),
+        sendFriendRequest: (receiverId: string) =>
+            client.post(`/players/${playerId}/friends`, { receiver_id: receiverId }),
+        acceptFriendRequest: (friendshipId: string) =>
+            client.post(`/players/${playerId}/friends/${friendshipId}/accept`),
+        declineFriendRequest: (friendshipId: string) =>
+            client.post(`/players/${playerId}/friends/${friendshipId}/decline`),
+        removeFriend: (friendshipId: string) =>
+            client.delete(`/players/${playerId}/friends/${friendshipId}`),
+        fetchPendingFriends: () => client.get(`/players/${playerId}/friends/pending`),
+        // Featured Match
+        fetchFeaturedMatch: () => client.get('/games/featured'),
+        // Replay
+        fetchReplay: (gameId: string) => client.get(`/games/${gameId}/replay`),
+        // Spectator Chat
+        sendSpectatorChat: (gameId: string, playerName: string, message: string) =>
+            client.post(`/games/${gameId}/spectator-chat`, { player_name: playerName, message }),
         client,
     };
 }
