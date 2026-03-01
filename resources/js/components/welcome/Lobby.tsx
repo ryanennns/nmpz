@@ -1,9 +1,8 @@
 import axios from 'axios';
 import { Eye, MessageCircleQuestion, Pencil, User, Users } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
 import AchievementsPanel from '@/components/welcome/AchievementsPanel';
-import DailyChallengePanel from '@/components/welcome/DailyChallengePanel';
 import FriendsPanel from '@/components/welcome/FriendsPanel';
 import GameDetailModal from '@/components/welcome/GameDetailModal';
 import GameHistoryPanel from '@/components/welcome/GameHistoryPanel';
@@ -18,11 +17,13 @@ import RankBadge from '@/components/welcome/RankBadge';
 import ReplayViewer from '@/components/welcome/ReplayViewer';
 import SeasonPanel from '@/components/welcome/SeasonPanel';
 import SoloLeaderboardPanel from '@/components/welcome/SoloLeaderboardPanel';
-import SoloPlayPanel from '@/components/welcome/SoloPlayPanel';
 import type { Player } from '@/components/welcome/types';
 import { WaitingRoom } from '@/components/welcome/WaitingRoom';
 import { useApiClient } from '@/hooks/useApiClient';
 import { FADE_TRANSITION_MS, STATS_POLL_MS, STAT_HIDDEN_MS, STAT_VISIBLE_MS } from '@/lib/game-constants';
+
+const SoloPlayPanel = lazy(() => import('@/components/welcome/SoloPlayPanel'));
+const DailyChallengePanel = lazy(() => import('@/components/welcome/DailyChallengePanel'));
 
 type ActiveGroup = 'none' | 'profile' | 'community' | 'watch';
 type ProfileTab = 'stats' | 'history' | 'achievements' | 'season' | 'solo';
@@ -479,11 +480,13 @@ export default function Lobby({
 
                                             {/* Solo content */}
                                             {playMode === 'solo' && (
-                                                <div className="mt-3 space-y-3">
-                                                    <SoloPlayPanel playerId={player.id} />
-                                                    <Divider label="daily" />
-                                                    <DailyChallengePanel playerId={player.id} />
-                                                </div>
+                                                <Suspense fallback={<div className="py-4 text-center text-xs text-white/30">Loading...</div>}>
+                                                    <div className="mt-3 space-y-3">
+                                                        <SoloPlayPanel playerId={player.id} />
+                                                        <Divider label="daily" />
+                                                        <DailyChallengePanel playerId={player.id} />
+                                                    </div>
+                                                </Suspense>
                                             )}
                                         </div>
                                     </>

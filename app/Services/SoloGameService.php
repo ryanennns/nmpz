@@ -8,6 +8,7 @@ use App\Models\Player;
 use App\Models\PlayerStats;
 use App\Models\SoloGame;
 use App\Models\SoloPersonalBest;
+use Illuminate\Support\Facades\Cache;
 
 class SoloGameService
 {
@@ -375,35 +376,39 @@ class SoloGameService
 
     public function getLeaderboard(string $mode, ?string $mapId = null): array
     {
-        $query = SoloGame::query()
-            ->where('mode', $mode)
-            ->where('status', 'completed')
-            ->with('player.user');
+        $cacheKey = "solo_leaderboard_{$mode}_" . ($mapId ?? 'all');
 
-        if ($mapId) {
-            $query->where('map_id', $mapId);
-        }
+        return Cache::remember($cacheKey, 300, function () use ($mode, $mapId) {
+            $query = SoloGame::query()
+                ->where('mode', $mode)
+                ->where('status', 'completed')
+                ->with('player.user');
 
-        // For streak mode, sort by rounds_completed (longest run)
-        if ($mode === 'streak') {
-            $query->orderByDesc('rounds_completed')->orderByDesc('total_score');
-        } else {
-            $query->orderByDesc('total_score');
-        }
+            if ($mapId) {
+                $query->where('map_id', $mapId);
+            }
 
-        $entries = $query->limit(50)->get();
+            // For streak mode, sort by rounds_completed (longest run)
+            if ($mode === 'streak') {
+                $query->orderByDesc('rounds_completed')->orderByDesc('total_score');
+            } else {
+                $query->orderByDesc('total_score');
+            }
 
-        return $entries->map(fn (SoloGame $game, int $index) => [
-            'rank' => $index + 1,
-            'player_name' => $game->player?->user?->name ?? 'Unknown',
-            'player_id' => $game->player_id,
-            'total_score' => $game->total_score,
-            'rounds_completed' => $game->rounds_completed,
-            'elapsed_seconds' => $game->elapsed_seconds,
-            'tier' => $game->tier,
-            'difficulty' => $game->difficulty,
-            'completed_at' => $game->completed_at?->toIso8601String(),
-        ])->toArray();
+            $entries = $query->limit(50)->get();
+
+            return $entries->map(fn (SoloGame $game, int $index) => [
+                'rank' => $index + 1,
+                'player_name' => $game->player?->user?->name ?? 'Unknown',
+                'player_id' => $game->player_id,
+                'total_score' => $game->total_score,
+                'rounds_completed' => $game->rounds_completed,
+                'elapsed_seconds' => $game->elapsed_seconds,
+                'tier' => $game->tier,
+                'difficulty' => $game->difficulty,
+                'completed_at' => $game->completed_at?->toIso8601String(),
+            ])->toArray();
+        });
     }
 
     public function getPersonalBests(Player $player): array

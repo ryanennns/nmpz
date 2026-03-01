@@ -1,5 +1,5 @@
 import { importLibrary } from '@googlemaps/js-api-loader';
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import type { RoundResult } from '@/components/welcome/types';
 
 function svgDot(color: string) {
@@ -25,7 +25,7 @@ function svgFlagDot(circleColor: string) {
     };
 }
 
-export default function ResultsMap({ result }: { result: RoundResult }) {
+export default memo(function ResultsMap({ result }: { result: RoundResult }) {
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -113,4 +113,4 @@ export default function ResultsMap({ result }: { result: RoundResult }) {
     return (
         <div ref={containerRef} className="streetview-lock absolute inset-0" />
     );
-}
+});

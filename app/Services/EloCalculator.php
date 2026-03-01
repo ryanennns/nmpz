@@ -5,14 +5,15 @@ namespace App\Services;
 use App\Models\EloHistory;
 use App\Models\Game;
 use App\Models\Player;
-use App\Models\PlayerStats;
 
 class EloCalculator
 {
     public static function calculate(Game $game): void
     {
-        $p1 = Player::find($game->player_one_id);
-        $p2 = Player::find($game->player_two_id);
+        $game->loadMissing(['playerOne.stats', 'playerTwo.stats']);
+
+        $p1 = $game->playerOne;
+        $p2 = $game->playerTwo;
 
         if (! $p1 || ! $p2) {
             return;
@@ -101,8 +102,7 @@ class EloCalculator
 
     private static function kFactor(Player $player): int
     {
-        $stats = PlayerStats::where('player_id', $player->getKey())->first();
-        $gamesPlayed = $stats?->games_played ?? 0;
+        $gamesPlayed = $player->stats?->games_played ?? 0;
 
         if ($gamesPlayed < config('game.k_factor_games_threshold')) {
             return config('game.k_factor_new');

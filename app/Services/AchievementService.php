@@ -7,18 +7,21 @@ use App\Models\Achievement;
 use App\Models\Game;
 use App\Models\Player;
 use App\Models\PlayerAchievement;
+use Illuminate\Support\Facades\Cache;
 
 class AchievementService
 {
     public function evaluateAfterGame(Game $game): void
     {
+        $game->load(['playerOne.stats', 'playerTwo']);
+
         $players = [
-            ['id' => $game->player_one_id, 'health' => $game->player_one_health],
-            ['id' => $game->player_two_id, 'health' => $game->player_two_health],
+            ['player' => $game->playerOne, 'health' => $game->player_one_health],
+            ['player' => $game->playerTwo, 'health' => $game->player_two_health],
         ];
 
         foreach ($players as $playerData) {
-            $player = Player::find($playerData['id']);
+            $player = $playerData['player'];
             if (! $player) {
                 continue;
             }
@@ -26,6 +29,12 @@ class AchievementService
             $stats = $player->stats;
             $isWinner = $game->winner_id === $player->getKey();
             $health = $playerData['health'];
+
+            // Reload stats if not loaded (e.g. for playerTwo)
+            if (! $player->relationLoaded('stats')) {
+                $player->load('stats');
+                $stats = $player->stats;
+            }
 
             // first_win
             if ($isWinner && ($stats?->games_won ?? 0) >= 1) {
@@ -86,7 +95,7 @@ class AchievementService
 
     public function award(Player $player, string $achievementKey): void
     {
-        $achievement = Achievement::query()->where('key', $achievementKey)->first();
+        $achievement = $this->resolveAchievement($achievementKey);
         if (! $achievement) {
             return;
         }
@@ -107,5 +116,19 @@ class AchievementService
         ]);
 
         AchievementEarned::dispatch($player, $achievement);
+    }
+
+    private function resolveAchievement(string $key): ?Achievement
+    {
+        $achievements = Cache::remember('achievements_by_key', 86400, function () {
+            return Achievement::all()->keyBy('key');
+        });
+
+        return $achievements->get($key);
+    }
+
+    public static function clearCache(): void
+    {
+        Cache::forget('achievements_by_key');
     }
 }

@@ -33,6 +33,8 @@ class RoundStarted implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $this->round->loadMissing('game');
+
         return [
             'game_id' => $this->round->game_id,
             'round_id' => $this->round->getKey(),

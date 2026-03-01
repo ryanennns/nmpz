@@ -1,5 +1,5 @@
 import { importLibrary } from '@googlemaps/js-api-loader';
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import type { LatLng } from '@/components/welcome/types';
 
 function svgGuessCircle(circleColor: string) {
@@ -14,7 +14,7 @@ function svgGuessCircle(circleColor: string) {
     };
 }
 
-export default function MapPicker({
+export default memo(function MapPicker({
     onPin,
     pinColor,
     disabled,
@@ -77,4 +77,4 @@ export default function MapPicker({
             className={`map-lock h-full w-full ${disabled ? 'cursor-not-allowed' : 'cursor-crosshair'}`}
         />
     );
-}
+});

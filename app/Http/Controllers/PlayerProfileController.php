@@ -7,6 +7,7 @@ use App\Models\Game;
 use App\Models\Player;
 use App\Models\PlayerAchievement;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class PlayerProfileController extends Controller
 {
@@ -15,46 +16,36 @@ class PlayerProfileController extends Controller
         $player->load('user', 'stats');
 
         $stats = $player->stats;
-        $eloHistory = $player->eloHistory()->limit(30)->get()->map(fn ($e) => [
-            'elo' => $e->elo_after,
-            'date' => $e->created_at->toDateString(),
-        ]);
-
-        // Win rate by map
-        $winsByMap = Game::query()
-            ->where('status', GameStatus::Completed)
-            ->where('winner_id', $player->getKey())
-            ->with('map')
+        $eloHistory = $player->eloHistory()
+            ->orderByDesc('created_at')
+            ->limit(30)
             ->get()
-            ->groupBy('map_id')
-            ->map(fn ($games) => [
-                'map_name' => $games->first()->map?->display_name ?? $games->first()->map?->name ?? 'Unknown',
-                'wins' => $games->count(),
-            ])
-            ->values();
-
-        // Total games by map
-        $gamesByMap = Game::query()
-            ->where('status', GameStatus::Completed)
-            ->where(fn ($q) => $q->where('player_one_id', $player->getKey())
-                ->orWhere('player_two_id', $player->getKey()))
-            ->get()
-            ->groupBy('map_id')
-            ->map->count();
-
-        $mapStats = $winsByMap->map(function ($entry) use ($gamesByMap) {
-            $mapId = Game::where('winner_id', '!=', null)
-                ->whereHas('map', fn ($q) => $q->where('display_name', $entry['map_name'])
-                    ->orWhere('name', $entry['map_name']))
-                ->value('map_id');
-
-            $total = $gamesByMap->get($mapId, 0);
-
-            return array_merge($entry, [
-                'total_games' => $total,
-                'win_rate' => $total > 0 ? round($entry['wins'] / $total * 100, 1) : 0,
+            ->map(fn ($e) => [
+                'elo' => $e->rating_after,
+                'date' => $e->created_at->toDateString(),
             ]);
-        });
+
+        // Map stats in two aggregate queries instead of loading all games
+        $playerId = $player->getKey();
+
+        $mapStats = DB::table('games')
+            ->join('maps', 'maps.id', '=', 'games.map_id')
+            ->where('games.status', GameStatus::Completed->value)
+            ->where(fn ($q) => $q->where('player_one_id', $playerId)->orWhere('player_two_id', $playerId))
+            ->groupBy('games.map_id', 'maps.display_name', 'maps.name')
+            ->select([
+                'games.map_id',
+                DB::raw('COALESCE(maps.display_name, maps.name, \'Unknown\') as map_name'),
+                DB::raw('COUNT(*) as total_games'),
+                DB::raw("SUM(CASE WHEN games.winner_id = '{$playerId}' THEN 1 ELSE 0 END) as wins"),
+            ])
+            ->get()
+            ->map(fn ($row) => [
+                'map_name' => $row->map_name,
+                'wins' => (int) $row->wins,
+                'total_games' => (int) $row->total_games,
+                'win_rate' => $row->total_games > 0 ? round($row->wins / $row->total_games * 100, 1) : 0,
+            ]);
 
         $achievements = PlayerAchievement::query()
             ->where('player_id', $player->getKey())

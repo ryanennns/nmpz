@@ -32,6 +32,8 @@ class GameMessage implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $this->player->loadMissing('user');
+
         return [
             'game_id' => $this->game->getKey(),
             'player_id' => $this->player->getKey(),

@@ -1,7 +1,7 @@
 import { setOptions } from '@googlemaps/js-api-loader';
 import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ChatSidebar from '@/components/welcome/ChatSidebar';
 import { CountdownTimer } from '@/components/welcome/CountdownTimer';
 import { GameProvider, useGameContext } from '@/components/welcome/GameContext';
@@ -115,6 +115,8 @@ function WelcomePage({
     const reactionSeqRef = useRef(0);
     const guessRef = useRef<() => void>(() => {});
     const lastRememberedGameId = useRef<string | null>(null);
+    const updateGuessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingGuessRef = useRef<LatLng | null>(null);
     const api = useApiClient(player.id);
 
     // --- Hooks ---
@@ -286,10 +288,18 @@ function WelcomePage({
         if (res?.data) setRound(res.data as Round);
     }
 
-    async function updateGuess(coords: LatLng) {
+    function updateGuess(coords: LatLng) {
         if (!round || !game || myLocked || gameOver) return;
-        const res = await api.guess(round.id, coords, false);
-        if (res?.data) setRound(res.data as Round);
+        pendingGuessRef.current = coords;
+        if (updateGuessTimerRef.current) return;
+        updateGuessTimerRef.current = setTimeout(async () => {
+            updateGuessTimerRef.current = null;
+            const c = pendingGuessRef.current;
+            if (!c) return;
+            pendingGuessRef.current = null;
+            const res = await api.guess(round.id, c, false);
+            if (res?.data) setRound(res.data as Round);
+        }, 300);
     }
 
     async function sendMessage() {
@@ -303,36 +313,36 @@ function WelcomePage({
 
     guessRef.current = guess;
 
-    function handleRematch() {
+    const handleRematch = useCallback(() => {
         const gid = lastGameId ?? game?.id;
         if (!gid) return;
         void api.requestRematch(gid);
         setRematchState('sent');
-    }
+    }, [lastGameId, game?.id, api]);
 
-    function handleRequeue() {
+    const handleRequeue = useCallback(() => {
         endSequence.dismissEndSequence(resetGameState);
         void api.joinQueue(playerName ?? undefined);
-    }
+    }, [endSequence, resetGameState, api, playerName]);
 
-    function handleExit() {
+    const handleExit = useCallback(() => {
         if (rematchState === 'received') {
             const gid = lastGameId ?? game?.id;
             if (gid) void api.declineRematch(gid);
         }
         endSequence.dismissEndSequence(resetGameState);
-    }
+    }, [rematchState, lastGameId, game?.id, api, endSequence, resetGameState]);
 
-    function handleDeclineRematch() {
+    const handleDeclineRematch = useCallback(() => {
         const gid = lastGameId ?? game?.id;
         if (!gid) return;
         void api.declineRematch(gid);
         setRematchState('declined');
-    }
+    }, [lastGameId, game?.id, api]);
 
     // --- Derived state ---
     type PlayerColour = 'blue' | 'red';
-    const playerConfig = game
+    const playerConfig = useMemo(() => game
         ? {
               me: {
                   color: isPlayerOne ? 'text-blue-400' : 'text-red-400',
@@ -360,13 +370,13 @@ function WelcomePage({
                   rank: (isPlayerOne ? game.player_two.rank : game.player_one.rank) as Rank | undefined,
               },
           }
-        : null;
+        : null, [game, isPlayerOne, health.p1, health.p2, roundScores.p1, roundScores.p2]);
 
     const gameState = round
         ? deriveGameState(round, gameOver, roundFinished)
         : 'waiting';
 
-    const roundSummary: RoundSummary | null =
+    const roundSummary: RoundSummary | null = useMemo(() =>
         roundFinished && roundScores.p1 !== null && roundScores.p2 !== null
             ? (() => {
                   const myScore = isPlayerOne ? roundScores.p1! : roundScores.p2!;
@@ -383,7 +393,7 @@ function WelcomePage({
                       opponentHealth: isPlayerOne ? health.p2 : health.p1,
                   };
               })()
-            : null;
+            : null, [roundFinished, roundScores.p1, roundScores.p2, roundDistances.p1, roundDistances.p2, isPlayerOne, health.p1, health.p2]);
 
     const hasRoundCountdown = roundFinished && countdown !== null;
     const hasUrgentCountdown =

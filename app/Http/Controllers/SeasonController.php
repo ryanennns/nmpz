@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Season;
 use App\Models\SeasonResult;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class SeasonController extends Controller
 {
@@ -28,26 +29,32 @@ class SeasonController extends Controller
 
     public function leaderboard(Season $season): JsonResponse
     {
-        $results = SeasonResult::query()
-            ->where('season_id', $season->getKey())
-            ->with('player.user')
-            ->orderByDesc('peak_elo')
-            ->limit(100)
-            ->get()
-            ->map(fn (SeasonResult $r) => [
-                'player_name' => $r->player?->user?->name ?? 'Unknown',
-                'player_id' => $r->player_id,
-                'peak_elo' => $r->peak_elo,
-                'final_elo' => $r->final_elo,
-                'peak_rank' => $r->peak_rank,
-                'games_played' => $r->games_played,
-                'games_won' => $r->games_won,
-            ]);
+        $seasonId = $season->getKey();
 
-        return response()->json([
-            'season_number' => $season->season_number,
-            'results' => $results,
-        ]);
+        $data = Cache::remember("season_leaderboard_{$seasonId}", 600, function () use ($season, $seasonId) {
+            $results = SeasonResult::query()
+                ->where('season_id', $seasonId)
+                ->with('player.user')
+                ->orderByDesc('peak_elo')
+                ->limit(100)
+                ->get()
+                ->map(fn (SeasonResult $r) => [
+                    'player_name' => $r->player?->user?->name ?? 'Unknown',
+                    'player_id' => $r->player_id,
+                    'peak_elo' => $r->peak_elo,
+                    'final_elo' => $r->final_elo,
+                    'peak_rank' => $r->peak_rank,
+                    'games_played' => $r->games_played,
+                    'games_won' => $r->games_won,
+                ]);
+
+            return [
+                'season_number' => $season->season_number,
+                'results' => $results,
+            ];
+        });
+
+        return response()->json($data);
     }
 
     public function history(): JsonResponse

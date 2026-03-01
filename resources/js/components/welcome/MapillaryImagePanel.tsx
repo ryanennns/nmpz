@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { Location } from '@/components/welcome/types';
 
 type MapillaryImage = {
@@ -17,7 +17,7 @@ function buildBbox(lat: number, lng: number, delta = 0.0005) {
     return `${left},${bottom},${right},${top}`;
 }
 
-export default function MapillaryImagePanel({
+export default memo(function MapillaryImagePanel({
     location,
     onHeadingChange,
 }: {
@@ -107,4 +107,4 @@ export default function MapillaryImagePanel({
             )}
         </div>
     );
-}
+});

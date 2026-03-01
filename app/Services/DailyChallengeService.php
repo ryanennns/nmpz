@@ -9,6 +9,7 @@ use App\Models\Map;
 use App\Models\Player;
 use App\Models\PlayerStats;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class DailyChallengeService
 {
@@ -303,33 +304,36 @@ class DailyChallengeService
     public function getLeaderboard(): array
     {
         $challenge = $this->getOrCreateForDate();
+        $challengeId = $challenge->getKey();
 
-        $totalParticipants = DailyChallengeEntry::query()
-            ->where('daily_challenge_id', $challenge->getKey())
-            ->whereNotNull('completed_at')
-            ->count();
+        return Cache::remember("daily_leaderboard_{$challengeId}", 300, function () use ($challenge, $challengeId) {
+            $totalParticipants = DailyChallengeEntry::query()
+                ->where('daily_challenge_id', $challengeId)
+                ->whereNotNull('completed_at')
+                ->count();
 
-        $entries = DailyChallengeEntry::query()
-            ->where('daily_challenge_id', $challenge->getKey())
-            ->whereNotNull('completed_at')
-            ->with('player.user')
-            ->orderByDesc('total_score')
-            ->limit(50)
-            ->get()
-            ->map(fn (DailyChallengeEntry $entry, int $index) => [
-                'rank' => $index + 1,
-                'player_name' => $entry->player?->user?->name ?? 'Unknown',
-                'player_id' => $entry->player_id,
-                'total_score' => $entry->total_score,
-                'tier' => $entry->tier,
-                'completed_at' => $entry->completed_at->toIso8601String(),
-            ]);
+            $entries = DailyChallengeEntry::query()
+                ->where('daily_challenge_id', $challengeId)
+                ->whereNotNull('completed_at')
+                ->with('player.user')
+                ->orderByDesc('total_score')
+                ->limit(50)
+                ->get()
+                ->map(fn (DailyChallengeEntry $entry, int $index) => [
+                    'rank' => $index + 1,
+                    'player_name' => $entry->player?->user?->name ?? 'Unknown',
+                    'player_id' => $entry->player_id,
+                    'total_score' => $entry->total_score,
+                    'tier' => $entry->tier,
+                    'completed_at' => $entry->completed_at->toIso8601String(),
+                ]);
 
-        return [
-            'challenge_date' => $challenge->challenge_date->toDateString(),
-            'entries' => $entries,
-            'total_participants' => $totalParticipants,
-        ];
+            return [
+                'challenge_date' => $challenge->challenge_date->toDateString(),
+                'entries' => $entries,
+                'total_participants' => $totalParticipants,
+            ];
+        });
     }
 
     public function getPlayerDailyStats(Player $player): array
