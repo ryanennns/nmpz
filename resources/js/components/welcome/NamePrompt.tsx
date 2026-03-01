@@ -46,9 +46,13 @@ export default function NamePrompt({
             >
                 continue
             </button>
-            <button className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900">
-                have an account? sign in
-            </button>
+            <div className="flex shrink items-center justify-between rounded px-2 py-1 text-xs text-zinc-600">
+                have an account?
+                <button className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300">
+                    {' '}
+                    sign in
+                </button>
+            </div>
         </div>
     );
 }
