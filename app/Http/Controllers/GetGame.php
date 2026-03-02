@@ -6,6 +6,7 @@ use App\Enums\GameStatus;
 use App\Models\Game;
 use App\Models\Location;
 use App\Models\Player;
+use App\Models\Round;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -42,14 +43,7 @@ class GetGame extends Controller
             'player_two_health' => $game->player_two_health,
         ];
 
-        $count = Location::query()->where('map_id', $game->map_id)->count();
-        $offset = ($game->seed) % $count;
-
-        $location = Location::query()->where('map_id', $game->map_id)
-            ->orderBy('id')
-            ->offset($offset)
-            ->firstOrFail();
-
+        /** @var Round $round */
         $round = $game->rounds()->latest()->first();
 
         $roundData = [
@@ -58,10 +52,10 @@ class GetGame extends Controller
             'round_number' => $round->round_number,
             'player_one_health' => $game->player_one_health,
             'player_two_health' => $game->player_two_health,
-            'location_lat' => $location?->lat,
-            'location_lng' => $location?->lng,
-            'location_heading' => $location?->heading,
-            'location_image_id' => $location?->image_id,
+            'location_lat' => $round->location->lat,
+            'location_lng' => $round->location->lng,
+            'location_heading' => $round->location->heading,
+            'location_image_id' => $round->location->image_id,
             'started_at' => optional($round->started_at)->toISOString(),
             'player_one_locked_in' => $round->player_one_locked_in,
             'player_two_locked_in' => $round->player_two_locked_in,

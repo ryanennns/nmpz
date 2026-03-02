@@ -48,7 +48,7 @@ class Game extends Model
 
     public function rounds(): HasMany
     {
-        return $this->hasMany(Round::class)->orderBy('round_number');
+        return $this->hasMany(Round::class);
     }
 
     public function playerOneScore(): int

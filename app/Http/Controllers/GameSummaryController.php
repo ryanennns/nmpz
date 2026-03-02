@@ -16,7 +16,7 @@ class GameSummaryController extends Controller
 
         $game->load(['playerOne', 'playerTwo', 'rounds.location']);
 
-        $rounds = $game->rounds->map(fn (Round $round) => [
+        $rounds = $game->rounds()->orderBy('round_number')->get()->map(fn (Round $round) => [
             'id' => $round->getKey(),
             'round_number' => $round->round_number,
             'player_one_score' => $round->player_one_score,

@@ -73,6 +73,53 @@ class GetGameTest extends TestCase
             );
     }
 
+    public function test_round_data_uses_the_latest_round_location_instead_of_the_seeded_map_location(): void
+    {
+        $map = Map::factory()->create();
+        $playerOne = Player::factory()->create();
+        $playerTwo = Player::factory()->create();
+
+        $game = Game::factory()->inProgress()->create([
+            'map_id' => $map->getKey(),
+            'player_one_id' => $playerOne->getKey(),
+            'player_two_id' => $playerTwo->getKey(),
+            'seed' => 1,
+        ]);
+
+        $activeRoundLocation = Location::factory()->create([
+            'map_id' => $map->getKey(),
+            'lat' => 35.6762,
+            'lng' => 139.6503,
+            'heading' => 90,
+            'image_id' => 'active-round-image',
+        ]);
+
+        Location::factory()->create([
+            'map_id' => $map->getKey(),
+            'lat' => 40.7128,
+            'lng' => -74.0060,
+            'heading' => 270,
+            'image_id' => 'seeded-image',
+        ]);
+
+        $round = Round::factory()->create([
+            'game_id' => $game->getKey(),
+            'location_id' => $activeRoundLocation->getKey(),
+        ]);
+
+        $response = $this->get("/games/{$game->getKey()}?player={$playerOne->getKey()}");
+
+        $response->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('round_data.round_id', $round->getKey())
+                ->where('round_data.location_lat', 35.6762)
+                ->where('round_data.location_lng', 139.6503)
+                ->where('round_data.location_heading', 90)
+                ->where('round_data.location_image_id', 'active-round-image')
+                ->where('round_data.location_image_id', fn (string $value) => $value !== 'seeded-image'),
+            );
+    }
+
     public function test_request_is_rejected_when_player_is_not_in_the_game(): void
     {
         $game = Game::factory()->inProgress()->create();
