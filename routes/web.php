@@ -11,6 +11,7 @@ use App\Http\Controllers\HomePageController;
 use App\Http\Controllers\JoinQueue;
 use App\Http\Controllers\PlayerLeavesQueue;
 use App\Http\Controllers\PlayerMakesGuess;
+use App\Http\Controllers\ReportLocation;
 use App\Http\Controllers\SendMessage;
 use App\Http\Controllers\UpdatePlayer;
 use App\Models\Game;
@@ -55,5 +56,8 @@ Route::get('stats', function () {
         'queue_count' => count(Cache::get('matchmaking_queue', [])),
     ]);
 });
+
+Route::middleware('auth')->post('locations/{location}/report', ReportLocation::class)
+    ->name('locations.report');
 
 require __DIR__.'/settings.php';
