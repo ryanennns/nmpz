@@ -31,4 +31,16 @@ describe('SimpleModal', () => {
 
         expect(onClose).toHaveBeenCalledTimes(1);
     });
+
+    it('applies a stable max-width class for the requested size', () => {
+        render(
+            <SimpleModal open onClose={vi.fn()} width="xl">
+                <div>content</div>
+            </SimpleModal>,
+        );
+
+        expect(screen.getByText('content').parentElement).toHaveClass(
+            'max-w-xl',
+        );
+    });
 });

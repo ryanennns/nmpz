@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import SummaryMap from './SummaryMap';
 import type { SummaryRound } from './types';
@@ -28,7 +28,7 @@ const round: SummaryRound = {
     round_number: 1,
     player_one_score: 4500,
     player_two_score: 3800,
-    location: { lat: 48.8566, lng: 2.3522 },
+    location: { lat: 48.8566, lng: 2.3522, image_id: 'image-123' },
     player_one_guess: { lat: 48.9, lng: 2.4 },
     player_two_guess: { lat: 49.0, lng: 2.5 },
 };
@@ -68,5 +68,31 @@ describe('SummaryMap', () => {
             <SummaryMap round={{ ...round, location: null }} />,
         );
         expect(container).toBeEmptyDOMElement();
+    });
+
+    it('opens Mapillary when the image panel is clicked', () => {
+        const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+        render(<SummaryMap round={round} />);
+        fireEvent.click(screen.getByTestId('summary-location-image'));
+
+        expect(openSpy).toHaveBeenCalledWith(
+            'https://www.mapillary.com/app/?pKey=image-123',
+            '_blank',
+            'noopener,noreferrer',
+        );
+
+        openSpy.mockRestore();
+    });
+
+    it('expands the image panel on hover', () => {
+        render(<SummaryMap round={round} />);
+        const imagePanel = screen.getByTestId('summary-location-image');
+
+        expect(imagePanel).toHaveClass('h-1/4', 'w-1/4');
+
+        fireEvent.mouseEnter(imagePanel);
+
+        expect(imagePanel).toHaveClass('h-[70%]', 'w-[55%]');
     });
 });

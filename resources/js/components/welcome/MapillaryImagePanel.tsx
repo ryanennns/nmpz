@@ -104,13 +104,22 @@ export default function MapillaryImagePanel({
     ]);
 
     return (
-        <div className="absolute inset-0 bg-neutral-900">
+        <div className="absolute inset-0 overflow-hidden bg-black">
             {imageUrl && (
-                <img
-                    src={imageUrl}
-                    alt="Street view"
-                    className="h-full w-full object-cover"
-                />
+                <>
+                    <img
+                        src={imageUrl}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl"
+                    />
+                    <div className="absolute inset-0 bg-black/30" />
+                    <img
+                        src={imageUrl}
+                        alt="Street view"
+                        className="relative h-full w-full object-contain"
+                    />
+                </>
             )}
             {(loading || error) && (
                 <div className="absolute inset-0 flex items-center justify-center text-sm text-neutral-400">

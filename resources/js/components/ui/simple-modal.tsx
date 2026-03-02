@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+type ModalWidth = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 type SimpleModalProps = {
     open: boolean;
@@ -8,7 +11,15 @@ type SimpleModalProps = {
     children: ReactNode;
     className?: string;
     overlayClassName?: string;
-    width?: string;
+    width?: ModalWidth;
+};
+
+const WIDTH_CLASS_MAP: Record<ModalWidth, string> = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
 };
 
 export default function SimpleModal({
@@ -50,7 +61,10 @@ export default function SimpleModal({
     if (!mounted) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" data-testid="modal">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center px-4"
+            data-testid="modal"
+        >
             <button
                 type="button"
                 className={
@@ -64,7 +78,13 @@ export default function SimpleModal({
             <div
                 className={
                     className ??
-                    `relative z-10 w-full max-w-${width ?? '2xl'} rounded border border-white/10 bg-black/80 p-5 text-sm text-white/80 shadow-lg backdrop-blur-sm font-mono transition-all duration-200 ${visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`
+                    cn(
+                        'relative z-10 w-full rounded border border-white/10 bg-black/80 p-5 font-mono text-sm text-white/80 shadow-lg backdrop-blur-sm transition-all duration-200',
+                        WIDTH_CLASS_MAP[width ?? '2xl'],
+                        visible
+                            ? 'scale-100 opacity-100'
+                            : 'scale-95 opacity-0',
+                    )
                 }
             >
                 <button
