@@ -117,7 +117,7 @@ export default function Lobby() {
         return () => {
             echo.leaveChannel(`player.${player.id}`);
         };
-    }, [localStorage, player, player?.id]);
+    }, [player, player?.id]);
 
     const submitPlayerName = async (name: string) => {
         const response = await api.createPlayer(name);
