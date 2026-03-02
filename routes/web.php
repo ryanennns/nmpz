@@ -29,22 +29,29 @@ Route::prefix('games')->group(function () {
 
 Route::prefix('players')->name('players')->group(function () {
     Route::post('/', CreatePlayer::class)->name('.create');
-    Route::get('/{player}', GetPlayer::class)->name('.get');
-    Route::post('/{player}/join-queue', JoinQueue::class)
-        ->name('.join-queue');
-    Route::post('/{player}/leave-queue', PlayerLeavesQueue::class)
-        ->name('.leave-queue');
-    Route::patch('/{player}', UpdatePlayer::class)
-        ->name('.update');
-    Route::get('/{player}/stats', GetPlayerStats::class)
-        ->name('.stats');
-    Route::post('/{player}/claim', ClaimPlayer::class);
+    Route::middleware('player.user')->group(function () {
+        Route::get('/{player}', GetPlayer::class)->middleware('player.user')->name('.get');
+        Route::post('/{player}/join-queue', JoinQueue::class)
+            ->middleware('player.user')
+            ->name('.join-queue');
+        Route::post('/{player}/leave-queue', PlayerLeavesQueue::class)
+            ->middleware('player.user')
+            ->name('.leave-queue');
+        Route::patch('/{player}', UpdatePlayer::class)
+            ->middleware('player.user')
+            ->name('.update');
+        Route::get('/{player}/stats', GetPlayerStats::class)
+            ->middleware('player.user')
+            ->name('.stats');
+        Route::post('/{player}/claim', ClaimPlayer::class)->middleware('player.user');
+        Route::post('/{player}/games/{game}/rounds/{round}/guess', PlayerMakesGuess::class)
+            ->middleware('player.user')
+            ->name('.games.rounds.guess');
+        Route::post('/{player}/games/{game}/send-message', SendMessage::class)
+            ->middleware('player.user')
+            ->name('.games.send-message');
+    });
 });
-
-Route::post('players/{player}/games/{game}/rounds/{round}/guess', PlayerMakesGuess::class)
-    ->name('games.rounds.guess');
-Route::post('players/{player}/games/{game}/send-message', SendMessage::class)
-    ->name('games.send-message');
 
 Route::middleware('auth')->get('/auth/player', GetAuthPlayer::class);
 

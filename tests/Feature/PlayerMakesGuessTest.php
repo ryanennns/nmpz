@@ -21,7 +21,7 @@ class PlayerMakesGuessTest extends TestCase
 
     private function url(Player $player, Game $game, Round $round): string
     {
-        return route('games.rounds.guess', [$player, $game, $round]);
+        return route('players.games.rounds.guess', [$player, $game, $round]);
     }
 
     private function validPayload(): array

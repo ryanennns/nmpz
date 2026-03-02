@@ -18,7 +18,7 @@ class UpdatePlayerTest extends TestCase
             'name' => 'Old Name',
         ]);
 
-        $this->patchJson(route('players.update', $player), [
+        $this->actingAs($player->user)->patchJson(route('players.update', $player), [
             'name' => 'New Name',
         ])->assertOk()->assertJson([
             'updated' => true,
