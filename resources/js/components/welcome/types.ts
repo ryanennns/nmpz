@@ -34,6 +34,8 @@ export type RoundResult = {
     p2DistanceKm: number | null;
 };
 
+export type EloDeltaMap = Record<string, number>;
+
 export type GameState = 'waiting' | 'one_guessed' | 'finished' | 'game_over';
 
 export type GameEvent = {

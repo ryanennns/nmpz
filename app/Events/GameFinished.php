@@ -15,6 +15,7 @@ class GameFinished implements ShouldBroadcastNow
 
     public function __construct(
         public readonly Game $game,
+        public readonly array $updatedElo,
     ) {}
 
     public function broadcastOn(): Channel
@@ -34,6 +35,7 @@ class GameFinished implements ShouldBroadcastNow
             'winner_id' => $this->game->winner_id,
             'player_one_health' => $this->game->player_one_health,
             'player_two_health' => $this->game->player_two_health,
+            'updated_elo' => $this->updatedElo,
         ];
     }
 }

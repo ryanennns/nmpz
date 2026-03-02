@@ -323,6 +323,29 @@ class StartNextRoundTest extends TestCase
         $this->assertSame(984, $game->playerTwo->fresh()->elo_rating);
     }
 
+    public function test_game_finished_event_includes_elo_deltas_for_a_win(): void
+    {
+        Event::fake();
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+        ]);
+
+        $game->playerOne->update(['elo_rating' => 1000]);
+        $game->playerTwo->update(['elo_rating' => 1000]);
+
+        $this->handle($this->roundFor($game, 5000, 0));
+
+        Event::assertDispatched(GameFinished::class, function (GameFinished $event) use ($game) {
+            return $event->game->is($game)
+                && $event->updatedElo === [
+                    $game->player_one_id => 16.0,
+                    $game->player_two_id => -16.0,
+                ];
+        });
+    }
+
     public function test_elo_change_is_smaller_when_higher_rated_player_wins(): void
     {
         Event::fake();
@@ -401,6 +424,37 @@ class StartNextRoundTest extends TestCase
         $this->assertLessThan(1200, $p1Elo);
         // Lower-rated player should gain elo in a draw
         $this->assertGreaterThan(1000, $p2Elo);
+    }
+
+    public function test_game_finished_event_includes_elo_deltas_for_no_contest(): void
+    {
+        Event::fake();
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+            'no_guess_rounds' => 2,
+        ]);
+
+        $game->playerOne->update(['elo_rating' => 1200]);
+        $game->playerTwo->update(['elo_rating' => 1000]);
+
+        $round = Round::factory()->for($game)->create([
+            'round_number' => 1,
+            'player_one_guess_lat' => null,
+            'player_one_guess_lng' => null,
+            'player_two_guess_lat' => null,
+            'player_two_guess_lng' => null,
+        ]);
+
+        $this->handle($round);
+
+        Event::assertDispatched(GameFinished::class, function (GameFinished $event) use ($game) {
+            return $event->game->is($game)
+                && isset($event->updatedElo[$game->player_one_id], $event->updatedElo[$game->player_two_id])
+                && $event->updatedElo[$game->player_one_id] < 0
+                && $event->updatedElo[$game->player_two_id] > 0;
+        });
     }
 
     public function test_elo_is_unchanged_when_game_continues(): void

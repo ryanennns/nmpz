@@ -13,6 +13,7 @@ import ShimmerText from '@/components/welcome/ShimmerText';
 import { StandardCompass } from '@/components/welcome/StandardCompass';
 
 import type {
+    EloDeltaMap,
     Game,
     GameEvent,
     GameState,
@@ -188,6 +189,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
     }>({ p1: null, p2: null });
     const [winnerId, setWinnerId] = useState<string | null>(null);
     const [winnerName, setWinnerName] = useState<string | null>(null);
+    const [winnerEloDelta, setWinnerEloDelta] = useState<EloDeltaMap>({});
     const [winnerOverlayVisible, setWinnerOverlayVisible] = useState(false);
     const [blackoutVisible, setBlackoutVisible] = useState(false);
     const [pageVisible, setPageVisible] = useState(true);
@@ -375,6 +377,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
     function triggerGameOver(
         winnerId: string | null,
         winnerName: string | null,
+        updatedElo: EloDeltaMap = {},
     ) {
         if (damageTimerRef.current !== null) {
             window.clearTimeout(damageTimerRef.current);
@@ -386,6 +389,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
         setGameOver(true);
         setWinnerId(winnerId);
         setWinnerName(winnerName);
+        setWinnerEloDelta(updatedElo);
 
         scheduleEndSequence(() => {
             setShowPostGame(true);
@@ -590,13 +594,19 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                 p2: data.player_two_health as number,
             });
             const winnerId = data.winner_id as string | null;
+            const updatedElo =
+                data.updated_elo &&
+                typeof data.updated_elo === 'object' &&
+                !Array.isArray(data.updated_elo)
+                    ? (data.updated_elo as EloDeltaMap)
+                    : {};
             const name =
                 winnerId === game.player_one.id
                     ? game.player_one.name
                     : winnerId === game.player_two.id
                       ? game.player_two.name
                       : null;
-            triggerGameOver(winnerId, name);
+            triggerGameOver(winnerId, name, updatedElo);
         });
 
         return () => {
@@ -991,6 +1001,21 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                         winnerId={winnerId}
                         id={player.id}
                         winnerName={winnerName}
+                        opponentId={
+                            game
+                                ? player.id === game.player_one.id
+                                    ? game.player_two.id
+                                    : game.player_one.id
+                                : null
+                        }
+                        opponentName={
+                            game
+                                ? player.id === game.player_one.id
+                                    ? game.player_two.name
+                                    : game.player_one.name
+                                : null
+                        }
+                        eloDelta={winnerEloDelta}
                     />
                 </div>
             </div>
