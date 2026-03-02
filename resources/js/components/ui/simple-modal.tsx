@@ -8,6 +8,7 @@ type SimpleModalProps = {
     children: ReactNode;
     className?: string;
     overlayClassName?: string;
+    width?: string;
 };
 
 export default function SimpleModal({
@@ -16,6 +17,7 @@ export default function SimpleModal({
     children,
     className,
     overlayClassName,
+    width,
 }: SimpleModalProps) {
     const [mounted, setMounted] = useState(open);
     const [visible, setVisible] = useState(false);
@@ -62,7 +64,7 @@ export default function SimpleModal({
             <div
                 className={
                     className ??
-                    `relative z-10 w-full max-w-2xl rounded border border-white/10 bg-black/80 p-5 text-sm text-white/80 shadow-lg backdrop-blur-sm font-mono transition-all duration-200 ${visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`
+                    `relative z-10 w-full max-w-${width ?? '2xl'} rounded border border-white/10 bg-black/80 p-5 text-sm text-white/80 shadow-lg backdrop-blur-sm font-mono transition-all duration-200 ${visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`
                 }
             >
                 <button

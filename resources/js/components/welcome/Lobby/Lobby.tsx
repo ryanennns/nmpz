@@ -1,7 +1,7 @@
 import { usePage } from '@inertiajs/react';
+import { clsx } from 'clsx';
 import { Settings } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import SimpleModal from '@/components/ui/simple-modal';
 import NamePrompt from '@/components/welcome/Lobby/NamePrompt';
 import { QueueReady } from '@/components/welcome/Lobby/QueueReady';
 import SignInForm from '@/components/welcome/Lobby/SignInForm';
@@ -12,7 +12,9 @@ import echo from '@/echo';
 import { useUnauthedApiClient } from '@/hooks/useApiClient';
 import { PLAYER_ID_KEY, useLocalStorage } from '@/hooks/useLocalStorage';
 import type { User } from '@/types/auth';
+import SettingsModal from './SettingsModal';
 import { LobbyHeader } from './LobbyHeader';
+import SimpleModal from '@/components/ui/simple-modal';
 
 const PHASE_TRANSITION_MS = 200;
 
@@ -190,9 +192,10 @@ export default function Lobby() {
         <div className="flex h-[100vh] items-center justify-center font-mono">
             <div className="flex w-72 max-w-sm flex-col items-center gap-4">
                 <div
-                    className={`flex w-full flex-col items-center gap-4 transition-opacity duration-200 ${
-                        phaseVisible ? 'opacity-100' : 'opacity-0'
-                    }`}
+                    className={clsx(
+                        `flex w-full flex-col items-center gap-4 transition-opacity duration-200`,
+                        phaseVisible ? 'opacity-100' : 'opacity-0',
+                    )}
                 >
                     {shouldDisplayHeader && (
                         <>
@@ -290,18 +293,13 @@ export default function Lobby() {
                     </p>
                     <p className="mt-4 font-bold">- ryan :)</p>
                 </SimpleModal>
-                <SimpleModal
+                <SettingsModal
                     open={settingsOpen}
                     onClose={() => setSettingsOpen(false)}
-                >
-                    <div className="mb-2 text-2xl text-white/80">settings</div>
-                    <p className="mb-2 leading-relaxed text-white/70">
-                        this is a placeholder settings panel for the lobby.
-                    </p>
-                    <p className="leading-relaxed text-white/50">
-                        add preferences here when the settings flow is ready.
-                    </p>
-                </SimpleModal>
+                    player={player}
+                    user={user}
+                    onSignOut={signOut}
+                />
             </div>
         </div>
     );
