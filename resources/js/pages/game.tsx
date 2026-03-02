@@ -676,8 +676,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
         if (!game || !chatText.trim()) return;
         const res = await api.sendMessage(player.id, chatText.trim());
         if (res) {
-            setChatText('');
-            setChatOpen(false);
+            resetChat();
         }
     }
 
@@ -706,6 +705,11 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
 
             throw error;
         }
+    }
+
+    function resetChat() {
+        setChatText('');
+        setChatOpen(false);
     }
 
     guessRef.current = guess;
@@ -757,8 +761,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
 
             if (e.code === 'Escape' && chatOpen) {
                 e.preventDefault();
-                setChatOpen(false);
-                setChatText('');
+                resetChat();
             }
         }
         window.addEventListener('keydown', onKeyDown);
@@ -881,6 +884,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                                         chatText={chatText}
                                         onChatTextChange={setChatText}
                                         onSendMessage={() => void sendMessage()}
+                                        onCloseChat={resetChat}
                                     />
                                 </div>
                                 {countdownConfig && (

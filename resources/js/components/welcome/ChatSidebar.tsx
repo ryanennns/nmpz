@@ -14,12 +14,14 @@ export default function ChatSidebar({
     chatText,
     onChatTextChange,
     onSendMessage,
+    onCloseChat,
 }: {
     messages: ChatMessage[];
     chatOpen: boolean;
     chatText: string;
     onChatTextChange: (value: string) => void;
     onSendMessage: () => void;
+    onCloseChat: () => void;
 }) {
     const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -54,18 +56,27 @@ export default function ChatSidebar({
                         value={chatText}
                         maxLength={255}
                         onChange={(e) => onChatTextChange(e.target.value)}
+                        onBlur={onCloseChat}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 onSendMessage();
+                                return;
+                            }
+
+                            if (e.key === 'Escape') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.currentTarget.blur();
+                                onCloseChat();
                             }
                         }}
                         placeholder="Type a message…"
                         className="w-full bg-transparent text-white outline-none placeholder:text-white/30"
                     />
                 ) : (
-                    <div className="text-white/40">Press Enter to chat</div>
+                    <div className="text-white/40">&lt;enter&gt; to chat</div>
                 )}
             </div>
         </div>
