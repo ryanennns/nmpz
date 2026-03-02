@@ -1,12 +1,13 @@
 import { setOptions } from '@googlemaps/js-api-loader';
 import { Head } from '@inertiajs/react';
-import type { ReactNode } from 'react';
+import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
 import ChatSidebar from '@/components/welcome/ChatSidebar';
 import { GameProvider, useGameContext } from '@/components/welcome/GameContext';
 import HealthBar from '@/components/welcome/HealthBar';
 import MapillaryImagePanel from '@/components/welcome/MapillaryImagePanel';
 import MapPicker from '@/components/welcome/MapPicker';
+import { LocationReportMenu } from '@/components/welcome/LocationReportMenu';
 import { PostGameButtons } from '@/components/welcome/PostGameButtons';
 import ResultsMap from '@/components/welcome/ResultsMap';
 import ShimmerText from '@/components/welcome/ShimmerText';
@@ -19,6 +20,7 @@ import type {
     GameState,
     LatLng,
     Location,
+    LocationReportReason,
     Message,
     Player,
     Round,
@@ -29,7 +31,6 @@ import echo from '@/echo';
 import { useApiClient } from '@/hooks/useApiClient';
 import { cn } from '@/lib/utils';
 
-const MAX_EVENTS = 5;
 const MAX_MESSAGES = 6;
 const END_MAP_HOLD_MS = 3000;
 const END_FADE_MS = 500;
@@ -42,6 +43,7 @@ type RoundData = {
     round_number: number;
     player_one_health: number;
     player_two_health: number;
+    location_id: string;
     location_lat: number;
     location_lng: number;
     location_heading: number;
@@ -75,8 +77,6 @@ function deriveGameState(
 
 let eventSeq = 0;
 
-const panel = 'rounded border border-white/10 bg-black/60 p-3 backdrop-blur-sm';
-
 function roundRemainingSeconds(startedAt: Date | null) {
     if (!startedAt || Number.isNaN(startedAt.getTime())) return null;
     const elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000);
@@ -106,6 +106,7 @@ function roundFromData(roundData: RoundData): Round {
 
 function locationFromData(roundData: RoundData): Location {
     return {
+        id: roundData.location_id,
         lat: roundData.location_lat,
         lng: roundData.location_lng,
         heading: roundData.location_heading,
@@ -169,7 +170,6 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
         p2: roundData.player_two_health,
     });
     const [gameOver, setGameOver] = useState(false);
-    const [events, setEvents] = useState<GameEvent[]>([]);
     const [messages, setMessages] = useState<Message[]>([]);
     const [countdown, setCountdown] = useState<number | null>(null);
     const [urgentCountdown, setUrgentCountdown] = useState<number | null>(() =>
@@ -194,6 +194,9 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
     const [blackoutVisible, setBlackoutVisible] = useState(false);
     const [pageVisible, setPageVisible] = useState(true);
     const [showPostGame, setShowPostGame] = useState(false);
+    const [reportedLocations, setReportedLocations] = useState<
+        Record<string, true>
+    >({});
     const guessRef = useRef<() => void>(() => {});
     const roundStartedAtRef = useRef<Date | null>(
         roundStartedAtFromData(roundData),
@@ -285,15 +288,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
           : null;
 
     function pushEvent(name: GameEvent['name'], data: Record<string, unknown>) {
-        setEvents((prev) => [
-            {
-                id: eventSeq++,
-                name,
-                ts: new Date().toISOString().substring(11, 23),
-                data,
-            },
-            ...prev.slice(0, MAX_EVENTS - 1),
-        ]);
+        console.info('[game event]', name, data);
     }
 
     function clearEndSequenceTimers() {
@@ -686,6 +681,33 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
         }
     }
 
+    async function reportLocation(reason: LocationReportReason) {
+        if (
+            !location ||
+            player.user_id == null ||
+            reportedLocations[location.id]
+        ) {
+            return;
+        }
+
+        try {
+            await api.reportLocation(location.id, reason);
+            setReportedLocations((prev) => ({
+                ...prev,
+                [location.id]: true,
+            }));
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 409) {
+                setReportedLocations((prev) => ({
+                    ...prev,
+                    [location.id]: true,
+                }));
+            }
+
+            throw error;
+        }
+    }
+
     guessRef.current = guess;
 
     useEffect(() => {
@@ -780,26 +802,6 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
             window.removeEventListener('keyup', onMoveKey, true);
         };
     }, [location]);
-
-    const stateLabel: Record<GameState, ReactNode> = {
-        waiting:
-            urgentCountdown !== null ? (
-                `${urgentCountdown}s to guess`
-            ) : (
-                <ShimmerText>Waiting for guesses</ShimmerText>
-            ),
-        one_guessed:
-            urgentCountdown !== null ? (
-                `${urgentCountdown}s to guess`
-            ) : (
-                <ShimmerText>waiting for opponent</ShimmerText>
-            ),
-        finished:
-            countdown !== null
-                ? `Next round in ${countdown}s`
-                : 'Round finished',
-        game_over: 'Game over',
-    };
 
     return (
         <>
@@ -916,37 +918,21 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                         );
                     })()}
 
-                    {/* Bottom-left: event feed */}
-                    <div
-                        className={`absolute bottom-4 left-4 z-10 w-60 space-y-2 text-xs ${panel}`}
-                    >
-                        {round && (
-                            <>
-                                <div className="flex justify-between text-xs opacity-70">
-                                    <span>Round {round.round_number}</span>
-                                    <span>{stateLabel[gameState]}</span>
-                                </div>
-                                {events.length > 0 && (
-                                    <div className="border-t border-white/10" />
-                                )}
-                            </>
+                    {round &&
+                        !roundFinished &&
+                        !gameOver &&
+                        location &&
+                        player.user_id != null && (
+                            <div className="absolute bottom-4 left-4 z-20">
+                                <LocationReportMenu
+                                    key={`report-${location.id}`}
+                                    onSubmit={reportLocation}
+                                    disabled={
+                                        reportedLocations[location.id] === true
+                                    }
+                                />
+                            </div>
                         )}
-                        {events.length === 0 ? (
-                            <p className="opacity-30">no events yet</p>
-                        ) : (
-                            events.map((e) => (
-                                <div
-                                    key={e.id}
-                                    className="flex gap-2 opacity-40"
-                                >
-                                    <span>{e.ts}</span>
-                                    <span className="truncate text-white/70">
-                                        {e.name}
-                                    </span>
-                                </div>
-                            ))
-                        )}
-                    </div>
 
                     {/* Bottom-center: compass */}
                     {location && heading && (

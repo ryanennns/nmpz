@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 import { useMemo } from 'react';
 import { useGameContext } from '@/components/welcome/GameContext';
-import type { LatLng } from '@/components/welcome/types';
+import type { LatLng, LocationReportReason } from '@/components/welcome/types';
 
 function getCsrfToken() {
     const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
@@ -101,6 +101,8 @@ export function useApiClient() {
                 { message },
             );
         },
+        reportLocation: (locationId: string, reason: LocationReportReason) =>
+            client.post(`/locations/${locationId}/report`, { reason }),
         fetchStats: () => client.get('/stats'),
         client,
     };

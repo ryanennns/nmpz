@@ -1,6 +1,7 @@
 export type Player = {
     id: string;
     name: string;
+    user_id?: number | null;
     user?: { name: string };
 };
 
@@ -12,6 +13,7 @@ export type Round = {
 };
 
 export type Location = {
+    id: string;
     lat: number;
     lng: number;
     heading: number;
@@ -35,6 +37,11 @@ export type RoundResult = {
 };
 
 export type EloDeltaMap = Record<string, number>;
+
+export type LocationReportReason =
+    | 'inaccurate'
+    | 'inappropriate'
+    | 'bad coverage';
 
 export type GameState = 'waiting' | 'one_guessed' | 'finished' | 'game_over';
 

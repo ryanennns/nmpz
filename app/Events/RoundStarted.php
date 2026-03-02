@@ -39,6 +39,7 @@ class RoundStarted implements ShouldBroadcastNow
             'round_number' => $this->round->round_number,
             'player_one_health' => $this->playerOneHealth,
             'player_two_health' => $this->playerTwoHealth,
+            'location_id' => $location->getKey(),
             'location_lat' => $location->lat,
             'location_lng' => $location->lng,
             'location_heading' => $location->heading,

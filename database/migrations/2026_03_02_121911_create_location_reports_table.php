@@ -12,11 +12,13 @@ return new class extends Migration
     {
         Schema::create('location_reports', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('reported_by_id')->constrained('users')->restrictOnDelete();
+            $table->foreignId('reported_by_id')->constrained('users')->restrictOnDelete();
             $table->foreignUuid('location_id')->constrained('locations')->cascadeOnDelete();
             $table->enum('reason', ReportReason::values());
             $table->enum('status', ReportStatus::values());
             $table->timestamps();
+
+            $table->unique(['reported_by_id', 'location_id']);
         });
     }
 

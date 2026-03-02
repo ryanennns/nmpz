@@ -17,6 +17,17 @@ class ReportLocation extends Controller
             'reason' => ['required', Rule::enum(ReportReason::class)],
         ]);
 
+        $existing = LocationReport::query()
+            ->where('reported_by_id', $request->user()->getKey())
+            ->where('location_id', $location->getKey())
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'message' => 'Location already reported.',
+            ], 409);
+        }
+
         $lr = LocationReport::query()->create([
             'reported_by_id' => $request->user()->getKey(),
             'location_id' => $location->getKey(),

@@ -35,6 +35,7 @@ class RoundFinished implements ShouldBroadcastNow
             'game_id' => $this->round->game_id,
             'round_id' => $this->round->getKey(),
             'round_number' => $this->round->round_number,
+            'location_id' => $location->getKey(),
             'location_lat' => $location->lat,
             'location_lng' => $location->lng,
             'player_one_guess_lat' => $this->round->player_one_guess_lat,

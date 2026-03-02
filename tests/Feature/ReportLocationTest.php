@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Enums\ReportReason;
 use App\Enums\ReportStatus;
 use App\Models\Location;
-use App\Models\Player;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -27,9 +26,6 @@ class ReportLocationTest extends TestCase
     {
         $location = Location::factory()->create();
         $user = User::factory()->create();
-        $player = Player::factory()->create([
-            'user_id' => $user->getKey(),
-        ]);
 
         $response = $this->actingAs($user)->postJson(
             route('locations.report', $location),
@@ -39,7 +35,7 @@ class ReportLocationTest extends TestCase
         );
 
         $response->assertCreated()
-            ->assertJsonPath('reported_by_id', $player->user->getKey())
+            ->assertJsonPath('reported_by_id', $user->getKey())
             ->assertJsonPath('location_id', $location->getKey())
             ->assertJsonPath('reason', ReportReason::Inaccurate->value)
             ->assertJsonPath('status', ReportStatus::Pending->value)
@@ -54,7 +50,7 @@ class ReportLocationTest extends TestCase
             ]);
 
         $this->assertDatabaseHas('location_reports', [
-            'reported_by_id' => $player->user->getKey(),
+            'reported_by_id' => $user->getKey(),
             'location_id' => $location->getKey(),
             'reason' => ReportReason::Inaccurate->value,
             'status' => ReportStatus::Pending->value,
@@ -81,5 +77,28 @@ class ReportLocationTest extends TestCase
             'reason' => 'not-a-real-reason',
         ])->assertStatus(422)
             ->assertJsonValidationErrors(['reason']);
+    }
+
+    public function test_user_cannot_report_the_same_location_twice(): void
+    {
+        $location = Location::factory()->create();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson(route('locations.report', $location), [
+            'reason' => ReportReason::Inaccurate->value,
+        ])->assertCreated();
+
+        $this->actingAs($user)->postJson(route('locations.report', $location), [
+            'reason' => ReportReason::Inappropriate->value,
+        ])->assertStatus(409)
+            ->assertJsonPath('message', 'Location already reported.');
+
+        $this->assertDatabaseCount('location_reports', 1);
+        $this->assertDatabaseHas('location_reports', [
+            'reported_by_id' => $user->getKey(),
+            'location_id' => $location->getKey(),
+            'reason' => ReportReason::Inaccurate->value,
+            'status' => ReportStatus::Pending->value,
+        ]);
     }
 }

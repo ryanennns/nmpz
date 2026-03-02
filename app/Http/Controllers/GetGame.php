@@ -52,6 +52,7 @@ class GetGame extends Controller
             'round_number' => $round->round_number,
             'player_one_health' => $game->player_one_health,
             'player_two_health' => $game->player_two_health,
+            'location_id' => $round->location->getKey(),
             'location_lat' => $round->location->lat,
             'location_lng' => $round->location->lng,
             'location_heading' => $round->location->heading,
