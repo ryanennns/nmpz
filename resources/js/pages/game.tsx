@@ -138,6 +138,34 @@ function CountdownTimer({
     );
 }
 
+function GuestBadge() {
+    return (
+        <span className="inline-flex items-center rounded-full border border-amber-200/25 bg-amber-300/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-[0.12em] text-slate-200">
+            guest
+        </span>
+    );
+}
+
+function PlayerNameLabel({
+    player,
+    align = 'left',
+}: {
+    player: Pick<Player, 'name' | 'is_guest'>;
+    align?: 'left' | 'right';
+}) {
+    return (
+        <span
+            className={cn(
+                'inline-flex items-center gap-2',
+                align === 'right' ? 'justify-end' : 'justify-start',
+            )}
+        >
+            <span>{player.name}</span>
+            {player.is_guest && <GuestBadge />}
+        </span>
+    );
+}
+
 export default function GamePage({
     player,
     game,
@@ -238,9 +266,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                   health: isPlayerOne ? health.p2 : health.p1,
                   score: isPlayerOne ? roundScores.p2 : roundScores.p1,
                   barColor: isPlayerOne ? 'red' : ('blue' as PlayerColour),
-                  name: isPlayerOne
-                      ? game.player_two.name
-                      : game.player_one.name,
+                  player: isPlayerOne ? game.player_two : game.player_one,
               },
           }
         : null;
@@ -911,7 +937,12 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                                     <div
                                         className={`${opponent?.colorDim} mb-1 font-mono text-xs`}
                                     >
-                                        {opponent?.name}
+                                        {opponent?.player && (
+                                            <PlayerNameLabel
+                                                player={opponent.player}
+                                                align="right"
+                                            />
+                                        )}
                                     </div>
                                     <HealthBar
                                         health={opponent?.health ?? 0}
@@ -990,7 +1021,19 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                         visible={winnerOverlayVisible}
                         winnerId={winnerId}
                         id={player.id}
-                        winnerName={winnerName}
+                        winnerName={
+                            game && winnerId ? (
+                                winnerId === game.player_one.id ? (
+                                    <PlayerNameLabel player={game.player_one} />
+                                ) : winnerId === game.player_two.id ? (
+                                    <PlayerNameLabel player={game.player_two} />
+                                ) : (
+                                    winnerName
+                                )
+                            ) : (
+                                winnerName
+                            )
+                        }
                         opponentId={
                             game
                                 ? player.id === game.player_one.id
@@ -999,11 +1042,13 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                                 : null
                         }
                         opponentName={
-                            game
-                                ? player.id === game.player_one.id
-                                    ? game.player_two.name
-                                    : game.player_one.name
-                                : null
+                            game ? (
+                                player.id === game.player_one.id ? (
+                                    <PlayerNameLabel player={game.player_two} />
+                                ) : (
+                                    <PlayerNameLabel player={game.player_one} />
+                                )
+                            ) : null
                         }
                         eloDelta={winnerEloDelta}
                     />

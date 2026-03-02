@@ -1,8 +1,8 @@
 import { Link } from '@inertiajs/react';
 import SimpleModal from '@/components/ui/simple-modal';
+import type { Player } from '@/components/welcome/types';
 import { logout } from '@/routes';
 import type { User } from '@/types/auth';
-import type { Player } from '@/components/welcome/types';
 
 type Props = {
     open: boolean;

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { EloDeltaMap } from '@/components/welcome/types';
 
 export const WinnerOverlay = ({
@@ -11,10 +12,10 @@ export const WinnerOverlay = ({
 }: {
     visible: boolean;
     winnerId: string | null;
-    winnerName: string | null;
+    winnerName: ReactNode | null;
     id: string;
     opponentId: string | null;
-    opponentName: string | null;
+    opponentName: ReactNode | null;
     eloDelta: EloDeltaMap;
 }) => {
     const myEloDelta = eloDelta[id];

@@ -2,6 +2,7 @@ import { usePage } from '@inertiajs/react';
 import { clsx } from 'clsx';
 import { Settings } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import SimpleModal from '@/components/ui/simple-modal';
 import NamePrompt from '@/components/welcome/Lobby/NamePrompt';
 import { QueueReady } from '@/components/welcome/Lobby/QueueReady';
 import SignInForm from '@/components/welcome/Lobby/SignInForm';
@@ -12,9 +13,8 @@ import echo from '@/echo';
 import { useUnauthedApiClient } from '@/hooks/useApiClient';
 import { PLAYER_ID_KEY, useLocalStorage } from '@/hooks/useLocalStorage';
 import type { User } from '@/types/auth';
-import SettingsModal from './SettingsModal';
 import { LobbyHeader } from './LobbyHeader';
-import SimpleModal from '@/components/ui/simple-modal';
+import SettingsModal from './SettingsModal';
 
 const PHASE_TRANSITION_MS = 200;
 

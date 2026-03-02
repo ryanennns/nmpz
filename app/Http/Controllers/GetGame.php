@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\PlayerResource;
 use App\Enums\GameStatus;
 use App\Models\Game;
 use App\Models\Location;
@@ -31,14 +32,8 @@ class GetGame extends Controller
 
         $gameArray = [
             'id' => $game->getKey(),
-            'player_one' => [
-                'id' => $game->player_one_id,
-                'name' => $game->playerOne?->name,
-            ],
-            'player_two' => [
-                'id' => $game->player_two_id,
-                'name' => $game->playerTwo?->name,
-            ],
+            'player_one' => new PlayerResource($game->playerOne),
+            'player_two' => new PlayerResource($game->playerTwo),
             'player_one_health' => $game->player_one_health,
             'player_two_health' => $game->player_two_health,
         ];
@@ -63,7 +58,7 @@ class GetGame extends Controller
         ];
 
         return Inertia::render('game', [
-            'player' => $player,
+            'player' => new PlayerResource($player),
             'game' => $gameArray,
             'round_data' => $roundData,
         ]);
