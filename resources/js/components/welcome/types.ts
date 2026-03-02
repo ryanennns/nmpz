@@ -71,4 +71,5 @@ export interface Message {
     name: string;
     text: string;
     ts: string;
+    clientState?: 'pending' | 'failed';
 }

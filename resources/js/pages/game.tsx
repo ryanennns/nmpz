@@ -596,16 +596,41 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
 
         channel.listen('.GameMessage', (data: Record<string, unknown>) => {
             pushEvent('GameMessage', data);
+            const name = (data.player_name as string) ?? 'Player';
+            const text = (data.message as string) ?? '';
             setMessages((prev) =>
-                [
-                    ...prev,
-                    {
-                        id: eventSeq++,
-                        name: (data.player_name as string) ?? 'Player',
-                        text: (data.message as string) ?? '',
-                        ts: new Date().toISOString().substring(11, 19),
-                    },
-                ].slice(-MAX_MESSAGES),
+                (() => {
+                    const optimisticIndex = prev.findIndex(
+                        (message) =>
+                            message.clientState &&
+                            message.name === name &&
+                            message.text === text,
+                    );
+
+                    if (optimisticIndex === -1) {
+                        return [
+                            ...prev,
+                            {
+                                id: eventSeq++,
+                                name,
+                                text,
+                                ts: new Date().toISOString().substring(11, 19),
+                            },
+                        ].slice(-MAX_MESSAGES);
+                    }
+
+                    return prev.map((message, index) =>
+                        index === optimisticIndex
+                            ? {
+                                  ...message,
+                                  clientState: undefined,
+                                  ts: new Date()
+                                      .toISOString()
+                                      .substring(11, 19),
+                              }
+                            : message,
+                    );
+                })(),
             );
         });
 
@@ -635,7 +660,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
             clearEndSequenceTimers();
             echo.leaveChannel(`game.${game.id}`);
         };
-    }, [game?.id]);
+    }, [game?.id, player.name]);
 
     useEffect(() => () => clearEndSequenceTimers(), []);
 
@@ -700,10 +725,35 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
     }
 
     async function sendMessage() {
-        if (!game || !chatText.trim()) return;
-        const res = await api.sendMessage(player.id, chatText.trim());
-        if (res) {
-            resetChat();
+        const nextMessage = chatText.trim();
+
+        if (!game || !nextMessage) return;
+
+        const optimisticId = eventSeq++;
+        setMessages((prev) =>
+            [
+                ...prev,
+                {
+                    id: optimisticId,
+                    name: player.name,
+                    text: nextMessage,
+                    ts: new Date().toISOString().substring(11, 19),
+                    clientState: 'pending',
+                } as Message,
+            ].slice(-MAX_MESSAGES),
+        );
+        resetChat();
+
+        try {
+            await api.sendMessage(player.id, nextMessage);
+        } catch {
+            setMessages((prev) =>
+                prev.map((message) =>
+                    message.id === optimisticId
+                        ? { ...message, clientState: 'failed' }
+                        : message,
+                ),
+            );
         }
     }
 

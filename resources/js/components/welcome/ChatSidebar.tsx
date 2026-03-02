@@ -6,6 +6,7 @@ type ChatMessage = {
     name: string;
     text: string;
     ts: string;
+    clientState?: 'pending' | 'failed';
 };
 
 export default function ChatSidebar({
@@ -39,7 +40,15 @@ export default function ChatSidebar({
                         <div key={m.id} className="mb-1 last:mb-0">
                             <span className="text-white/40">{m.ts}</span>{' '}
                             <span className="text-white/70">{m.name}:</span>{' '}
-                            <span>{m.text}</span>
+                            <span
+                                className={cn(
+                                    m.clientState === 'failed'
+                                        ? 'text-red-300/55'
+                                        : 'text-white/80',
+                                )}
+                            >
+                                {m.text}
+                            </span>
                         </div>
                     ))}
                 </div>
