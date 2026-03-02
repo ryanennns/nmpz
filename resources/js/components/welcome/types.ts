@@ -1,6 +1,7 @@
 export type Player = {
     id: string;
     name: string;
+    is_guest: boolean
     user_id?: number | null;
     user?: { name: string };
 };

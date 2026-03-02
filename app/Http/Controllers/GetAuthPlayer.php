@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\PlayerResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,7 +17,7 @@ class GetAuthPlayer extends Controller
         }
 
         return response()->json([
-            'player' => $player->toArray(),
+            'player' => new PlayerResource($player),
             'user' => $request->user()->toArray(),
         ]);
     }

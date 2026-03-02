@@ -17,9 +17,11 @@ class CreatePlayerTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonPath('name', 'Test Player')
+            ->assertJsonPath('is_guest', true)
             ->assertJsonStructure([
                 'id',
                 'name',
+                'is_guest',
             ]);
 
         $this->assertDatabaseHas('players', [

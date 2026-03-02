@@ -31,9 +31,7 @@ class StartNextRound
                 'winner_id' => $winnerId,
             ]);
 
-            $updatedElo = $this->resolveEloUpdate($game->playerOne, $game->playerTwo, $winnerId);
-
-            GameFinished::dispatch($game, $updatedElo);
+            GameFinished::dispatch($game, $this->updateElo($game->playerOne, $game->playerTwo, $winnerId));
 
             return;
         }
@@ -57,9 +55,7 @@ class StartNextRound
                 'winner_id' => null,
             ]);
 
-            $updatedElo = $this->resolveEloUpdate($game->playerOne, $game->playerTwo, null);
-
-            GameFinished::dispatch($game, $updatedElo);
+            GameFinished::dispatch($game, $this->updateElo($game->playerOne, $game->playerTwo, null));
 
             return;
         }
@@ -117,30 +113,28 @@ class StartNextRound
 
         $p1EloChange = $k * ($scoreOne - $expectedOne);
         $p2EloChange = $k * ($scoreTwo - $expectedTwo);
-        $playerOne->update([
-            'elo_rating' => (int) round($playerOne->elo_rating + $p1EloChange),
-        ]);
 
-        $playerTwo->update([
-            'elo_rating' => (int) round($playerTwo->elo_rating + $p2EloChange),
-        ]);
+        $playerOneIsGuest = $playerOne->isGuest();
+        $playerTwoIsGuest = $playerTwo->isGuest();
+        $resolvedP1EloChange = $playerOneIsGuest || ! $playerTwoIsGuest ? $p1EloChange : 0;
+        $resolvedP2EloChange = $playerTwoIsGuest || ! $playerOneIsGuest ? $p2EloChange : 0;
 
-        return [
-            $playerOne->getKey() => $p1EloChange,
-            $playerTwo->getKey() => $p2EloChange,
-        ];
-    }
-
-    private function resolveEloUpdate(Player $playerOne, Player $playerTwo, ?string $winnerId): array
-    {
-        if (! $playerOne->user()->exists() || ! $playerTwo->user()->exists()) {
-            return [
-                $playerOne->getKey() => 0,
-                $playerTwo->getKey() => 0,
-            ];
+        if ($resolvedP1EloChange !== 0.0) {
+            $playerOne->update([
+                'elo_rating' => (int) round($playerOne->elo_rating + $resolvedP1EloChange),
+            ]);
         }
 
-        return $this->updateElo($playerOne, $playerTwo, $winnerId);
+        if ($resolvedP2EloChange !== 0.0) {
+            $playerTwo->update([
+                'elo_rating' => (int) round($playerTwo->elo_rating + $resolvedP2EloChange),
+            ]);
+        }
+
+        return [
+            $playerOne->getKey() => $resolvedP1EloChange,
+            $playerTwo->getKey() => $resolvedP2EloChange,
+        ];
     }
 
     private function pickLocation(Game $game, int $roundNumber): Location

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\PlayerResource;
 use App\Models\Player;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -29,6 +30,9 @@ class ClaimPlayer extends Controller
 
         Auth::login($user);
 
-        return response()->json(['player' => $player->fresh()->toArray(), 'user' => $user->toArray()], 201);
+        return response()->json([
+            'player' => new PlayerResource($player->fresh()),
+            'user' => $user->toArray(),
+        ], 201);
     }
 }

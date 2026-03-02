@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\PlayerResource;
 use App\Models\Player;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,6 @@ class CreatePlayer extends Controller
             'user_id' => $request->user()?->id,
         ]);
 
-        return response()->json($p->toArray(), 201);
+        return (new PlayerResource($p))->response()->setStatusCode(201);
     }
 }

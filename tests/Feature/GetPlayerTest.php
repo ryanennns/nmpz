@@ -27,7 +27,8 @@ class GetPlayerTest extends TestCase
 
         $this->getJson(route('players.get', $player))
             ->assertOk()
-            ->assertJsonPath('id', $player->getKey());
+            ->assertJsonPath('id', $player->getKey())
+            ->assertJsonPath('is_guest', true);
     }
 
     public function test_it_rejects_if_a_different_user_requests_claimed_player(): void
@@ -51,6 +52,7 @@ class GetPlayerTest extends TestCase
         $this->actingAs($user)
             ->getJson(route('players.get', $player))
             ->assertOk()
-            ->assertJsonPath('id', $player->getKey());
+            ->assertJsonPath('id', $player->getKey())
+            ->assertJsonPath('is_guest', false);
     }
 }

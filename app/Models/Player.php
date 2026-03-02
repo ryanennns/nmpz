@@ -16,6 +16,11 @@ class Player extends Model
 
     protected $guarded = [];
 
+    public function isGuest(): bool
+    {
+        return $this->user()->doesntExist();
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

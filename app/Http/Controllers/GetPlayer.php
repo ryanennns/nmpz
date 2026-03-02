@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\PlayerResource;
 use App\Models\Player;
-use Illuminate\Http\JsonResponse;
 
 class GetPlayer extends Controller
 {
-    public function __invoke(Player $player): JsonResponse
+    public function __invoke(Player $player): PlayerResource
     {
-        return response()->json($player->toArray(), 200);
+        return new PlayerResource($player);
     }
 }

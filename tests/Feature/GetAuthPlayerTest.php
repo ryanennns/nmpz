@@ -41,6 +41,7 @@ class GetAuthPlayerTest extends TestCase
             ->assertJsonPath('player.id', $player->getKey())
             ->assertJsonPath('player.name', 'Alice')
             ->assertJsonPath('player.user_id', $user->getKey())
+            ->assertJsonPath('player.is_guest', false)
             ->assertJsonPath('user.id', $user->getKey())
             ->assertJsonPath('user.name', $user->name)
             ->assertJsonPath('user.email', $user->email);

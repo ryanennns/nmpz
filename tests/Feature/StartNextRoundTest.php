@@ -42,6 +42,16 @@ class StartNextRoundTest extends TestCase
         $game->playerTwo->update(['user_id' => User::factory()->create()->getKey()]);
     }
 
+    private function registerPlayerOne(Game $game): void
+    {
+        $game->playerOne->update(['user_id' => User::factory()->create()->getKey()]);
+    }
+
+    private function registerPlayerTwo(Game $game): void
+    {
+        $game->playerTwo->update(['user_id' => User::factory()->create()->getKey()]);
+    }
+
     // --- Health deduction ---
 
     public function test_player_two_takes_damage_when_player_one_scores_higher(): void
@@ -488,7 +498,7 @@ class StartNextRoundTest extends TestCase
         $this->assertSame(1000, $game->playerTwo->fresh()->elo_rating);
     }
 
-    public function test_guests_do_not_receive_elo_changes_when_the_game_finishes(): void
+    public function test_authenticated_winner_does_not_receive_elo_change_against_guest_player(): void
     {
         Event::fake();
 
@@ -497,18 +507,46 @@ class StartNextRoundTest extends TestCase
             'player_two_health' => 5000,
         ]);
 
+        $this->registerPlayerOne($game);
         $game->playerOne->update(['elo_rating' => 1000]);
         $game->playerTwo->update(['elo_rating' => 1000]);
 
         $this->handle($this->roundFor($game, 5000, 0));
 
         $this->assertSame(1000, $game->playerOne->fresh()->elo_rating);
-        $this->assertSame(1000, $game->playerTwo->fresh()->elo_rating);
+        $this->assertSame(984, $game->playerTwo->fresh()->elo_rating);
 
         Event::assertDispatched(GameFinished::class, function (GameFinished $event) use ($game) {
             return $event->game->is($game)
                 && $event->updatedElo === [
                     $game->player_one_id => 0,
+                    $game->player_two_id => -16.0,
+                ];
+        });
+    }
+
+    public function test_guest_winner_gains_elo_against_authenticated_player(): void
+    {
+        Event::fake();
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+        ]);
+
+        $this->registerPlayerTwo($game);
+        $game->playerOne->update(['elo_rating' => 1000]);
+        $game->playerTwo->update(['elo_rating' => 1000]);
+
+        $this->handle($this->roundFor($game, 5000, 0));
+
+        $this->assertSame(1016, $game->playerOne->fresh()->elo_rating);
+        $this->assertSame(1000, $game->playerTwo->fresh()->elo_rating);
+
+        Event::assertDispatched(GameFinished::class, function (GameFinished $event) use ($game) {
+            return $event->game->is($game)
+                && $event->updatedElo === [
+                    $game->player_one_id => 16.0,
                     $game->player_two_id => 0,
                 ];
         });
