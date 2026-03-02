@@ -319,8 +319,32 @@
     animation: low-hp-pulse 650ms ease-in-out infinite;
 }
 
+.countdown-tick-pulse {
+    animation: countdown-tick-pulse 420ms cubic-bezier(0.22, 1, 0.36, 1);
+    transform-origin: center;
+}
+
+@keyframes countdown-tick-pulse {
+    0% {
+        transform: scale(0.9);
+        opacity: 0.78;
+    }
+    35% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+    70% {
+        transform: scale(0.97);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 .urgent-screen-halo {
-    animation: urgent-screen-halo 900ms ease-out infinite;
+    animation: urgent-screen-halo 1500ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes urgent-screen-halo {

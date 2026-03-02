@@ -124,8 +124,9 @@ function CountdownTimer({
     return (
         <div className="pointer-events-none absolute top-6 left-1/2 z-20 -translate-x-1/2 rounded bg-black/50 px-4 py-3 text-center backdrop-blur-sm">
             <div
+                key={`${config.label}-${config.value}`}
                 className={cn(
-                    'font-mono text-6xl font-bold tabular-nums',
+                    'countdown-tick-pulse font-mono text-6xl font-bold tabular-nums',
                     config.valueClass,
                 )}
             >
@@ -843,7 +844,10 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                     className="relative h-screen w-screen overflow-hidden font-mono text-white"
                 >
                     {urgentCountdown !== null && urgentCountdown <= 15 && (
-                        <div className="urgent-screen-halo pointer-events-none absolute inset-0 z-10" />
+                        <div
+                            key={`urgent-halo-${urgentCountdown}`}
+                            className="urgent-screen-halo pointer-events-none absolute inset-0 z-10"
+                        />
                     )}
                     {/* Red vignette flash when my health drops */}
                     {myDamageKey > 0 && (
