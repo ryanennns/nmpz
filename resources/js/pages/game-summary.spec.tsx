@@ -8,8 +8,8 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import GameSummaryPage from './game-summary';
 import type { GameSummary } from '@/components/game-summary/types';
+import GameSummaryPage from './game-summary';
 
 vi.mock('@inertiajs/react', () => ({
     Head: ({ title }: { title: string }) => <title>{title}</title>,

@@ -3,6 +3,7 @@
 export default new Proxy(
     {},
     {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         get: (_target, _prop) => () => '#',
     },
 );
