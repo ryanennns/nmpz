@@ -86,6 +86,14 @@ function roundStartedAtFromData(roundData: RoundData) {
     return roundData.started_at ? new Date(roundData.started_at) : null;
 }
 
+function formatDistance(distanceKm: number | null) {
+    if (distanceKm === null) return null;
+    if (distanceKm < 1)
+        return `${Math.round(distanceKm * 1000).toLocaleString()} m away`;
+
+    return `${Math.round(distanceKm).toLocaleString()} km away`;
+}
+
 function roundFromData(roundData: RoundData): Round {
     return {
         id: roundData.round_id,
@@ -234,6 +242,20 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
     const gameState = round
         ? deriveGameState(round, gameOver, roundFinished)
         : 'waiting';
+    const roundDistances = roundResult
+        ? {
+              me: formatDistance(
+                  isPlayerOne
+                      ? roundResult.p1DistanceKm
+                      : roundResult.p2DistanceKm,
+              ),
+              opponent: formatDistance(
+                  isPlayerOne
+                      ? roundResult.p2DistanceKm
+                      : roundResult.p1DistanceKm,
+              ),
+          }
+        : { me: null, opponent: null };
     const hasRoundCountdown = roundFinished && countdown !== null;
     const hasUrgentCountdown =
         (gameState === 'one_guessed' || gameState === 'waiting') &&
@@ -530,6 +552,14 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                               lng: Number(data.player_two_guess_lng),
                           }
                         : null,
+                p1DistanceKm:
+                    data.player_one_distance_km != null
+                        ? Number(data.player_one_distance_km)
+                        : null,
+                p2DistanceKm:
+                    data.player_two_distance_km != null
+                        ? Number(data.player_two_distance_km)
+                        : null,
             });
         });
 
@@ -810,11 +840,18 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                                     <div className="rounded bg-black/50 px-4 py-3 backdrop-blur-sm">
                                         {roundFinished &&
                                             me?.score !== null && (
-                                                <div
-                                                    className={`${me?.color} mb-3 font-mono text-6xl font-bold tabular-nums`}
-                                                >
-                                                    {me?.score?.toLocaleString()}
-                                                </div>
+                                                <>
+                                                    <div
+                                                        className={`${me?.color} font-mono text-6xl font-bold tabular-nums`}
+                                                    >
+                                                        {me?.score?.toLocaleString()}
+                                                    </div>
+                                                    {roundDistances.me && (
+                                                        <div className="mb-3 text-xs text-white/60">
+                                                            {roundDistances.me}
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
                                         <div
                                             className={`${me?.colorDim} mb-1 font-mono text-xs`}
@@ -840,11 +877,20 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                                 <div className="pointer-events-none absolute top-6 right-8 z-20 rounded bg-black/50 px-4 py-3 text-right backdrop-blur-sm">
                                     {roundFinished &&
                                         opponent?.score !== null && (
-                                            <div
-                                                className={`${opponent?.color} mb-3 font-mono text-6xl font-bold tabular-nums`}
-                                            >
-                                                {opponent?.score?.toLocaleString()}
-                                            </div>
+                                            <>
+                                                <div
+                                                    className={`${opponent?.color} font-mono text-6xl font-bold tabular-nums`}
+                                                >
+                                                    {opponent?.score?.toLocaleString()}
+                                                </div>
+                                                {roundDistances.opponent && (
+                                                    <div className="mb-3 text-xs text-white/60">
+                                                        {
+                                                            roundDistances.opponent
+                                                        }
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                     <div
                                         className={`${opponent?.colorDim} mb-1 font-mono text-xs`}

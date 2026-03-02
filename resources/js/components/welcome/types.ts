@@ -30,6 +30,8 @@ export type RoundResult = {
     location: { lat: number; lng: number };
     p1Guess: { lat: number; lng: number } | null;
     p2Guess: { lat: number; lng: number } | null;
+    p1DistanceKm: number | null;
+    p2DistanceKm: number | null;
 };
 
 export type GameState = 'waiting' | 'one_guessed' | 'finished' | 'game_over';

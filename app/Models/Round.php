@@ -72,7 +72,7 @@ class Round extends Model
 
     public static function calculateScore(float $lat1, float $lng1, float $lat2, float $lng2): int
     {
-        $distanceKm = self::haversineDistanceKm($lat1, $lng1, $lat2, $lng2);
+        $distanceKm = self::calculateDistanceKm($lat1, $lng1, $lat2, $lng2);
 
         if ($distanceKm < 0.025) {
             return 5000;
@@ -81,7 +81,39 @@ class Round extends Model
         return (int) round(5000 * exp(-$distanceKm / 2000.0));
     }
 
-    private static function haversineDistanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    public function playerOneDistanceKm(): ?float
+    {
+        $location = $this->location;
+
+        if (! $location || $this->player_one_guess_lat === null || $this->player_one_guess_lng === null) {
+            return null;
+        }
+
+        return self::calculateDistanceKm(
+            $location->lat,
+            $location->lng,
+            $this->player_one_guess_lat,
+            $this->player_one_guess_lng,
+        );
+    }
+
+    public function playerTwoDistanceKm(): ?float
+    {
+        $location = $this->location;
+
+        if (! $location || $this->player_two_guess_lat === null || $this->player_two_guess_lng === null) {
+            return null;
+        }
+
+        return self::calculateDistanceKm(
+            $location->lat,
+            $location->lng,
+            $this->player_two_guess_lat,
+            $this->player_two_guess_lng,
+        );
+    }
+
+    public static function calculateDistanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
     {
         $earthRadiusKm = 6371.0;
         $dLat = deg2rad($lat2 - $lat1);
