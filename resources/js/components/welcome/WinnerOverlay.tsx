@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import type { EloDeltaMap } from '@/components/welcome/types';
 
 export const WinnerOverlay = ({
@@ -6,24 +5,24 @@ export const WinnerOverlay = ({
     winnerId,
     winnerName,
     id,
-    opponentId,
-    opponentName,
     eloDelta,
 }: {
     visible: boolean;
     winnerId: string | null;
-    winnerName: ReactNode | null;
+    winnerName: string | null;
     id: string;
-    opponentId: string | null;
-    opponentName: ReactNode | null;
     eloDelta: EloDeltaMap;
 }) => {
     const myEloDelta = eloDelta[id];
-    const opponentEloDelta = opponentId ? eloDelta[opponentId] : undefined;
-    const hasEloDelta =
-        Number.isFinite(myEloDelta) || Number.isFinite(opponentEloDelta);
+    const hasEloDelta = Number.isFinite(myEloDelta);
     const formatEloDelta = (value: number) =>
         `${value >= 0 ? '+' : ''}${Math.round(value)}`;
+    const eloDeltaClass =
+        typeof myEloDelta === 'number'
+            ? myEloDelta >= 0
+                ? 'text-emerald-400'
+                : 'text-red-400'
+            : 'text-white/80';
 
     return (
         <div
@@ -42,16 +41,10 @@ export const WinnerOverlay = ({
                 </div>
             )}
             {hasEloDelta && (
-                <div className="mt-5 space-y-1 font-mono text-sm text-white/70">
-                    {Number.isFinite(myEloDelta) && (
-                        <div>you: elo {formatEloDelta(myEloDelta)}</div>
-                    )}
-                    {Number.isFinite(opponentEloDelta) && opponentName && (
-                        <div>
-                            {opponentName}: elo{' '}
-                            {formatEloDelta(opponentEloDelta || 0)}
-                        </div>
-                    )}
+                <div
+                    className={`mt-5 font-mono text-3xl font-bold ${eloDeltaClass}`}
+                >
+                    {formatEloDelta(myEloDelta)} elo
                 </div>
             )}
         </div>

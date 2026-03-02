@@ -1025,35 +1025,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                         visible={winnerOverlayVisible}
                         winnerId={winnerId}
                         id={player.id}
-                        winnerName={
-                            game && winnerId ? (
-                                winnerId === game.player_one.id ? (
-                                    <PlayerNameLabel player={game.player_one} />
-                                ) : winnerId === game.player_two.id ? (
-                                    <PlayerNameLabel player={game.player_two} />
-                                ) : (
-                                    winnerName
-                                )
-                            ) : (
-                                winnerName
-                            )
-                        }
-                        opponentId={
-                            game
-                                ? player.id === game.player_one.id
-                                    ? game.player_two.id
-                                    : game.player_one.id
-                                : null
-                        }
-                        opponentName={
-                            game ? (
-                                player.id === game.player_one.id ? (
-                                    <PlayerNameLabel player={game.player_two} />
-                                ) : (
-                                    <PlayerNameLabel player={game.player_one} />
-                                )
-                            ) : null
-                        }
+                        winnerName={winnerName}
                         eloDelta={winnerEloDelta}
                     />
                 </div>

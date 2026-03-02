@@ -105,7 +105,12 @@ export const QueueReady = ({
             <div className="flex shrink items-center justify-between rounded py-1 text-xs text-zinc-600">
                 {!isAuthenticated && (
                     <>
-                        <div></div>
+                        <div
+                            className="cursor-default"
+                            title="sign up to see elo"
+                        >
+                            elo: ▓▓▓▓
+                        </div>
                         <button
                             type="button"
                             onClick={onSignUp}
