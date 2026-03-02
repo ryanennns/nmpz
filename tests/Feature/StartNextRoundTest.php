@@ -10,6 +10,7 @@ use App\Jobs\ForceEndRound;
 use App\Listeners\StartNextRound;
 use App\Models\Game;
 use App\Models\Round;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Date;
@@ -33,6 +34,12 @@ class StartNextRoundTest extends TestCase
             'player_one_score' => $p1Score,
             'player_two_score' => $p2Score,
         ]);
+    }
+
+    private function registerPlayers(Game $game): void
+    {
+        $game->playerOne->update(['user_id' => User::factory()->create()->getKey()]);
+        $game->playerTwo->update(['user_id' => User::factory()->create()->getKey()]);
     }
 
     // --- Health deduction ---
@@ -313,6 +320,7 @@ class StartNextRoundTest extends TestCase
             'player_two_health' => 5000,
         ]);
 
+        $this->registerPlayers($game);
         $game->playerOne->update(['elo_rating' => 1000]);
         $game->playerTwo->update(['elo_rating' => 1000]);
 
@@ -332,6 +340,7 @@ class StartNextRoundTest extends TestCase
             'player_two_health' => 5000,
         ]);
 
+        $this->registerPlayers($game);
         $game->playerOne->update(['elo_rating' => 1000]);
         $game->playerTwo->update(['elo_rating' => 1000]);
 
@@ -355,6 +364,7 @@ class StartNextRoundTest extends TestCase
             'player_two_health' => 5000,
         ]);
 
+        $this->registerPlayers($game);
         $game->playerOne->update(['elo_rating' => 1400]);
         $game->playerTwo->update(['elo_rating' => 1000]);
 
@@ -380,6 +390,7 @@ class StartNextRoundTest extends TestCase
             'player_two_health' => 5000,
         ]);
 
+        $this->registerPlayers($game);
         $game->playerOne->update(['elo_rating' => 1000]);
         $game->playerTwo->update(['elo_rating' => 1400]);
 
@@ -404,6 +415,7 @@ class StartNextRoundTest extends TestCase
             'no_guess_rounds' => 2,
         ]);
 
+        $this->registerPlayers($game);
         $game->playerOne->update(['elo_rating' => 1200]);
         $game->playerTwo->update(['elo_rating' => 1000]);
 
@@ -436,6 +448,7 @@ class StartNextRoundTest extends TestCase
             'no_guess_rounds' => 2,
         ]);
 
+        $this->registerPlayers($game);
         $game->playerOne->update(['elo_rating' => 1200]);
         $game->playerTwo->update(['elo_rating' => 1000]);
 
@@ -473,5 +486,31 @@ class StartNextRoundTest extends TestCase
 
         $this->assertSame(1000, $game->playerOne->fresh()->elo_rating);
         $this->assertSame(1000, $game->playerTwo->fresh()->elo_rating);
+    }
+
+    public function test_guests_do_not_receive_elo_changes_when_the_game_finishes(): void
+    {
+        Event::fake();
+
+        $game = Game::factory()->inProgress()->create([
+            'player_one_health' => 5000,
+            'player_two_health' => 5000,
+        ]);
+
+        $game->playerOne->update(['elo_rating' => 1000]);
+        $game->playerTwo->update(['elo_rating' => 1000]);
+
+        $this->handle($this->roundFor($game, 5000, 0));
+
+        $this->assertSame(1000, $game->playerOne->fresh()->elo_rating);
+        $this->assertSame(1000, $game->playerTwo->fresh()->elo_rating);
+
+        Event::assertDispatched(GameFinished::class, function (GameFinished $event) use ($game) {
+            return $event->game->is($game)
+                && $event->updatedElo === [
+                    $game->player_one_id => 0,
+                    $game->player_two_id => 0,
+                ];
+        });
     }
 }

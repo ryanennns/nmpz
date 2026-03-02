@@ -31,7 +31,7 @@ class StartNextRound
                 'winner_id' => $winnerId,
             ]);
 
-            $updatedElo = $this->updateElo($game->playerOne, $game->playerTwo, $winnerId);
+            $updatedElo = $this->resolveEloUpdate($game->playerOne, $game->playerTwo, $winnerId);
 
             GameFinished::dispatch($game, $updatedElo);
 
@@ -57,7 +57,7 @@ class StartNextRound
                 'winner_id' => null,
             ]);
 
-            $updatedElo = $this->updateElo($game->playerOne, $game->playerTwo, null);
+            $updatedElo = $this->resolveEloUpdate($game->playerOne, $game->playerTwo, null);
 
             GameFinished::dispatch($game, $updatedElo);
 
@@ -129,6 +129,18 @@ class StartNextRound
             $playerOne->getKey() => $p1EloChange,
             $playerTwo->getKey() => $p2EloChange,
         ];
+    }
+
+    private function resolveEloUpdate(Player $playerOne, Player $playerTwo, ?string $winnerId): array
+    {
+        if (! $playerOne->user()->exists() || ! $playerTwo->user()->exists()) {
+            return [
+                $playerOne->getKey() => 0,
+                $playerTwo->getKey() => 0,
+            ];
+        }
+
+        return $this->updateElo($playerOne, $playerTwo, $winnerId);
     }
 
     private function pickLocation(Game $game, int $roundNumber): Location
