@@ -21,12 +21,12 @@ describe('PlayerStats', () => {
         cleanup();
     });
 
-    it('shows loading state initially', () => {
+    it('renders nothing while loading', () => {
         mocks.api.getPlayerStats.mockReturnValue(new Promise(() => {}));
 
-        render(<PlayerStats playerId="player-1" />);
+        const { container } = render(<PlayerStats playerId="player-1" />);
 
-        expect(screen.getByText('loading stats...')).toBeInTheDocument();
+        expect(container.innerHTML).toBe('');
     });
 
     it('displays win/loss record and elo after loading', async () => {

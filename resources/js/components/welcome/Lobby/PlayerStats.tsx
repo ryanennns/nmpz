@@ -31,7 +31,7 @@ const resultColor: Record<RecentMatch['result'], string> = {
 export function PlayerStats({ playerId }: { playerId: string }) {
     const api = useUnauthedApiClient();
     const [stats, setStats] = useState<Stats | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [visible, setVisible] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -44,11 +44,6 @@ export function PlayerStats({ playerId }: { playerId: string }) {
             })
             .catch(() => {
                 // silently fail - stats are non-critical
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setLoading(false);
-                }
             });
 
         return () => {
@@ -56,13 +51,11 @@ export function PlayerStats({ playerId }: { playerId: string }) {
         };
     }, [playerId]);
 
-    if (loading) {
-        return (
-            <div className="w-full text-center text-xs text-white/30">
-                loading stats...
-            </div>
-        );
-    }
+    useEffect(() => {
+        if (!stats) return;
+        const frame = requestAnimationFrame(() => setVisible(true));
+        return () => cancelAnimationFrame(frame);
+    }, [stats]);
 
     if (!stats) {
         return null;
@@ -71,54 +64,66 @@ export function PlayerStats({ playerId }: { playerId: string }) {
     const hasMatches = stats.recent_matches.length > 0;
 
     return (
-        <div className="w-full space-y-2">
-            <div className="flex items-center justify-between text-xs text-white/50">
-                <div className="flex gap-3">
-                    <span>
-                        <span className="text-green-400">{stats.wins}W</span>
-                        {' / '}
-                        <span className="text-red-400">{stats.losses}L</span>
-                        {stats.draws > 0 && (
-                            <>
+        <div
+            className={`grid transition-[grid-template-rows] duration-300 ease-out ${visible ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+        >
+            <div className="overflow-hidden">
+                <div
+                    className={`w-full space-y-2 transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
+                >
+                    <div className="flex items-center justify-between text-xs text-white/50">
+                        <div className="flex gap-3">
+                            <span>
+                                <span className="text-green-400">
+                                    {stats.wins}W
+                                </span>
                                 {' / '}
-                                <span className="text-yellow-400">
-                                    {stats.draws}D
+                                <span className="text-red-400">
+                                    {stats.losses}L
                                 </span>
-                            </>
-                        )}
-                    </span>
-                </div>
-                <span className="text-white/30">elo {stats.elo}</span>
-            </div>
-
-            {hasMatches && (
-                <div className="space-y-0.5">
-                    <div className="text-[10px] text-white/20">
-                        recent matches
-                    </div>
-                    {stats.recent_matches.map((match) => (
-                        <a
-                            key={match.game_id}
-                            href={`/games/${match.game_id}/summary`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex cursor-pointer items-center justify-between text-xs text-white/40 transition-colors hover:text-white/70"
-                        >
-                            <div className="flex items-center gap-2">
-                                <span
-                                    className={`font-bold ${resultColor[match.result]}`}
-                                >
-                                    {resultLabel[match.result]}
-                                </span>
-                                <span>vs {match.opponent_name}</span>
-                            </div>
-                            <span className="text-[10px] text-white/20">
-                                {formatRelativeTime(match.played_at)}
+                                {stats.draws > 0 && (
+                                    <>
+                                        {' / '}
+                                        <span className="text-yellow-400">
+                                            {stats.draws}D
+                                        </span>
+                                    </>
+                                )}
                             </span>
-                        </a>
-                    ))}
+                        </div>
+                        <span className="text-white/30">elo {stats.elo}</span>
+                    </div>
+
+                    {hasMatches && (
+                        <div className="space-y-0.5">
+                            <div className="text-[10px] text-white/20">
+                                recent matches
+                            </div>
+                            {stats.recent_matches.map((match) => (
+                                <a
+                                    key={match.game_id}
+                                    href={`/games/${match.game_id}/summary`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex cursor-pointer items-center justify-between text-xs text-white/40 transition-colors hover:text-white/70"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span
+                                            className={`font-bold ${resultColor[match.result]}`}
+                                        >
+                                            {resultLabel[match.result]}
+                                        </span>
+                                        <span>vs {match.opponent_name}</span>
+                                    </div>
+                                    <span className="text-[10px] text-white/20">
+                                        {formatRelativeTime(match.played_at)}
+                                    </span>
+                                </a>
+                            ))}
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
         </div>
     );
 }
