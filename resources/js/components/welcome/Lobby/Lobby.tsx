@@ -3,6 +3,7 @@ import { clsx } from 'clsx';
 import { Settings } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import SimpleModal from '@/components/ui/simple-modal';
+import Toast from '@/components/ui/toast';
 import NamePrompt from '@/components/welcome/Lobby/NamePrompt';
 import { QueueReady } from '@/components/welcome/Lobby/QueueReady';
 import SignInForm from '@/components/welcome/Lobby/SignInForm';
@@ -28,6 +29,7 @@ export default function Lobby() {
     const [helpOpen, setHelpOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [player, setPlayer] = useState<Player | undefined>(undefined);
+    const [showGuestProgressToast, setShowGuestProgressToast] = useState(false);
 
     const [phase, setPhase] = useState<
         'guest_signin' | 'queue_ready' | 'queued' | 'sign_in' | 'sign_up'
@@ -74,6 +76,7 @@ export default function Lobby() {
                 api.getPlayer(key)
                     .then((data) => {
                         setPlayer(data.data);
+                        setShowGuestProgressToast(true);
 
                         const autoQueue = new URLSearchParams(
                             window.location.search,
@@ -143,6 +146,7 @@ export default function Lobby() {
     };
 
     const signOut = () => {
+        setShowGuestProgressToast(false);
         setPhase('guest_signin');
         setTimeout(() => {
             setPlayer(undefined);
@@ -263,6 +267,18 @@ export default function Lobby() {
                         />
                     )}
                 </div>
+                {showGuestProgressToast && player && !user && (
+                    <Toast
+                        data-testid="guest-progress-toast"
+                        dismissLabel="Dismiss progress toast"
+                        onDismiss={() => setShowGuestProgressToast(false)}
+                    >
+                        <p className="leading-relaxed text-zinc-200">
+                            want to save your progress? create an account to
+                            keep this player.
+                        </p>
+                    </Toast>
+                )}
                 <SimpleModal open={helpOpen} onClose={() => setHelpOpen(false)}>
                     <div className="mb-2 text-2xl text-white/50">
                         what is <span className="text-white/80">nmpz</span>

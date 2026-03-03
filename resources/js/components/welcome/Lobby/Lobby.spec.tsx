@@ -169,6 +169,12 @@ describe('Lobby', () => {
         expect(await screen.findByText('join queue')).toBeInTheDocument();
         expect(mocks.api.getPlayer).toHaveBeenCalledWith('stored-player');
         expect(screen.getByText('sam')).toBeInTheDocument();
+        expect(screen.getByTestId('guest-progress-toast')).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                'want to save your progress? create an account to keep this player.',
+            ),
+        ).toBeInTheDocument();
     });
 
     it('removes the stored player key when getPlayer fails', async () => {
@@ -250,6 +256,31 @@ describe('Lobby', () => {
         expect(mocks.api.getAuthPlayer).toHaveBeenCalledTimes(1);
         expect(mocks.api.getPlayer).not.toHaveBeenCalled();
         expect(screen.getByText('alice')).toBeInTheDocument();
+        expect(
+            screen.queryByTestId('guest-progress-toast'),
+        ).not.toBeInTheDocument();
+    });
+
+    it('dismisses the guest progress toast', async () => {
+        mocks.localStorage.get.mockReturnValue('stored-player');
+        mocks.api.getPlayer.mockResolvedValue({
+            status: 200,
+            data: { id: 'stored-player', name: 'sam' },
+        });
+
+        render(<Lobby />);
+
+        const user = userEvent.setup();
+        await screen.findByTestId('guest-progress-toast');
+        await user.click(
+            screen.getByRole('button', { name: /dismiss progress toast/i }),
+        );
+
+        await waitFor(() => {
+            expect(
+                screen.queryByTestId('guest-progress-toast'),
+            ).not.toBeInTheDocument();
+        });
     });
 
     it('clears local auth state when signing out', async () => {
