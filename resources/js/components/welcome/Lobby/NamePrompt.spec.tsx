@@ -27,9 +27,12 @@ describe('NamePrompt', () => {
         expect(onSubmit).not.toHaveBeenCalled();
     });
 
-    it('shows the error styles when error is true', () => {
+    it('shows the error styles when submitting an empty name', async () => {
         const onSubmit = vi.fn();
-        render(<NamePrompt onSubmit={onSubmit} onSignIn={vi.fn()} error />);
+        render(<NamePrompt onSubmit={onSubmit} onSignIn={vi.fn()} />);
+
+        const user = userEvent.setup();
+        await user.click(screen.getByText('continue'));
 
         expect(screen.getByPlaceholderText('your name')).toHaveClass(
             'border-red-500',

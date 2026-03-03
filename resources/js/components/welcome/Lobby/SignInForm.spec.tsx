@@ -69,6 +69,11 @@ describe('SignInForm', () => {
         render(<SignInForm api={api} onSuccess={vi.fn()} onBack={vi.fn()} />);
 
         const user = userEvent.setup();
+        await user.type(
+            screen.getByPlaceholderText('email'),
+            'test@example.com',
+        );
+        await user.type(screen.getByPlaceholderText('password'), 'password123');
         await user.click(screen.getByText('sign in'));
 
         expect(

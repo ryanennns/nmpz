@@ -60,7 +60,7 @@ describe('QueueReady', () => {
         );
 
         const user = userEvent.setup();
-        await user.click(screen.getByText('Join queue'));
+        await user.click(screen.getByText('join queue'));
 
         expect(onJoinQueue).toHaveBeenCalledTimes(1);
     });

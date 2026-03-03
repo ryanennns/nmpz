@@ -1,20 +1,19 @@
 import { useState } from 'react';
 import type { Player } from '@/components/welcome/types';
-import type { useUnauthedApiClient } from '@/hooks/useApiClient';
+import { useUnauthedApiClient } from '@/hooks/useApiClient';
 import type { User } from '@/types';
 import AuthForm, { AuthField, getValidationErrors } from './AuthForm';
 
 export default function SignUpForm({
     playerId,
-    api,
     onSuccess,
     onBack,
 }: {
     playerId: string;
-    api: ReturnType<typeof useUnauthedApiClient>;
     onSuccess: (player: Player, user: User) => void;
     onBack: () => void;
 }) {
+    const api = useUnauthedApiClient();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');

@@ -1,12 +1,10 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SignUpForm from './SignUpForm';
 
-describe('SignUpForm', () => {
-    afterEach(() => cleanup());
-
-    const makeApi = (overrides: Record<string, unknown> = {}) => ({
+const mocks = vi.hoisted(() => ({
+    api: {
         createPlayer: vi.fn(),
         updatePlayer: vi.fn(),
         joinQueue: vi.fn(),
@@ -15,14 +13,24 @@ describe('SignUpForm', () => {
         signIn: vi.fn(),
         getAuthPlayer: vi.fn(),
         claimPlayer: vi.fn(),
-        ...overrides,
+    },
+}));
+
+vi.mock('@/hooks/useApiClient', () => ({
+    useUnauthedApiClient: () => mocks.api,
+}));
+
+describe('SignUpForm', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
+
+    afterEach(() => cleanup());
 
     it('renders email, password, confirmation fields and create account button', () => {
         render(
             <SignUpForm
                 playerId="player-1"
-                api={makeApi()}
                 onSuccess={vi.fn()}
                 onBack={vi.fn()}
             />,
@@ -39,20 +47,17 @@ describe('SignUpForm', () => {
 
     it('calls onSuccess when claim returns 201', async () => {
         const onSuccess = vi.fn();
-        const api = makeApi({
-            claimPlayer: vi.fn().mockResolvedValue({
-                status: 201,
-                data: {
-                    player: { id: 'player-1' },
-                    user: { id: 1, email: 'new@example.com' },
-                },
-            }),
+        mocks.api.claimPlayer.mockResolvedValue({
+            status: 201,
+            data: {
+                player: { id: 'player-1' },
+                user: { id: 1, email: 'new@example.com' },
+            },
         });
 
         render(
             <SignUpForm
                 playerId="player-1"
-                api={api}
                 onSuccess={onSuccess}
                 onBack={vi.fn()}
             />,
@@ -73,7 +78,7 @@ describe('SignUpForm', () => {
         await waitFor(() => {
             expect(onSuccess).toHaveBeenCalledTimes(1);
         });
-        expect(api.claimPlayer).toHaveBeenCalledWith(
+        expect(mocks.api.claimPlayer).toHaveBeenCalledWith(
             'player-1',
             'new@example.com',
             'password123',
@@ -82,29 +87,35 @@ describe('SignUpForm', () => {
     });
 
     it('shows field errors on 422', async () => {
-        const api = makeApi({
-            claimPlayer: vi.fn().mockRejectedValue({
-                response: {
-                    status: 422,
-                    data: {
-                        errors: {
-                            email: ['The email has already been taken.'],
-                        },
+        mocks.api.claimPlayer.mockRejectedValue({
+            response: {
+                status: 422,
+                data: {
+                    errors: {
+                        email: ['The email has already been taken.'],
                     },
                 },
-            }),
+            },
         });
 
         render(
             <SignUpForm
                 playerId="player-1"
-                api={api}
                 onSuccess={vi.fn()}
                 onBack={vi.fn()}
             />,
         );
 
         const user = userEvent.setup();
+        await user.type(
+            screen.getByPlaceholderText('email'),
+            'taken@example.com',
+        );
+        await user.type(screen.getByPlaceholderText('password'), 'password123');
+        await user.type(
+            screen.getByPlaceholderText('confirm password'),
+            'password123',
+        );
         await user.click(screen.getByText('create account'));
 
         expect(
@@ -118,7 +129,6 @@ describe('SignUpForm', () => {
         render(
             <SignUpForm
                 playerId="player-1"
-                api={makeApi()}
                 onSuccess={vi.fn()}
                 onBack={onBack}
             />,

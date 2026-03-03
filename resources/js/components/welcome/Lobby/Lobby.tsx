@@ -227,7 +227,6 @@ export default function Lobby() {
                     )}
                     {displayPhase === 'sign_up' && (
                         <SignUpForm
-                            api={api}
                             playerId={player!.id}
                             onBack={() => setPhase('queue_ready')}
                             onSuccess={(player, user) => {
