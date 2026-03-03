@@ -128,6 +128,38 @@ class VoteOnLocationReportTest extends TestCase
         ]);
     }
 
+    public function test_user_one_can_remove_a_location_immediately(): void
+    {
+        $user = User::factory()->create([
+            'id' => 1,
+        ]);
+        $location = Location::factory()->create();
+        $report = $this->createPendingReport($location);
+
+        $this->actingAs($user)
+            ->postJson(route('locations.vote', $location), [
+                'vote' => 'remove',
+            ])
+            ->assertOk()
+            ->assertJson([
+                'report' => null,
+            ]);
+
+        $this->assertDatabaseHas('location_reports', [
+            'id' => $report->getKey(),
+            'votes_to_reject' => 1,
+            'status' => ReportStatus::Rejected->value,
+        ]);
+        $this->assertSoftDeleted('locations', [
+            'id' => $location->getKey(),
+        ]);
+        $this->assertDatabaseHas('location_report_votes', [
+            'location_report_id' => $report->getKey(),
+            'user_id' => 1,
+            'vote' => 'remove',
+        ]);
+    }
+
     public function test_same_user_cannot_increment_the_vote_twice(): void
     {
         $user = User::factory()->create();

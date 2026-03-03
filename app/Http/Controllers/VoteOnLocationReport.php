@@ -53,13 +53,17 @@ class VoteOnLocationReport extends Controller
             $report->increment($column);
             $report->refresh();
 
+            $isOwnerOverride =
+                $validated['vote'] === 'remove' &&
+                (int) $request->user()->getKey() === 1;
+
             if ($report->votes_to_accept >= 3) {
                 $report->update([
                     'status' => ReportStatus::Accepted,
                 ]);
             }
 
-            if ($report->votes_to_reject >= 3) {
+            if ($isOwnerOverride || $report->votes_to_reject >= 3) {
                 $location->delete();
                 $report->update([
                     'status' => ReportStatus::Rejected,
