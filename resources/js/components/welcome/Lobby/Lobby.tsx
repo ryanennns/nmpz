@@ -29,7 +29,6 @@ export default function Lobby() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [player, setPlayer] = useState<Player | undefined>(undefined);
 
-    const [error, setError] = useState<string | undefined>(undefined);
     const [phase, setPhase] = useState<
         'guest_signin' | 'queue_ready' | 'queued' | 'sign_in' | 'sign_up'
     >('guest_signin');
@@ -125,8 +124,6 @@ export default function Lobby() {
         const response = await api.createPlayer(name);
 
         if (response.status !== 201) {
-            setError('oops');
-
             return;
         }
 
@@ -139,14 +136,10 @@ export default function Lobby() {
             return;
         }
 
-        try {
-            await api.updatePlayer(player.id, name);
-            setPlayer((currentPlayer) =>
-                currentPlayer ? { ...currentPlayer, name } : currentPlayer,
-            );
-        } catch {
-            setError('oops');
-        }
+        await api.updatePlayer(player.id, name);
+        setPlayer((currentPlayer) =>
+            currentPlayer ? { ...currentPlayer, name } : currentPlayer,
+        );
     };
 
     const signOut = () => {
@@ -214,7 +207,6 @@ export default function Lobby() {
                         <NamePrompt
                             onSubmit={submitPlayerName}
                             onSignIn={() => setPhase('sign_in')}
-                            error={!!error}
                         />
                     )}
                     {displayPhase === 'sign_in' && (

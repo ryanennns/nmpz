@@ -4,12 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 export default function NamePrompt({
     onSubmit,
     onSignIn,
-    error = false,
 }: {
     onSubmit: (name: string) => void;
     onSignIn: () => void;
-    error?: boolean;
 }) {
+    const [error, setError] = useState<boolean>(false);
     const [name, setName] = useState('');
     const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -19,7 +18,13 @@ export default function NamePrompt({
 
     function submit() {
         const trimmed = name.trim();
-        if (!trimmed) return;
+        if (!trimmed) {
+            setError(true);
+
+            return;
+        }
+
+        setError(false);
         onSubmit(trimmed.slice(0, 50));
     }
 

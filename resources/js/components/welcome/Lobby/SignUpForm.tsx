@@ -19,9 +19,35 @@ export default function SignUpForm({
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');
     const [errors, setErrors] = useState<Record<string, string[]>>({});
+    const [serverErrors, setServerErrors] = useState<Record<string, string[]>>(
+        {},
+    );
 
     const submit = async () => {
+        const newErrors: Record<string, string[]> = {};
+        if (!email) {
+            newErrors.email = ['required'];
+        }
+
+        if (!password) {
+            newErrors.password = ['required'];
+        }
+
+        if (password && password.length < 8) {
+            newErrors.password = ['must be at least 8 characters'];
+        }
+
+        if (password !== passwordConfirmation) {
+            newErrors.password_confirmation = ['passwords do not match'];
+        }
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
         setErrors({});
+        setServerErrors({});
         try {
             const data = await api.claimPlayer(
                 playerId,
@@ -33,7 +59,7 @@ export default function SignUpForm({
         } catch (err: unknown) {
             const validationErrors = getValidationErrors(err);
             if (validationErrors) {
-                setErrors(validationErrors);
+                setServerErrors(validationErrors);
             }
         }
     };
@@ -50,6 +76,7 @@ export default function SignUpForm({
                 onChange={setEmail}
                 placeholder="email"
                 error={errors.email?.[0]}
+                serverError={serverErrors.email?.[0]}
             />
             <AuthField
                 type="password"
@@ -57,6 +84,7 @@ export default function SignUpForm({
                 onChange={setPassword}
                 placeholder="password"
                 error={errors.password?.[0]}
+                serverError={serverErrors.password?.[0]}
             />
             <AuthField
                 type="password"
@@ -64,6 +92,7 @@ export default function SignUpForm({
                 onChange={setPasswordConfirmation}
                 placeholder="confirm password"
                 error={errors.password_confirmation?.[0]}
+                serverError={serverErrors.password_confirmation?.[0]}
             />
         </AuthForm>
     );

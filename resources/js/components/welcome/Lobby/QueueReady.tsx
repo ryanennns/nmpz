@@ -95,7 +95,7 @@ export const QueueReady = ({
                 onClick={onJoinQueue}
                 className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
             >
-                Join queue
+                join queue
             </button>
             {isAuthenticated && playerId && (
                 <div className="mt-3">
