@@ -20,9 +20,11 @@ function buildBbox(lat: number, lng: number, delta = 0.0005) {
 export default function MapillaryImagePanel({
     location,
     onHeadingChange,
+    displayMode = 'contain',
 }: {
     location: Location;
     onHeadingChange?: (heading: number) => void;
+    displayMode?: 'contain' | 'cover';
 }) {
     const token = import.meta.env.VITE_MAPILLARY_ACCESS_TOKEN as string;
     const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -117,7 +119,7 @@ export default function MapillaryImagePanel({
                     <img
                         src={imageUrl}
                         alt="Street view"
-                        className="relative h-full w-full object-contain"
+                        className={`relative h-full w-full ${displayMode === 'cover' ? 'object-cover' : 'object-contain'}`}
                     />
                 </>
             )}

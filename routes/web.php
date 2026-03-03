@@ -5,6 +5,7 @@ use App\Http\Controllers\CreatePlayer;
 use App\Http\Controllers\GameSummaryController;
 use App\Http\Controllers\GetAuthPlayer;
 use App\Http\Controllers\GetGame;
+use App\Http\Controllers\GetLocationReports;
 use App\Http\Controllers\GetPlayer;
 use App\Http\Controllers\GetPlayerStats;
 use App\Http\Controllers\HomePageController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\PlayerMakesGuess;
 use App\Http\Controllers\ReportLocation;
 use App\Http\Controllers\SendMessage;
 use App\Http\Controllers\UpdatePlayer;
+use App\Http\Controllers\VoteOnLocationReport;
 use App\Models\Game;
 use App\Models\Player;
 use App\Models\Round;
@@ -64,7 +66,13 @@ Route::get('stats', function () {
     ]);
 });
 
-Route::middleware('auth')->post('locations/{location}/report', ReportLocation::class)
-    ->name('locations.report');
+Route::middleware('auth')->group(function () {
+    Route::get('locations/reports', GetLocationReports::class)
+        ->name('locations.reports');
+    Route::post('locations/{location}/report', ReportLocation::class)
+        ->name('locations.report');
+    Route::post('locations/{location}/vote', VoteOnLocationReport::class)
+        ->name('locations.vote');
+});
 
 require __DIR__.'/settings.php';

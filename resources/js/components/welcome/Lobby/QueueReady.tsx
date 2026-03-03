@@ -10,6 +10,7 @@ export const QueueReady = ({
     onEditName,
     isAuthenticated,
     onSignUp,
+    onReviewLocations,
     onSignOut,
 }: {
     playerName: string;
@@ -18,6 +19,7 @@ export const QueueReady = ({
     onEditName: (name: string) => void;
     isAuthenticated: boolean;
     onSignUp: () => void;
+    onReviewLocations: () => void;
     onSignOut: () => void;
 }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -122,7 +124,13 @@ export const QueueReady = ({
                 )}
                 {isAuthenticated && (
                     <>
-                        <div></div>
+                        <button
+                            type="button"
+                            onClick={onReviewLocations}
+                            className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300"
+                        >
+                            review locations
+                        </button>
                         <Link
                             href={logout()}
                             as="button"

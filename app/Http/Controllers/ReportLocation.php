@@ -18,7 +18,6 @@ class ReportLocation extends Controller
         ]);
 
         $existing = LocationReport::query()
-            ->where('reported_by_id', $request->user()->getKey())
             ->where('location_id', $location->getKey())
             ->first();
 
@@ -28,11 +27,24 @@ class ReportLocation extends Controller
             ], 409);
         }
 
+        $pendingReport = LocationReport::query()
+            ->where('location_id', $location->getKey())
+            ->where('status', ReportStatus::Pending)
+            ->exists();
+
+        if ($pendingReport) {
+            return response()->json([
+                'message' => 'Location already has a pending report.',
+            ], 409);
+        }
+
         $lr = LocationReport::query()->create([
             'reported_by_id' => $request->user()->getKey(),
             'location_id' => $location->getKey(),
             'reason' => $validated['reason'],
             'status' => ReportStatus::Pending,
+            'votes_to_accept' => 0,
+            'votes_to_reject' => 0,
         ]);
 
         return response()->json($lr->toArray(), 201);

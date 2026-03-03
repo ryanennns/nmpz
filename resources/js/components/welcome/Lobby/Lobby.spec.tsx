@@ -1,4 +1,10 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+    cleanup,
+    fireEvent,
+    render,
+    screen,
+    waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -281,6 +287,38 @@ describe('Lobby', () => {
                 screen.queryByTestId('guest-progress-toast'),
             ).not.toBeInTheDocument();
         });
+    });
+
+    it('fades out before navigating to review locations', async () => {
+        mocks.page.props.auth.user = { id: 1, name: 'alice' };
+        mocks.api.getAuthPlayer.mockResolvedValue({
+            status: 200,
+            data: {
+                player: { id: 'auth-player', name: 'alice' },
+                user: { id: 1, name: 'alice' },
+            },
+        });
+
+        const assignSpy = vi.fn();
+        vi.stubGlobal('location', {
+            ...window.location,
+            assign: assignSpy,
+        });
+
+        const { container } = render(<Lobby />);
+        await screen.findByText('review locations');
+        fireEvent.click(screen.getByText('review locations'));
+
+        const phaseWrapper = container.querySelector(
+            '.transition-opacity.duration-200',
+        ) as HTMLElement;
+        expect(phaseWrapper).toHaveClass('opacity-0');
+        expect(assignSpy).not.toHaveBeenCalled();
+
+        await waitFor(() => {
+            expect(assignSpy).toHaveBeenCalledWith('/locations/reports');
+        });
+        vi.unstubAllGlobals();
     });
 
     it('clears local auth state when signing out', async () => {

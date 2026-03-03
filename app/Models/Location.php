@@ -7,11 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Location extends Model
 {
     use HasFactory,
-        HasUuids;
+        HasUuids,
+        SoftDeletes;
 
     protected $guarded = [];
 
@@ -32,5 +34,10 @@ class Location extends Model
     public function rounds(): HasMany
     {
         return $this->hasMany(Round::class);
+    }
+
+    public function locationReports(): HasMany
+    {
+        return $this->hasMany(LocationReport::class);
     }
 }

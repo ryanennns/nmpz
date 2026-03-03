@@ -155,6 +155,13 @@ export default function Lobby() {
         }, 500);
     };
 
+    const reviewLocations = () => {
+        setPhaseVisible(false);
+        window.setTimeout(() => {
+            window.location.assign('/locations/reports');
+        }, PHASE_TRANSITION_MS);
+    };
+
     // fade in transition
     useEffect(() => {
         if (phase === displayPhase) {
@@ -253,6 +260,7 @@ export default function Lobby() {
                             }}
                             isAuthenticated={!!user}
                             onSignUp={() => setPhase('sign_up')}
+                            onReviewLocations={reviewLocations}
                             onSignOut={signOut}
                         />
                     )}

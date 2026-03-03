@@ -55,6 +55,7 @@ describe('QueueReady', () => {
                 onEditName={onEditName}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}
+                onReviewLocations={vi.fn()}
                 onSignOut={vi.fn()}
             />,
         );
@@ -76,6 +77,7 @@ describe('QueueReady', () => {
                 onEditName={onEditName}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}
+                onReviewLocations={vi.fn()}
                 onSignOut={vi.fn()}
             />,
         );
@@ -99,6 +101,7 @@ describe('QueueReady', () => {
                 onEditName={vi.fn()}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}
+                onReviewLocations={vi.fn()}
                 onSignOut={vi.fn()}
             />,
         );
@@ -114,11 +117,13 @@ describe('QueueReady', () => {
                 onEditName={vi.fn()}
                 isAuthenticated={true}
                 onSignUp={vi.fn()}
+                onReviewLocations={vi.fn()}
                 onSignOut={vi.fn()}
             />,
         );
 
         expect(screen.queryByText('create account')).not.toBeInTheDocument();
+        expect(screen.getByText('review locations')).toBeInTheDocument();
         expect(screen.getByText('sign out')).toBeInTheDocument();
     });
 
@@ -132,6 +137,7 @@ describe('QueueReady', () => {
                 onEditName={vi.fn()}
                 isAuthenticated={false}
                 onSignUp={onSignUp}
+                onReviewLocations={vi.fn()}
                 onSignOut={vi.fn()}
             />,
         );
@@ -152,6 +158,7 @@ describe('QueueReady', () => {
                 onEditName={vi.fn()}
                 isAuthenticated={true}
                 onSignUp={vi.fn()}
+                onReviewLocations={vi.fn()}
                 onSignOut={onSignOut}
             />,
         );
@@ -160,6 +167,27 @@ describe('QueueReady', () => {
         await user.click(screen.getByText('sign out'));
 
         expect(onSignOut).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onReviewLocations when "review locations" is clicked', async () => {
+        const onReviewLocations = vi.fn();
+
+        render(
+            <QueueReady
+                playerName="ryan"
+                onJoinQueue={vi.fn()}
+                onEditName={vi.fn()}
+                isAuthenticated={true}
+                onSignUp={vi.fn()}
+                onReviewLocations={onReviewLocations}
+                onSignOut={vi.fn()}
+            />,
+        );
+
+        const user = userEvent.setup();
+        await user.click(screen.getByText('review locations'));
+
+        expect(onReviewLocations).toHaveBeenCalledTimes(1);
     });
 
     it('shows player stats when authenticated with playerId', async () => {
@@ -181,6 +209,7 @@ describe('QueueReady', () => {
                 onEditName={vi.fn()}
                 isAuthenticated={true}
                 onSignUp={vi.fn()}
+                onReviewLocations={vi.fn()}
                 onSignOut={vi.fn()}
             />,
         );
@@ -199,6 +228,7 @@ describe('QueueReady', () => {
                 onEditName={vi.fn()}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}
+                onReviewLocations={vi.fn()}
                 onSignOut={vi.fn()}
             />,
         );
@@ -214,10 +244,27 @@ describe('QueueReady', () => {
                 onEditName={vi.fn()}
                 isAuthenticated={true}
                 onSignUp={vi.fn()}
+                onReviewLocations={vi.fn()}
                 onSignOut={vi.fn()}
             />,
         );
 
         expect(mocks.api.getPlayerStats).not.toHaveBeenCalled();
+    });
+
+    it('does not show "review reports" when not authenticated', () => {
+        render(
+            <QueueReady
+                playerName="ryan"
+                onJoinQueue={vi.fn()}
+                onEditName={vi.fn()}
+                isAuthenticated={false}
+                onSignUp={vi.fn()}
+                onReviewLocations={vi.fn()}
+                onSignOut={vi.fn()}
+            />,
+        );
+
+        expect(screen.queryByText('review locations')).not.toBeInTheDocument();
     });
 });

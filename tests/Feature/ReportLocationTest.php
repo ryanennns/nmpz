@@ -54,6 +54,8 @@ class ReportLocationTest extends TestCase
             'location_id' => $location->getKey(),
             'reason' => ReportReason::Inaccurate->value,
             'status' => ReportStatus::Pending->value,
+            'votes_to_accept' => 0,
+            'votes_to_reject' => 0,
         ]);
     }
 
@@ -100,5 +102,23 @@ class ReportLocationTest extends TestCase
             'reason' => ReportReason::Inaccurate->value,
             'status' => ReportStatus::Pending->value,
         ]);
+    }
+
+    public function test_user_cannot_create_a_new_pending_report_for_a_location_that_is_already_pending(): void
+    {
+        $location = Location::factory()->create();
+        $firstUser = User::factory()->create();
+        $secondUser = User::factory()->create();
+
+        $this->actingAs($firstUser)->postJson(route('locations.report', $location), [
+            'reason' => ReportReason::Inaccurate->value,
+        ])->assertCreated();
+
+        $this->actingAs($secondUser)->postJson(route('locations.report', $location), [
+            'reason' => ReportReason::BadCoverage->value,
+        ])->assertStatus(409)
+            ->assertJsonPath('message', 'Location already reported.');
+
+        $this->assertDatabaseCount('location_reports', 1);
     }
 }
