@@ -10,6 +10,7 @@ use App\Models\Player;
 use App\Models\Round;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 class PlayerMakesGuess extends Controller
 {
@@ -34,23 +35,24 @@ class PlayerMakesGuess extends Controller
             return response()->json($round);
         }
 
+        $lockedIn = Arr::get($validated, 'locked_in', false);
         if ($isPlayerOne) {
             $round->player_one_guess_lat = $validated['lat'];
             $round->player_one_guess_lng = $validated['lng'];
-            if (($validated['locked_in'] ?? false) === true) {
+            if ($lockedIn) {
                 $round->player_one_locked_in = true;
             }
         } else {
             $round->player_two_guess_lat = $validated['lat'];
             $round->player_two_guess_lng = $validated['lng'];
-            if (($validated['locked_in'] ?? false) === true) {
+            if ($lockedIn) {
                 $round->player_two_locked_in = true;
             }
         }
 
         $round->save();
 
-        if (($validated['locked_in'] ?? false) === true) {
+        if ($lockedIn) {
             PlayerGuessed::dispatch($round, $player);
         }
 
@@ -64,7 +66,7 @@ class PlayerMakesGuess extends Controller
                 RoundFinished::dispatch($round);
                 ForceEndRound::cancelPending($round->getKey());
             }
-        } elseif (($validated['locked_in'] ?? false) === true) {
+        } elseif ($lockedIn) {
             $startedAt = $round->started_at ?? now();
             if ($round->started_at === null) {
                 $round->forceFill(['started_at' => $startedAt])->save();
