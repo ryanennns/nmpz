@@ -1,9 +1,19 @@
 import fs from "fs";
+import path from "node:path";
+import process from 'node:process';
+import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 
-// eslint-disable-next-line no-undef
-const MAPILLARY_TOKEN = process.env.MAPILLARY_ACCESS_TOKEN;
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const ROOT_ENV_PATH = path.resolve(SCRIPT_DIR, "../../.env");
+const DEFAULT_CAPITALS_CSV_PATH = path.resolve(SCRIPT_DIR, "capitals.csv");
+const OUTPUT_PATH = path.resolve(SCRIPT_DIR, "mapillary_images.json");
+
+dotenv.config({ path: ROOT_ENV_PATH, quiet: true });
+
+const MAPILLARY_TOKEN = process.env.VITE_MAPILLARY_ACCESS_TOKEN;
 if (!MAPILLARY_TOKEN) {
-    throw new Error("Set MAPILLARY_ACCESS_TOKEN environment variable.");
+    throw new Error(`Set VITE_MAPILLARY_ACCESS_TOKEN in ${ROOT_ENV_PATH}.`);
 }
 
 const MAPILLARY_API = "https://graph.mapillary.com/images";
@@ -90,8 +100,8 @@ async function processCapitals(capitals) {
 }
 
 // Example: load capitals.csv generated earlier
-function loadCapitalsCsv(path = "capitals.csv") {
-    const text = fs.readFileSync(path, "utf8");
+function loadCapitalsCsv(csvPath = DEFAULT_CAPITALS_CSV_PATH) {
+    const text = fs.readFileSync(csvPath, "utf8");
     const lines = text.trim().split("\n").slice(1);
 
     return lines.map(line => {
@@ -113,16 +123,16 @@ async function main() {
     const images = await processCapitals(capitals);
 
     fs.writeFileSync(
-        "mapillary_images.json",
+        OUTPUT_PATH,
         JSON.stringify(images, null, 2),
         "utf8"
     );
 
-    console.log("Saved mapillary_images.json");
+    console.log(`Saved ${OUTPUT_PATH}`);
 }
 
 main().catch(err => {
     console.error(err);
-    // eslint-disable-next-line no-undef
+
     process.exit(1);
 });
