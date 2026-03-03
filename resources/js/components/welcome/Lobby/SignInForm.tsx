@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { useUnauthedApiClient } from '@/hooks/useApiClient';
 import AuthForm, { AuthField, getValidationErrors } from './AuthForm';
 
+const MIN_SIGN_IN_DURATION_MS = 500;
+
 export default function SignInForm({
     api,
     onSuccess,
@@ -24,24 +26,37 @@ export default function SignInForm({
         if (!password) newErrors.password = ['required'];
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
-            return;
+            return false;
         }
 
         setErrors({});
         setServerErrors({});
         try {
-            await api.signIn(email, password);
+            await Promise.all([
+                api.signIn(email, password),
+                new Promise((resolve) => {
+                    window.setTimeout(resolve, MIN_SIGN_IN_DURATION_MS);
+                }),
+            ]);
             onSuccess();
+            return true;
         } catch (err: unknown) {
             const validationErrors = getValidationErrors(err);
             if (validationErrors) {
                 setServerErrors(validationErrors);
             }
+
+            return false;
         }
     };
 
     return (
-        <AuthForm submitLabel="sign in" onSubmit={submit} onBack={onBack}>
+        <AuthForm
+            submitLabel="sign in"
+            onSubmit={submit}
+            onBack={onBack}
+            showSuccessState
+        >
             <AuthField
                 type="email"
                 value={email}

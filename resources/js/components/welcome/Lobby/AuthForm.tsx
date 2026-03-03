@@ -1,13 +1,15 @@
 import { clsx } from 'clsx';
 import { CircleAlert } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
 type AuthFormProps = {
     children: ReactNode;
     submitLabel: string;
-    onSubmit: () => Promise<void> | void;
+    onSubmit: () => Promise<boolean> | boolean;
     onBack: () => void;
+    showSuccessState?: boolean;
+    successLabel?: string;
 };
 
 type AuthFieldProps = {
@@ -77,13 +79,37 @@ export default function AuthForm({
     submitLabel,
     onSubmit,
     onBack,
+    showSuccessState = false,
+    successLabel = '✓',
 }: AuthFormProps) {
     const [pending, setPending] = useState(false);
+    const [successful, setSuccessful] = useState(false);
+    const [activeDot, setActiveDot] = useState(0);
+
+    useEffect(() => {
+        if (!pending) {
+            setActiveDot(0);
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            setActiveDot((currentDot) => (currentDot + 1) % 3);
+        }, 120);
+
+        return () => {
+            window.clearInterval(interval);
+        };
+    }, [pending]);
 
     const handleSubmit = async () => {
+        if (pending || successful) {
+            return;
+        }
+
         setPending(true);
         try {
-            await onSubmit();
+            const didSucceed = await onSubmit();
+            setSuccessful(Boolean(didSucceed) && showSuccessState);
         } finally {
             setPending(false);
         }
@@ -100,10 +126,31 @@ export default function AuthForm({
             {children}
             <button
                 type="submit"
-                disabled={pending}
+                disabled={pending || successful}
                 className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20 disabled:opacity-50"
             >
-                {pending ? '...' : submitLabel}
+                {pending ? (
+                    <span className="inline-flex items-center gap-0.5">
+                        {[0, 1, 2].map((dot) => (
+                            <span
+                                key={dot}
+                                data-dot
+                                className={clsx(
+                                    'inline-block transition-opacity duration-100',
+                                    activeDot === dot
+                                        ? 'opacity-100'
+                                        : 'opacity-30',
+                                )}
+                            >
+                                .
+                            </span>
+                        ))}
+                    </span>
+                ) : successful ? (
+                    successLabel
+                ) : (
+                    submitLabel
+                )}
             </button>
             <div className="flex shrink items-center justify-between rounded text-xs text-zinc-600">
                 <button

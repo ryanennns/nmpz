@@ -42,7 +42,7 @@ export default function SignUpForm({
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
-            return;
+            return false;
         }
 
         setErrors({});
@@ -55,11 +55,14 @@ export default function SignUpForm({
                 passwordConfirmation,
             );
             onSuccess(data.data.player as Player, data.data.user as User);
+            return true;
         } catch (err: unknown) {
             const validationErrors = getValidationErrors(err);
             if (validationErrors) {
                 setServerErrors(validationErrors);
             }
+
+            return false;
         }
     };
 

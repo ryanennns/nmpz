@@ -31,22 +31,92 @@ describe('SignInForm', () => {
 
     it('calls onSuccess when sign in returns 200', async () => {
         const onSuccess = vi.fn();
+        let resolveSignIn: (() => void) | undefined;
         const api = makeApi({
-            signIn: vi.fn().mockResolvedValue({ status: 200 }),
+            signIn: vi.fn().mockImplementation(
+                () =>
+                    new Promise<void>((resolve) => {
+                        resolveSignIn = resolve;
+                    }),
+            ),
         });
 
         render(<SignInForm api={api} onSuccess={onSuccess} onBack={vi.fn()} />);
 
         const user = userEvent.setup();
+        const button = screen.getByRole('button', { name: 'sign in' });
         await user.type(
             screen.getByPlaceholderText('email'),
             'test@example.com',
         );
         await user.type(screen.getByPlaceholderText('password'), 'secret');
-        await user.click(screen.getByText('sign in'));
+        await user.click(button);
+
+        expect(button).toHaveTextContent('...');
+
+        resolveSignIn?.();
 
         await waitFor(() => {
             expect(onSuccess).toHaveBeenCalledTimes(1);
+            expect(button).toHaveTextContent('✓');
+        });
+        expect(button).toBeDisabled();
+    });
+
+    it('blinks the loading dots in sequence while sign in is pending', async () => {
+        let resolveSignIn: (() => void) | undefined;
+        const api = makeApi({
+            signIn: vi.fn().mockImplementation(
+                () =>
+                    new Promise<void>((resolve) => {
+                        resolveSignIn = resolve;
+                    }),
+            ),
+        });
+
+        render(<SignInForm api={api} onSuccess={vi.fn()} onBack={vi.fn()} />);
+
+        const user = userEvent.setup();
+        const button = screen.getByRole('button', { name: 'sign in' });
+        await user.type(
+            screen.getByPlaceholderText('email'),
+            'test@example.com',
+        );
+        await user.type(screen.getByPlaceholderText('password'), 'secret');
+        await user.click(button);
+
+        const dots = () =>
+            Array.from(button.querySelectorAll<HTMLElement>('[data-dot]'));
+
+        expect(dots()[0]).toHaveClass('opacity-100');
+        expect(dots()[1]).toHaveClass('opacity-30');
+        expect(dots()[2]).toHaveClass('opacity-30');
+
+        await waitFor(
+            () => {
+                expect(dots()[1]).toHaveClass('opacity-100');
+            },
+            { timeout: 400 },
+        );
+
+        await waitFor(
+            () => {
+                expect(dots()[2]).toHaveClass('opacity-100');
+            },
+            { timeout: 400 },
+        );
+
+        await waitFor(
+            () => {
+                expect(dots()[0]).toHaveClass('opacity-100');
+            },
+            { timeout: 400 },
+        );
+
+        resolveSignIn?.();
+
+        await waitFor(() => {
+            expect(button).toHaveTextContent('✓');
         });
     });
 
