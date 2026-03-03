@@ -71,8 +71,9 @@ Route::middleware('auth')->group(function () {
         ->name('locations.reports');
     Route::post('locations/{location}/report', ReportLocation::class)
         ->name('locations.report');
-    Route::post('locations/{location}/vote', VoteOnLocationReport::class)
-        ->name('locations.vote');
+
+    Route::post('location-reports/{locationReport}/vote', VoteOnLocationReport::class)
+        ->name('location-reports.vote');
 });
 
 require __DIR__.'/settings.php';

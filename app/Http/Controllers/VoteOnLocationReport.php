@@ -3,91 +3,98 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ReportStatus;
-use App\Models\Location;
 use App\Models\LocationReport;
 use App\Models\LocationReportVote;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 
 class VoteOnLocationReport extends Controller
 {
-    public function __invoke(Request $request, Location $location): JsonResponse
+    public function __invoke(Request $request, LocationReport $locationReport): JsonResponse
     {
+        if ($locationReport->status !== ReportStatus::Pending) {
+            return response()->json([
+                'message' => 'This report has already been resolved.',
+            ], 422);
+        }
+
+        if ($locationReport->votes()->where('user_id', $request->user()->getKey())->exists()) {
+            return response()->json([
+                'message' => 'You have already voted on this report.',
+            ]);
+        }
+
         $validated = $request->validate([
             'vote' => ['required', Rule::in(['keep', 'remove'])],
         ]);
 
-        DB::transaction(function () use ($location, $request, $validated) {
-            $report = LocationReport::query()
-                ->where('location_id', $location->getKey())
-                ->where('status', ReportStatus::Pending)
-                ->oldest()
-                ->lockForUpdate()
-                ->first();
+        $vote = Arr::get($validated, 'vote');
 
-            if (! $report) {
-                abort(404);
-            }
+        if (! $vote) {
+            return response()->json([
+                'message' => 'Invalid vote value.',
+            ], 422);
+        }
 
-            $alreadyVoted = LocationReportVote::query()
-                ->where('location_report_id', $report->getKey())
-                ->where('user_id', $request->user()->getKey())
-                ->exists();
+        if ($request->user()->getKey() === 1 && $vote === 'remove') {
+            $locationReport->update(['status' => ReportStatus::Rejected]);
+            $locationReport->location()->delete();
+        }
 
-            if ($alreadyVoted) {
-                return $report;
-            }
+        $locationReport->increment($vote === 'keep'
+            ? 'votes_to_accept'
+            : 'votes_to_reject');
+        $locationReport->save();
 
-            LocationReportVote::query()->create([
-                'location_report_id' => $report->getKey(),
-                'user_id' => $request->user()->getKey(),
-                'vote' => $validated['vote'],
-            ]);
+        LocationReportVote::query()->create([
+            'location_report_id' => $locationReport->getKey(),
+            'user_id' => $request->user()->getKey(),
+            'vote' => $vote,
+        ]);
 
-            $column = $validated['vote'] === 'keep'
-                ? 'votes_to_accept'
-                : 'votes_to_reject';
+        if ($locationReport->votes_to_accept >= 3) {
+            $locationReport->status = ReportStatus::Accepted;
+        }
 
-            $report->increment($column);
-            $report->refresh();
+        if ($locationReport->votes_to_reject >= 3) {
+            $locationReport->status = ReportStatus::Rejected;
+            $locationReport->location()->delete();
+        }
 
-            $isOwnerOverride =
-                $validated['vote'] === 'remove' &&
-                (int) $request->user()->getKey() === 1;
+        $locationReport->save();
 
-            if ($report->votes_to_accept >= 3) {
-                $report->update([
-                    'status' => ReportStatus::Accepted,
-                ]);
-            }
-
-            if ($isOwnerOverride || $report->votes_to_reject >= 3) {
-                $location->delete();
-                $report->update([
-                    'status' => ReportStatus::Rejected,
-                ]);
-            }
-
-            return $report;
-        });
-
-        $currentReport = LocationReport::query()
-            ->where('location_id', $location->getKey())
-            ->where('status', ReportStatus::Pending)
-            ->oldest()
-            ->first();
-
-        $votedReportId = $currentReport?->getKey();
-
-        $nextReport = $this->nextPendingReportForUser(
+        $report = $this->nextPendingReportForUser(
             $request->user()->getKey(),
-            $votedReportId,
+            $locationReport->getKey(),
         );
 
+        if (! $report) {
+            return response()->json([
+                'report' => null,
+            ]);
+        }
+
         return response()->json([
-            'report' => $this->serializeReport($nextReport),
+            'report' => [
+                'id' => $report->getKey(),
+                'reason' => $report->reason,
+                'status' => $report->status->value,
+                'votes_to_accept' => $report->votes_to_accept,
+                'votes_to_reject' => $report->votes_to_reject,
+                'reported_by' => [
+                    'id' => $report->reportedBy?->getKey(),
+                    'name' => $report->reportedBy?->name,
+                ],
+                'location' => [
+                    'id' => $report->location?->getKey(),
+                    'lat' => $report->location?->lat,
+                    'lng' => $report->location?->lng,
+                    'heading' => $report->location?->heading,
+                    'image_id' => $report->location?->image_id,
+                ],
+            ],
         ]);
     }
 
@@ -107,33 +114,5 @@ class VoteOnLocationReport extends Controller
             })
             ->oldest()
             ->first();
-    }
-
-    private function serializeReport(?LocationReport $report): ?array
-    {
-        if (! $report) {
-            return null;
-        }
-
-        return [
-            'id' => $report->getKey(),
-            'reason' => $report->reason,
-            'status' => $report->status->value,
-            'votes_to_accept' => $report->votes_to_accept,
-            'votes_to_reject' => $report->votes_to_reject,
-            'reported_by' => [
-                'id' => $report->reportedBy?->getKey(),
-                'name' => $report->reportedBy?->name,
-            ],
-            'location' => $report->location
-                ? [
-                    'id' => $report->location->getKey(),
-                    'lat' => $report->location->lat,
-                    'lng' => $report->location->lng,
-                    'heading' => $report->location->heading,
-                    'image_id' => $report->location->image_id,
-                ]
-                : null,
-        ];
     }
 }

@@ -64,7 +64,7 @@ export default function LocationReportsPage({
         setPendingVote(vote);
         try {
             const response = await api.voteOnLocationReport(
-                activeReport.location.id,
+                activeReport.id,
                 vote,
             );
             const payload = response.data as {

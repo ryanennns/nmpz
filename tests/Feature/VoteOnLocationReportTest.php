@@ -16,8 +16,9 @@ class VoteOnLocationReportTest extends TestCase
     public function test_guest_is_redirected_to_login(): void
     {
         $location = Location::factory()->create();
+        $report = $this->createPendingReport($location);
 
-        $this->post("/locations/{$location->getKey()}/vote", [
+        $this->post(route('location-reports.vote', $report), [
             'vote' => 'keep',
         ])->assertRedirect('/login');
     }
@@ -26,10 +27,10 @@ class VoteOnLocationReportTest extends TestCase
     {
         $user = User::factory()->create();
         $location = Location::factory()->create();
-        $this->createPendingReport($location);
+        $report = $this->createPendingReport($location);
 
         $this->actingAs($user)
-            ->post(route('locations.vote', $location), [])
+            ->post(route('location-reports.vote', $report), [])
             ->assertSessionHasErrors(['vote']);
     }
 
@@ -37,10 +38,10 @@ class VoteOnLocationReportTest extends TestCase
     {
         $user = User::factory()->create();
         $location = Location::factory()->create();
-        $this->createPendingReport($location);
+        $report = $this->createPendingReport($location);
 
         $this->actingAs($user)
-            ->post(route('locations.vote', $location), [
+            ->post(route('location-reports.vote', $report), [
                 'vote' => 'skip',
             ])
             ->assertSessionHasErrors(['vote']);
@@ -53,7 +54,7 @@ class VoteOnLocationReportTest extends TestCase
         $report = $this->createPendingReport($location);
 
         $this->actingAs($user)
-            ->postJson(route('locations.vote', $location), [
+            ->postJson(route('location-reports.vote', $report), [
                 'vote' => 'keep',
             ])
             ->assertOk()
@@ -83,7 +84,7 @@ class VoteOnLocationReportTest extends TestCase
         ]);
 
         $this->actingAs(User::factory()->create())
-            ->postJson(route('locations.vote', $location), [
+            ->postJson(route('location-reports.vote', $report), [
                 'vote' => 'keep',
             ])
             ->assertOk()
@@ -110,7 +111,7 @@ class VoteOnLocationReportTest extends TestCase
         ]);
 
         $this->actingAs(User::factory()->create())
-            ->postJson(route('locations.vote', $location), [
+            ->postJson(route('location-reports.vote', $report), [
                 'vote' => 'remove',
             ])
             ->assertOk()
@@ -137,7 +138,7 @@ class VoteOnLocationReportTest extends TestCase
         $report = $this->createPendingReport($location);
 
         $this->actingAs($user)
-            ->postJson(route('locations.vote', $location), [
+            ->postJson(route('location-reports.vote', $report), [
                 'vote' => 'remove',
             ])
             ->assertOk()
@@ -166,11 +167,11 @@ class VoteOnLocationReportTest extends TestCase
         $location = Location::factory()->create();
         $report = $this->createPendingReport($location);
 
-        $this->actingAs($user)->postJson(route('locations.vote', $location), [
+        $this->actingAs($user)->postJson(route('location-reports.vote', $report), [
             'vote' => 'keep',
         ])->assertOk();
 
-        $this->actingAs($user)->postJson(route('locations.vote', $location), [
+        $this->actingAs($user)->postJson(route('location-reports.vote', $report), [
             'vote' => 'keep',
         ])->assertOk();
 
@@ -185,12 +186,15 @@ class VoteOnLocationReportTest extends TestCase
     {
         $user = User::factory()->create();
         $location = Location::factory()->create();
+        $report = $this->createPendingReport($location, [
+            'status' => ReportStatus::Accepted,
+        ]);
 
         $this->actingAs($user)
-            ->post(route('locations.vote', $location), [
+            ->post(route('location-reports.vote', $report), [
                 'vote' => 'keep',
             ])
-            ->assertNotFound();
+            ->assertUnprocessable();
     }
 
     public function test_vote_returns_the_next_available_report_for_the_user(): void
@@ -209,7 +213,7 @@ class VoteOnLocationReportTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->postJson(route('locations.vote', $firstLocation), [
+            ->postJson(route('location-reports.vote', $firstReport), [
                 'vote' => 'keep',
             ])
             ->assertOk()

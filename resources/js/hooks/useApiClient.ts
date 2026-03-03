@@ -65,8 +65,11 @@ export const useUnauthedApiClient = () => {
             }),
         getPlayerStats: (playerId: string) =>
             client.get(`/players/${playerId}/stats`),
-        voteOnLocationReport: (locationId: string, vote: 'keep' | 'remove') =>
-            client.post(`/locations/${locationId}/vote`, { vote }),
+        voteOnLocationReport: (
+            locationReportId: string,
+            vote: 'keep' | 'remove',
+        ) =>
+            client.post(`/location-reports/${locationReportId}/vote`, { vote }),
     };
 };
 
@@ -105,8 +108,11 @@ export function useApiClient() {
         },
         reportLocation: (locationId: string, reason: LocationReportReason) =>
             client.post(`/locations/${locationId}/report`, { reason }),
-        voteOnLocationReport: (locationId: string, vote: 'keep' | 'remove') =>
-            client.post(`/locations/${locationId}/vote`, { vote }),
+        voteOnLocationReport: (
+            locationReportId: string,
+            vote: 'keep' | 'remove',
+        ) =>
+            client.post(`/location-reports/${locationReportId}/vote`, { vote }),
         fetchStats: () => client.get('/stats'),
         client,
     };

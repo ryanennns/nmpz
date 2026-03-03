@@ -158,7 +158,7 @@ describe('LocationReportsPage', () => {
         await user.click(screen.getByText('keep location'));
 
         expect(mocks.api.voteOnLocationReport).toHaveBeenCalledWith(
-            'location-1',
+            'report-1',
             'keep',
         );
 
@@ -199,7 +199,7 @@ describe('LocationReportsPage', () => {
         await user.click(screen.getByText('remove location'));
 
         expect(mocks.api.voteOnLocationReport).toHaveBeenCalledWith(
-            'location-2',
+            'report-1',
             'remove',
         );
 
