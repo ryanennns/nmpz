@@ -4,6 +4,8 @@ import { useUnauthedApiClient } from '@/hooks/useApiClient';
 import type { User } from '@/types';
 import AuthForm, { AuthField, getValidationErrors } from './AuthForm';
 
+const MIN_SIGN_UP_DURATION_MS = 500;
+
 export default function SignUpForm({
     playerId,
     onSuccess,
@@ -48,12 +50,17 @@ export default function SignUpForm({
         setErrors({});
         setServerErrors({});
         try {
-            const data = await api.claimPlayer(
-                playerId,
-                email,
-                password,
-                passwordConfirmation,
-            );
+            const [data] = await Promise.all([
+                api.claimPlayer(
+                    playerId,
+                    email,
+                    password,
+                    passwordConfirmation,
+                ),
+                new Promise((resolve) => {
+                    window.setTimeout(resolve, MIN_SIGN_UP_DURATION_MS);
+                }),
+            ]);
             onSuccess(data.data.player as Player, data.data.user as User);
             return true;
         } catch (err: unknown) {
@@ -71,6 +78,7 @@ export default function SignUpForm({
             submitLabel="create account"
             onSubmit={submit}
             onBack={onBack}
+            showSuccessState
         >
             <AuthField
                 type="email"

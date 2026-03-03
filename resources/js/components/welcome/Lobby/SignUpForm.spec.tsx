@@ -73,11 +73,14 @@ describe('SignUpForm', () => {
             screen.getByPlaceholderText('confirm password'),
             'password123',
         );
-        await user.click(screen.getByText('create account'));
+        const button = screen.getByRole('button', { name: 'create account' });
+        await user.click(button);
 
         await waitFor(() => {
             expect(onSuccess).toHaveBeenCalledTimes(1);
+            expect(button).toHaveTextContent('✓');
         });
+        expect(button).toBeDisabled();
         expect(mocks.api.claimPlayer).toHaveBeenCalledWith(
             'player-1',
             'new@example.com',
