@@ -38,6 +38,8 @@ export const QueueReady = ({
             onEditName(nextName);
         }
     };
+    const classes = 'shrink rounded text-xs transition-all hover:text-zinc-300';
+
     return (
         <div className="w-72">
             <div className="mb-2 flex min-h-9 items-center justify-between gap-2 text-center text-sm text-white">
@@ -116,7 +118,7 @@ export const QueueReady = ({
                         <button
                             type="button"
                             onClick={onSignUp}
-                            className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300"
+                            className={classes}
                         >
                             create account
                         </button>
@@ -127,7 +129,7 @@ export const QueueReady = ({
                         <button
                             type="button"
                             onClick={onReviewLocations}
-                            className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300"
+                            className={classes}
                         >
                             review locations
                         </button>
@@ -135,7 +137,7 @@ export const QueueReady = ({
                             href={logout()}
                             as="button"
                             onClick={onSignOut}
-                            className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300"
+                            className={classes}
                         >
                             sign out
                         </Link>
