@@ -7,8 +7,8 @@ import MapillaryImagePanel from '@/components/welcome/MapillaryImagePanel';
 import MapPicker from '@/components/welcome/MapPicker';
 import { StandardCompass } from '@/components/welcome/StandardCompass';
 import type { LatLng, LocationReportReason } from '@/components/welcome/types';
-import { PLAYER_ID_KEY, useLocalStorage } from '@/hooks/useLocalStorage';
 import { getP1Color } from '@/hooks/use-theme';
+import { PLAYER_ID_KEY, useLocalStorage } from '@/hooks/useLocalStorage';
 
 setOptions({
     key: import.meta.env.VITE_GOOGLE_MAPS_KEY as string,
