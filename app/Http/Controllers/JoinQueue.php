@@ -12,17 +12,6 @@ class JoinQueue extends Controller
 {
     public function __invoke(Request $request, Player $player): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => ['sometimes', 'nullable', 'string', 'max:50'],
-        ]);
-
-        if (! empty($validated['name'])) {
-            $player->update(['name' => $validated['name']]);
-            $player->user()->update(['name' => $validated['name']]);
-        } elseif (! $player->name) {
-            return response()->json(['error' => 'Name is required'], 422);
-        }
-
         if ($player->hasActiveGame()) {
             return response()->json(['error' => 'Player already in game'], 409);
         }

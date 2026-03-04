@@ -2,15 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Resources\PlayerResource;
 use App\Enums\GameStatus;
+use App\Http\Resources\PlayerResource;
 use App\Models\Game;
-use App\Models\Location;
 use App\Models\Player;
 use App\Models\Round;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class GetGame extends Controller
 {
@@ -18,6 +16,10 @@ class GetGame extends Controller
     {
         $validated = $request->validate(['player' => 'required|string|exists:players,id']);
         $player = Player::query()->find($validated['player']);
+
+        if ($player->user()->exists() && $request->user()?->getKey() !== $player->user_id) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
 
         if ($game->status !== GameStatus::InProgress) {
             return redirect("/games/$game->id/summary");

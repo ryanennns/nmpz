@@ -6,7 +6,7 @@ use App\Models\Player;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 
-class PlayerLeavesQueue extends Controller
+class LeaveQueue extends Controller
 {
     public function __invoke(Player $player): Response
     {
