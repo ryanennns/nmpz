@@ -81,7 +81,7 @@ export default function Toast({
         <div
             role="status"
             className={cn(
-                'fixed right-4 bottom-4 z-10 max-w-xs rounded border border-white/10 bg-black/85 px-4 py-3 text-xs text-white shadow-lg backdrop-blur-sm transition-all duration-200 ease-out',
+                'fixed right-4 bottom-4 z-10 max-w-xs rounded border border-p1/20 bg-black/85 px-4 py-3 text-xs text-white shadow-lg backdrop-blur-sm transition-all duration-200 ease-out',
                 isVisible
                     ? 'translate-y-0 opacity-100'
                     : 'translate-y-2 opacity-0',
@@ -96,7 +96,7 @@ export default function Toast({
                         type="button"
                         aria-label={dismissLabel}
                         onClick={() => startDismissRef.current()}
-                        className="shrink-0 rounded px-1 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+                        className="shrink-0 rounded px-1 text-white/30 transition hover:bg-p1/10 hover:text-p1"
                     >
                         <X className="h-3 w-3" />
                     </button>

@@ -93,13 +93,13 @@ export default function LocationReportsPage({
                 <div className="relative z-10 min-h-screen">
                     {!activeReport || !activeReport.location ? (
                         <div className="flex min-h-screen items-center justify-center px-4">
-                            <div className="flex w-full max-w-sm flex-col gap-4 rounded border border-white/10 bg-black/70 p-6 text-center text-xs text-white/60 backdrop-blur-sm">
+                            <div className="flex w-full max-w-sm flex-col gap-4 rounded border border-p1/20 bg-black/70 p-6 text-center text-xs text-white/60 backdrop-blur-sm">
                                 <div>no new location reports to review.</div>
                                 <div className="grid gap-2 sm:grid-cols-2">
                                     <button
                                         type="button"
                                         onClick={() => navigateWithFade('/')}
-                                        className="rounded border border-white/10 px-3 py-2 text-center text-xs text-white/75 transition hover:bg-white/10 hover:text-white"
+                                        className="rounded border border-p1/20 px-3 py-2 text-center text-xs text-p1/70 transition hover:bg-p1/10 hover:text-p1"
                                     >
                                         home
                                     </button>
@@ -108,7 +108,7 @@ export default function LocationReportsPage({
                                         onClick={() =>
                                             navigateWithFade('/?auto_queue=1')
                                         }
-                                        className="rounded border border-white/10 px-3 py-2 text-center text-xs text-white/75 transition hover:bg-white/10 hover:text-white"
+                                        className="rounded border border-p1/20 px-3 py-2 text-center text-xs text-p1/70 transition hover:bg-p1/10 hover:text-p1"
                                     >
                                         queue
                                     </button>
@@ -117,7 +117,7 @@ export default function LocationReportsPage({
                         </div>
                     ) : (
                         <>
-                            <div className="absolute top-4 left-4 max-w-sm rounded border border-white/10 bg-black/70 p-4 shadow-2xl backdrop-blur-sm">
+                            <div className="absolute top-4 left-4 max-w-sm rounded border border-p1/20 bg-black/70 p-4 shadow-2xl backdrop-blur-sm">
                                 <div className="mb-4 flex items-center justify-between gap-4">
                                     <div>
                                         <p className="text-xs tracking-[0.2em] text-white/40 uppercase">
@@ -130,7 +130,7 @@ export default function LocationReportsPage({
                                     <button
                                         type="button"
                                         onClick={() => navigateWithFade('/')}
-                                        className="rounded border border-white/10 px-2 py-1 text-[11px] text-white/70 transition hover:bg-white/10 hover:text-white"
+                                        className="rounded border border-p1/20 px-2 py-1 text-[11px] text-p1/70 transition hover:bg-p1/10 hover:text-p1"
                                     >
                                         back
                                     </button>

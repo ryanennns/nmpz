@@ -208,7 +208,7 @@ export default function Lobby() {
                                 type="button"
                                 onClick={() => setSettingsOpen(true)}
                                 aria-label="Open settings"
-                                className="group fixed bottom-4 left-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 transition hover:bg-white/20 hover:text-white"
+                                className="group fixed bottom-4 left-4 flex h-8 w-8 items-center justify-center rounded-full bg-p1/10 text-p1/60 transition hover:bg-p1/20 hover:text-p1"
                             >
                                 <Settings className="h-4 w-4 transition-transform duration-300 group-hover:rotate-180" />
                             </button>

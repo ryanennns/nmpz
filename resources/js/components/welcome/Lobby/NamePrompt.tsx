@@ -44,20 +44,22 @@ export default function NamePrompt({
                 placeholder="your name"
                 className={clsx(
                     'w-full rounded border bg-black/40 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30',
-                    error ? 'border-solid border-red-500' : 'border-white/10',
+                    error
+                        ? 'border-solid border-red-500'
+                        : 'border-white/10 focus:border-p1/50',
                 )}
             />
             <button
                 onClick={submit}
-                className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
+                className="w-full rounded bg-p1/15 px-2 py-1 text-xs text-p1 transition hover:bg-p1/25"
             >
                 continue
             </button>
-            <div className="flex shrink items-center justify-between rounded text-xs text-zinc-600">
+            <div className="flex shrink items-center justify-between rounded text-xs text-white/30">
                 have an account?
                 <button
                     onClick={onSignIn}
-                    className="shrink rounded text-xs transition-all hover:text-zinc-300"
+                    className="shrink rounded text-xs transition-all hover:text-p1"
                 >
                     sign in
                 </button>

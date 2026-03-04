@@ -1,6 +1,7 @@
 import { importLibrary } from '@googlemaps/js-api-loader';
 import { useEffect, useRef } from 'react';
 import type { RoundResult } from '@/components/welcome/types';
+import { getP1Color } from '@/hooks/use-theme';
 
 function svgDot(color: string) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="7" fill="${color}" stroke="white" stroke-width="2"/></svg>`;
@@ -74,7 +75,7 @@ export default function ResultsMap({ result }: { result: RoundResult }) {
                 new google.maps.Marker({
                     position: result.p1Guess,
                     map,
-                    icon: svgDot('#60a5fa'),
+                    icon: svgDot(getP1Color()),
                 });
                 bounds.extend(result.p1Guess);
                 new google.maps.Polyline({

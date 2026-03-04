@@ -22,7 +22,7 @@ type AuthFieldProps = {
 };
 
 const inputClassName =
-    'w-full rounded border bg-black/40 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30';
+    'w-full rounded border bg-black/40 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30 focus:border-p1/50 transition-colors';
 
 export function getValidationErrors(
     err: unknown,
@@ -127,7 +127,7 @@ export default function AuthForm({
             <button
                 type="submit"
                 disabled={pending || successful}
-                className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20 disabled:opacity-50"
+                className="w-full rounded bg-p1/15 px-2 py-1 text-xs text-p1 transition hover:bg-p1/25 disabled:opacity-50"
             >
                 {pending ? (
                     <span className="inline-flex items-center gap-0.5">
@@ -152,11 +152,11 @@ export default function AuthForm({
                     submitLabel
                 )}
             </button>
-            <div className="flex shrink items-center justify-between rounded text-xs text-zinc-600">
+            <div className="flex shrink items-center justify-between rounded text-xs text-white/30">
                 <button
                     type="button"
                     onClick={onBack}
-                    className="shrink rounded px-2 py-1 text-xs transition-all hover:bg-zinc-900 hover:text-zinc-300"
+                    className="shrink rounded px-2 py-1 text-xs transition-all hover:text-p1"
                 >
                     back
                 </button>

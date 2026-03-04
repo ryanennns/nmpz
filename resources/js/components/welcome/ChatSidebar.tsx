@@ -55,8 +55,8 @@ export default function ChatSidebar({
             )}
             <div
                 className={cn(
-                    'pointer-events-auto rounded border border-white/10 bg-black/60 p-2 text-xs backdrop-blur-sm',
-                    chatOpen ? '' : 'opacity-70',
+                    'pointer-events-auto rounded border bg-black/60 p-2 text-xs backdrop-blur-sm transition-colors',
+                    chatOpen ? 'border-p1/30' : 'border-white/10 opacity-70',
                 )}
             >
                 {chatOpen ? (

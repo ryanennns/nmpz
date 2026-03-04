@@ -38,11 +38,11 @@ export const QueueReady = ({
             onEditName(nextName);
         }
     };
-    const classes = 'shrink rounded text-xs transition-all hover:text-zinc-300';
+    const classes = 'shrink rounded text-xs transition-all hover:text-p1';
 
     return (
-        <div className="w-72">
-            <div className="mb-2 flex min-h-9 items-center justify-between gap-2 text-center text-sm text-white">
+        <div className="flex w-72 flex-col gap-3">
+            <div className="flex max-h-5 items-center justify-between gap-2 text-center text-sm text-white">
                 {isEditing ? (
                     <>
                         <label className="flex flex-1 items-center gap-2">
@@ -66,13 +66,13 @@ export const QueueReady = ({
                                 }}
                                 maxLength={32}
                                 autoFocus
-                                className="w-full border-b border-white/30 bg-transparent px-0 py-0.5 text-sm text-white outline-none"
+                                className="w-full border-b border-p1/40 bg-transparent px-0 py-0.5 text-sm text-white outline-none"
                             />
                         </label>
                         <button
                             type="button"
                             onClick={saveName}
-                            className="rounded bg-white/10 px-2 py-0.5 pt-1.5 text-[10px] text-white/70 hover:bg-white/20"
+                            className="rounded bg-p1/15 px-2 py-0.5 pt-1.5 text-[10px] text-p1/80 transition hover:bg-p1/25 hover:text-p1"
                         >
                             Save
                         </button>
@@ -97,7 +97,7 @@ export const QueueReady = ({
             </div>
             <button
                 onClick={onJoinQueue}
-                className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
+                className="w-full rounded bg-p1/15 px-2 py-1 text-xs text-p1 transition hover:bg-p1/25"
             >
                 join queue
             </button>
@@ -106,7 +106,7 @@ export const QueueReady = ({
                     <PlayerStats playerId={playerId} />
                 </div>
             )}
-            <div className="flex shrink items-center justify-between rounded py-1 text-xs text-zinc-600">
+            <div className="flex shrink items-center justify-between rounded text-xs text-white/30">
                 {!isAuthenticated && (
                     <>
                         <div

@@ -1,5 +1,5 @@
 const btn =
-    'w-44 rounded bg-white/5 px-4 py-2 text-sm text-neutral-300 transition-colors hover:bg-white/10';
+    'w-44 rounded bg-p1/10 px-4 py-2 text-sm text-p1/80 transition-colors hover:bg-p1/20 hover:text-p1';
 
 type Props = {
     visible: boolean;
@@ -16,7 +16,7 @@ export function PostGameButtons({
 }: Props) {
     return (
         <div
-            className={`absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-neutral-900 transition-opacity duration-500 ${
+            className={`absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black transition-opacity duration-500 ${
                 visible ? 'opacity-100' : 'pointer-events-none opacity-0'
             }`}
         >

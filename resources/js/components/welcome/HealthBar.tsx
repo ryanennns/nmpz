@@ -12,7 +12,7 @@ export default function HealthBar({
     color: 'blue' | 'red';
 }) {
     const pct = Math.max(0, Math.min(100, (health / MAX_HP) * 100));
-    const colorClass = color === 'blue' ? 'text-blue-400' : 'text-red-400';
+    const colorClass = color === 'blue' ? 'text-p1' : 'text-red-400';
     const lowHp = health > 0 && health <= 1500;
 
     const [flashing, setFlashing] = useState(false);

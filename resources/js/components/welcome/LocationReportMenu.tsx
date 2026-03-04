@@ -43,7 +43,7 @@ export function LocationReportMenu({
                 <div
                     aria-hidden={!open}
                     data-testid="location-report-panel"
-                    className={`absolute bottom-12 left-0 w-44 rounded border border-white/10 bg-black/80 p-3 shadow-2xl backdrop-blur-sm transition-all duration-150 ${open ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}
+                    className={`absolute bottom-12 left-0 w-44 rounded border border-p1/20 bg-black/80 p-3 shadow-2xl backdrop-blur-sm transition-all duration-150 ${open ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}
                 >
                     <div className="mb-2 font-mono text-[10px] tracking-wide text-white/50 uppercase">
                         Report location
@@ -70,7 +70,7 @@ export function LocationReportMenu({
                         type="button"
                         onClick={() => void submit()}
                         disabled={submitting || disabled}
-                        className="mt-3 w-full rounded bg-white/10 px-2 py-1 font-mono text-xs text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="mt-3 w-full rounded bg-p1/15 px-2 py-1 font-mono text-xs text-p1 transition hover:bg-p1/25 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         submit
                     </button>
@@ -82,7 +82,7 @@ export function LocationReportMenu({
                         setOpen((prev) => !prev);
                     }}
                     disabled={disabled}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white/70 backdrop-blur-sm transition hover:bg-black/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white/50 backdrop-blur-sm transition hover:bg-black/80 hover:text-p1 disabled:cursor-not-allowed disabled:opacity-35"
                     aria-label="Report location"
                     aria-expanded={open}
                 >

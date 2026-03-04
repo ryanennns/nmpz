@@ -20,7 +20,7 @@ export const WinnerOverlay = ({
     const eloDeltaClass =
         typeof myEloDelta === 'number'
             ? myEloDelta >= 0
-                ? 'text-emerald-400'
+                ? 'text-p1'
                 : 'text-red-400'
             : 'text-white/80';
 

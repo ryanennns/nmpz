@@ -22,17 +22,15 @@ export default function RoundList({
               : null;
 
     return (
-        <div className="flex h-full w-72 shrink-0 flex-col overflow-hidden border-r border-white/10 bg-neutral-900">
-            <div className="border-b border-white/10 p-4">
+        <div className="flex h-full w-72 shrink-0 flex-col overflow-hidden border-r border-p1/15 bg-neutral-900">
+            <div className="border-b border-p1/15 p-4">
                 <div className="flex items-center justify-between text-sm">
-                    <span className="text-blue-400">
-                        {game.player_one.name}
-                    </span>
+                    <span className="text-p1">{game.player_one.name}</span>
                     <span className="text-xs text-neutral-500">vs</span>
                     <span className="text-red-400">{game.player_two.name}</span>
                 </div>
                 <div className="mt-2 flex items-center justify-between font-bold tabular-nums">
-                    <span className="text-blue-400">
+                    <span className="text-p1">
                         {game.player_one_total_score.toLocaleString()}
                     </span>
                     <span className="text-red-400">
@@ -57,10 +55,10 @@ export default function RoundList({
                 ))}
             </div>
 
-            <div className="border-t border-white/10 p-4">
+            <div className="border-t border-p1/15 p-4">
                 <button
                     onClick={onContinue}
-                    className="w-full rounded bg-white/5 px-3 py-2 text-sm text-neutral-300 transition-colors hover:bg-white/10"
+                    className="w-full rounded bg-p1/10 px-3 py-2 text-sm text-p1/80 transition-colors hover:bg-p1/20 hover:text-p1"
                 >
                     continue
                 </button>
@@ -82,15 +80,15 @@ function RoundRow({
         <button
             onClick={onSelect}
             className={cn(
-                'w-full border-b border-white/5 p-3 text-left transition-colors hover:bg-white/5',
-                selected && 'bg-white/10',
+                'w-full border-b border-white/5 p-3 text-left transition-colors hover:bg-p1/5',
+                selected && 'bg-p1/10',
             )}
         >
             <div className="mb-1 text-xs text-neutral-400">
                 Round {round.round_number}
             </div>
             <div className="flex justify-between text-sm tabular-nums">
-                <span className="text-blue-400">
+                <span className="text-p1">
                     {round.player_one_score?.toLocaleString() ?? '—'}
                 </span>
                 <span className="text-red-400">

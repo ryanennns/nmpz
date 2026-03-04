@@ -79,7 +79,7 @@ export default function SimpleModal({
                 className={
                     className ??
                     cn(
-                        'relative z-10 w-full rounded border border-white/10 bg-black/80 p-5 font-mono text-sm text-white/80 shadow-lg backdrop-blur-sm transition-all duration-200',
+                        'relative z-10 w-full rounded border border-p1/20 bg-black/80 p-5 font-mono text-sm text-white/80 shadow-lg backdrop-blur-sm transition-all duration-200',
                         WIDTH_CLASS_MAP[width ?? '2xl'],
                         visible
                             ? 'scale-100 opacity-100'
@@ -90,7 +90,7 @@ export default function SimpleModal({
                 <button
                     type="button"
                     onClick={onClose}
-                    className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded border border-white/20 text-xs text-white/70 transition hover:border-white/40 hover:text-white"
+                    className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded border border-p1/20 text-xs text-white/40 transition hover:border-p1/50 hover:text-p1"
                 >
                     <X />
                 </button>

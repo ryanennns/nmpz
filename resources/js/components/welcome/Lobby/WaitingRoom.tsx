@@ -96,7 +96,7 @@ export const WaitingRoom = ({
             </div>
             <button
                 onClick={onLeaveQueue}
-                className="mt-3 rounded px-2 py-1 text-xs text-white/20 transition-all duration-500 hover:bg-white/5 hover:text-white/50"
+                className="mt-3 rounded px-2 py-1 text-xs text-white/20 transition-all duration-500 hover:bg-p1/10 hover:text-p1/60"
             >
                 leave queue
             </button>

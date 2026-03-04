@@ -28,6 +28,7 @@ import type {
 } from '@/components/welcome/types';
 import { WinnerOverlay } from '@/components/welcome/WinnerOverlay';
 import echo from '@/echo';
+import { getP1Color } from '@/hooks/use-theme';
 import { useApiClient } from '@/hooks/useApiClient';
 import { cn } from '@/lib/utils';
 
@@ -141,7 +142,7 @@ function CountdownTimer({
 
 function GuestBadge() {
     return (
-        <span className="inline-flex items-center rounded-full border border-amber-200/25 bg-amber-300/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-[0.12em] text-slate-200">
+        <span className="inline-flex items-center rounded-full border border-p1/25 bg-p1/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-[0.12em] text-p1/80">
             guest
         </span>
     );
@@ -251,19 +252,15 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
     const playerConfig = game
         ? {
               me: {
-                  color: isPlayerOne ? 'text-blue-400' : 'text-red-400',
-                  colorDim: isPlayerOne
-                      ? 'text-blue-400/60'
-                      : 'text-red-400/60',
+                  color: isPlayerOne ? 'text-p1' : 'text-red-400',
+                  colorDim: isPlayerOne ? 'text-p1/60' : 'text-red-400/60',
                   health: isPlayerOne ? health.p1 : health.p2,
                   score: isPlayerOne ? roundScores.p1 : roundScores.p2,
                   barColor: isPlayerOne ? 'blue' : ('red' as PlayerColour),
               },
               opponent: {
-                  color: isPlayerOne ? 'text-red-400' : 'text-blue-400',
-                  colorDim: isPlayerOne
-                      ? 'text-red-400/60'
-                      : 'text-blue-400/60',
+                  color: isPlayerOne ? 'text-red-400' : 'text-p1',
+                  colorDim: isPlayerOne ? 'text-red-400/60' : 'text-p1/60',
                   health: isPlayerOne ? health.p2 : health.p1,
                   score: isPlayerOne ? roundScores.p2 : roundScores.p1,
                   barColor: isPlayerOne ? 'red' : ('blue' as PlayerColour),
@@ -296,7 +293,7 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
         ? {
               value: countdown as number,
               label: 'next round',
-              valueClass: 'text-white',
+              valueClass: 'text-p1',
           }
         : hasUrgentCountdown
           ? {
@@ -1041,14 +1038,16 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                                     setPin(coords);
                                     void updateGuess(coords);
                                 }}
-                                pinColor={isPlayerOne ? '#60a5fa' : '#f87171'}
+                                pinColor={
+                                    isPlayerOne ? getP1Color() : '#f87171'
+                                }
                                 disabled={myLocked || gameOver}
                             />
                             <div className="absolute right-2 bottom-2 left-2 font-mono">
                                 <button
                                     onClick={guess}
                                     disabled={!pin || myLocked || gameOver}
-                                    className="w-full rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm enabled:hover:bg-black/80 disabled:opacity-30"
+                                    className="w-full rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm transition enabled:hover:bg-p1/20 enabled:hover:text-p1 disabled:opacity-30"
                                 >
                                     {myLocked
                                         ? 'Locked in ✓'

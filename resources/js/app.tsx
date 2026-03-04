@@ -5,6 +5,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../css/app.css';
 import { initializeTheme } from './hooks/use-appearance';
+import { initializeColorTheme } from './hooks/use-theme';
 
 configureEcho({
     broadcaster: 'pusher',
@@ -35,3 +36,4 @@ createInertiaApp({
 
 // This will set light / dark mode on load...
 initializeTheme();
+initializeColorTheme();
