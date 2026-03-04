@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('locations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('map_id')->constrained()->cascadeOnDelete();
             $table->decimal('lat', 10, 7);
             $table->decimal('lng', 10, 7);
             $table->smallInteger('heading');

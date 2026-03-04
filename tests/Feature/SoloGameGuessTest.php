@@ -20,19 +20,19 @@ class SoloGameGuessTest extends TestCase
     {
         $map = Map::query()->create(['name' => 'likeacw-mapillary']);
         $firstLocation = Location::factory()->create([
-            'map_id' => $map->getKey(),
             'lat' => 40.7128,
             'lng' => -74.0060,
             'heading' => 180,
             'image_id' => 'image-1',
         ]);
+        $map->locations()->attach($firstLocation->getKey());
         $secondLocation = Location::factory()->create([
-            'map_id' => $map->getKey(),
             'lat' => 34.0522,
             'lng' => -118.2437,
             'heading' => 90,
             'image_id' => 'image-2',
         ]);
+        $map->locations()->attach($secondLocation->getKey());
 
         $player = Player::factory()->create();
         $game = SoloGame::query()->create([
@@ -90,10 +90,10 @@ class SoloGameGuessTest extends TestCase
     {
         $map = Map::query()->create(['name' => 'likeacw-mapillary']);
         $location = Location::factory()->create([
-            'map_id' => $map->getKey(),
             'lat' => 51.5074,
             'lng' => -0.1278,
         ]);
+        $map->locations()->attach($location->getKey());
 
         $player = Player::factory()->create();
         $game = SoloGame::query()->create([

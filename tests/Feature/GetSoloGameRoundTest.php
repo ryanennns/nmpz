@@ -19,7 +19,8 @@ class GetSoloGameRoundTest extends TestCase
     {
         $player = Player::factory()->create();
         $map = Map::query()->create(['name' => 'likeacw-mapillary']);
-        $location = Location::factory()->create(['map_id' => $map->getKey()]);
+        $location = Location::factory()->create();
+        $map->locations()->attach($location->getKey());
         $game = SoloGame::query()->create([
             'player_id' => $player->getKey(),
         ]);
@@ -42,19 +43,19 @@ class GetSoloGameRoundTest extends TestCase
         $player = Player::factory()->create();
         $map = Map::query()->create(['name' => 'likeacw-mapillary']);
         $firstLocation = Location::factory()->create([
-            'map_id' => $map->getKey(),
             'lat' => 40.7128,
             'lng' => -74.0060,
             'heading' => 180,
             'image_id' => 'image-1',
         ]);
+        $map->locations()->attach($firstLocation->getKey());
         $secondLocation = Location::factory()->create([
-            'map_id' => $map->getKey(),
             'lat' => 34.0522,
             'lng' => -118.2437,
             'heading' => 90,
             'image_id' => 'image-2',
         ]);
+        $map->locations()->attach($secondLocation->getKey());
 
         $game = SoloGame::query()->create([
             'player_id' => $player->getKey(),
@@ -93,7 +94,8 @@ class GetSoloGameRoundTest extends TestCase
             'user_id' => $user->getKey(),
         ]);
         $map = Map::query()->create(['name' => 'likeacw-mapillary']);
-        $location = Location::factory()->create(['map_id' => $map->getKey()]);
+        $location = Location::factory()->create();
+        $map->locations()->attach($location->getKey());
         $game = SoloGame::query()->create([
             'player_id' => $player->getKey(),
         ]);

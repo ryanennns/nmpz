@@ -17,12 +17,13 @@ class PlayerUserGuard
             $player = Player::query()->find($request->input('player_id'));
         }
 
-        if (is_null($player) && ! $request->user()) {
-            abort(401, 'Unauthorized');
+        if ($player === null && !$request->user()) {
+            abort(Response::HTTP_UNAUTHORIZED);
         }
 
-        if ($player instanceof Player && $player->user_id !== null && $request->user()?->getKey() !== $player->user_id) {
-            abort(401, 'Unauthorized');
+        if ($player) {
+            $mismatchPlayer = $request->user()?->getKey() !== $player->user()->first()?->getKey();
+            abort_if($mismatchPlayer, Response::HTTP_UNAUTHORIZED, 'Unauthorized');
         }
 
         return $next($request);

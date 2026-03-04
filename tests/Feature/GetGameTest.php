@@ -32,12 +32,12 @@ class GetGameTest extends TestCase
         ]);
 
         $location = Location::factory()->create([
-            'map_id' => $map->getKey(),
             'lat' => 49.2827,
             'lng' => -123.1207,
             'heading' => 180,
             'image_id' => 'image-123',
         ]);
+        $map->locations()->attach($location->getKey());
 
         $round = Round::factory()->create([
             'game_id' => $game->getKey(),
@@ -90,20 +90,20 @@ class GetGameTest extends TestCase
         ]);
 
         $activeRoundLocation = Location::factory()->create([
-            'map_id' => $map->getKey(),
             'lat' => 35.6762,
             'lng' => 139.6503,
             'heading' => 90,
             'image_id' => 'active-round-image',
         ]);
+        $map->locations()->attach($activeRoundLocation->getKey());
 
-        Location::factory()->create([
-            'map_id' => $map->getKey(),
+        $seededLocation = Location::factory()->create([
             'lat' => 40.7128,
             'lng' => -74.0060,
             'heading' => 270,
             'image_id' => 'seeded-image',
         ]);
+        $map->locations()->attach($seededLocation->getKey());
 
         $round = Round::factory()->create([
             'game_id' => $game->getKey(),

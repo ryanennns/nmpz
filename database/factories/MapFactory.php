@@ -21,7 +21,8 @@ class MapFactory extends Factory
     public function configure(): static
     {
         return $this->afterCreating(function (Map $map) {
-            Location::factory()->for($map)->create();
+            $location = Location::factory()->create();
+            $map->locations()->attach($location->getKey());
         });
     }
 }

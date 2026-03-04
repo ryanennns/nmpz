@@ -174,7 +174,7 @@ export default function Lobby() {
             .then((response) => {
                 window.setTimeout(() => {
                     window.location.assign(
-                        `/singleplayer/${response.data.game_id}`,
+                        `/singleplayer/${response.data.game_id}?player_id=${player.id}`,
                     );
                 }, PHASE_TRANSITION_MS);
             })

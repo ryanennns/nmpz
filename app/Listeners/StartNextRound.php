@@ -139,11 +139,12 @@ class StartNextRound
 
     private function pickLocation(Game $game, int $roundNumber): Location
     {
-        $count = Location::where('map_id', $game->map_id)->count();
+        $map = $game->map;
+        $count = $map->locations()->count();
         $offset = ($game->seed + $roundNumber - 1) % $count;
 
-        return Location::where('map_id', $game->map_id)
-            ->orderBy('id')
+        return $map->locations()
+            ->orderBy('locations.id')
             ->offset($offset)
             ->firstOrFail();
     }

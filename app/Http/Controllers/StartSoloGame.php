@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Location;
+use App\Models\Map;
 use App\Models\Player;
 use App\Models\SoloGame;
 use App\Models\SoloRound;
@@ -21,17 +22,17 @@ class StartSoloGame extends Controller
 
         $player = Player::query()->findOrFail($validated['player_id']);
 
-        $locations = Location::query()->whereHas('map', fn ($q) => $q->where('name', 'likeacw-mapillary'))
+        $locations = Location::query()
             ->inRandomOrder()
             ->limit(self::TOTAL_ROUNDS)
             ->get();
 
         abort_if($locations->count() < self::TOTAL_ROUNDS, 500, 'Not enough locations');
 
-        $game = SoloGame::create(['player_id' => $player->getKey()]);
+        $game = SoloGame::query()->create(['player_id' => $player->getKey()]);
 
         foreach ($locations as $index => $location) {
-            SoloRound::create([
+            SoloRound::query()->create([
                 'solo_game_id' => $game->getKey(),
                 'location_id' => $location->getKey(),
                 'round_number' => $index + 1,

@@ -18,14 +18,14 @@ class StartSoloGameTest extends TestCase
     public function test_it_starts_a_solo_game_and_creates_five_rounds(): void
     {
         $player = Player::factory()->create();
-        $map = Map::query()->create(['name' => 'likeacw-mapillary']);
+        $map = Map::query()->create(['name' => Map::ALL_LOCATIONS_MAP]);
 
-        Location::factory()->count(StartSoloGame::TOTAL_ROUNDS)->create([
-            'map_id' => $map->getKey(),
-        ]);
+        $mapLocations = Location::factory()->count(StartSoloGame::TOTAL_ROUNDS)->create();
+        $map->locations()->attach($mapLocations->pluck('id')->all());
 
         $otherMap = Map::query()->create(['name' => 'other-map']);
-        Location::factory()->create(['map_id' => $otherMap->getKey()]);
+        $otherLocation = Location::factory()->create();
+        $otherMap->locations()->attach($otherLocation->getKey());
 
         $response = $this->postJson('/singleplayer/games', [
             'player_id' => $player->getKey(),
@@ -59,9 +59,8 @@ class StartSoloGameTest extends TestCase
         $player = Player::factory()->create();
         $map = Map::query()->create(['name' => 'likeacw-mapillary']);
 
-        Location::factory()->count(StartSoloGame::TOTAL_ROUNDS - 1)->create([
-            'map_id' => $map->getKey(),
-        ]);
+        $mapLocations = Location::factory()->count(StartSoloGame::TOTAL_ROUNDS - 1)->create();
+        $map->locations()->attach($mapLocations->pluck('id')->all());
 
         $this->postJson('/singleplayer/games', [
             'player_id' => $player->getKey(),

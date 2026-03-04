@@ -28,10 +28,10 @@ class GameSummaryTest extends TestCase
         ]);
 
         $location = Location::factory()->create([
-            'map_id' => $game->map_id,
             'lat' => 48.8566,
             'lng' => 2.3522,
         ]);
+        $game->map->locations()->attach($location->getKey());
 
         Round::factory()->create([
             'game_id' => $game->getKey(),
@@ -72,7 +72,8 @@ class GameSummaryTest extends TestCase
     {
         $game = Game::factory()->create(['status' => GameStatus::Completed]);
 
-        $location = Location::factory()->create(['map_id' => $game->map_id]);
+        $location = Location::factory()->create();
+        $game->map->locations()->attach($location->getKey());
 
         Round::factory()->create([
             'game_id' => $game->getKey(),

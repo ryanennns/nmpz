@@ -7,7 +7,6 @@ use App\Events\RoundStarted;
 use App\Jobs\ForceEndRound;
 use App\Enums\GameStatus;
 use App\Models\Game;
-use App\Models\Location;
 use App\Models\Map;
 use App\Models\Player;
 use App\Models\Round;
@@ -60,8 +59,8 @@ class MatchmakeQueue
 
     private function createMatch(Player $playerOne, Player $playerTwo): void
     {
-        $map = Map::query()->where('name', 'likeacw-mapillary')->firstOrFail();
-        $locationCount = Location::query()->where('map_id', $map->getKey())->count();
+        $map = Map::query()->where('name', Map::ALL_LOCATIONS_MAP)->firstOrFail();
+        $locationCount = $map->locations()->count();
         if ($locationCount === 0) {
             return;
         }
@@ -78,8 +77,8 @@ class MatchmakeQueue
             'status' => GameStatus::InProgress,
         ]);
 
-        $location = Location::query()->where('map_id', $map->getKey())
-            ->orderBy('id')
+        $location = $map->locations()
+            ->orderBy('locations.id')
             ->offset($seed % $locationCount)
             ->firstOrFail();
 
