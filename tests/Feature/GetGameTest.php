@@ -48,7 +48,7 @@ class GetGameTest extends TestCase
             'player_two_locked_in' => false,
         ]);
 
-        $response = $this->get("/games/{$game->getKey()}?player={$playerOne->getKey()}");
+        $response = $this->get("/games/{$game->getKey()}?player_id={$playerOne->getKey()}");
 
         $response->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -110,7 +110,7 @@ class GetGameTest extends TestCase
             'location_id' => $activeRoundLocation->getKey(),
         ]);
 
-        $response = $this->get("/games/{$game->getKey()}?player={$playerOne->getKey()}");
+        $response = $this->get("/games/{$game->getKey()}?player_id={$playerOne->getKey()}");
 
         $response->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -128,7 +128,7 @@ class GetGameTest extends TestCase
         $game = Game::factory()->inProgress()->create();
         $outsider = Player::factory()->create();
 
-        $this->get("/games/{$game->getKey()}?player={$outsider->getKey()}")
+        $this->get("/games/{$game->getKey()}?player_id={$outsider->getKey()}")
             ->assertStatus(422);
     }
 
@@ -140,7 +140,7 @@ class GetGameTest extends TestCase
             'player_one_id' => $player->getKey(),
         ]);
 
-        $this->get("/games/{$game->getKey()}?player={$player->getKey()}")
+        $this->get("/games/{$game->getKey()}?player_id={$player->getKey()}")
             ->assertStatus(302);
     }
 }

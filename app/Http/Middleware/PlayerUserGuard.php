@@ -13,8 +13,12 @@ class PlayerUserGuard
     {
         $player = $request->route('player');
 
-        if (is_string($player)) {
-            $player = Player::query()->find($player);
+        if ($player === null) {
+            $player = Player::query()->first($request->input('player_id'));
+        }
+
+        if (is_null($player) && ! $request->user()) {
+            abort(401, 'Unauthorized');
         }
 
         if ($player instanceof Player && $player->user_id !== null && $request->user()?->getKey() !== $player->user_id) {

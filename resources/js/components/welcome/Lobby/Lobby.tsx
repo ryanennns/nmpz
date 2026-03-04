@@ -114,7 +114,7 @@ export default function Lobby() {
         channel.listen('.GameReady', (data: { game: Game }) => {
             console.log('game found!', data);
             window.location.assign(
-                `/games/${data.game.id}?player=${player.id}`,
+                `/games/${data.game.id}?player_id=${player.id}`,
             );
         });
 

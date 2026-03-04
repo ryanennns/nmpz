@@ -14,8 +14,8 @@ class GetGame extends Controller
 {
     public function __invoke(Request $request, Game $game)
     {
-        $validated = $request->validate(['player' => 'required|string|exists:players,id']);
-        $player = Player::query()->find($validated['player']);
+        $validated = $request->validate(['player_id' => 'required|string|exists:players,id']);
+        $player = Player::query()->find($validated['player_id']);
 
         if ($player->user()->exists() && $request->user()?->getKey() !== $player->user_id) {
             return response()->json(['error' => 'Unauthorized'], 401);
