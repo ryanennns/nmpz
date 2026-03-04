@@ -65,6 +65,8 @@ export const useUnauthedApiClient = () => {
             }),
         getPlayerStats: (playerId: string) =>
             client.get(`/players/${playerId}/stats`),
+        startSoloGame: (playerId: string) =>
+            client.post('/singleplayer/games', { player_id: playerId }),
         voteOnLocationReport: (
             locationReportId: string,
             vote: 'keep' | 'remove',

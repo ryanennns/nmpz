@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => {
             updatePlayer: vi.fn(),
             joinQueue: vi.fn(),
             leaveQueue: vi.fn(),
+            startSoloGame: vi.fn(),
             getPlayer: vi.fn(),
             getAuthPlayer: vi.fn(),
             signIn: vi.fn(),
@@ -163,6 +164,48 @@ describe('Lobby', () => {
         expect(mocks.api.joinQueue).toHaveBeenCalledWith('player-2');
     });
 
+    it('fades out before navigating to singleplayer', async () => {
+        mocks.api.createPlayer.mockResolvedValue({
+            status: 201,
+            data: { id: 'player-2', name: 'ryan' },
+        });
+        mocks.api.startSoloGame.mockResolvedValue({
+            data: { game_id: 'solo-1' },
+        });
+
+        const assignSpy = vi.fn();
+        vi.stubGlobal('location', {
+            ...window.location,
+            assign: assignSpy,
+        });
+
+        const { container } = render(<Lobby />);
+        const user = userEvent.setup();
+
+        await user.type(screen.getByPlaceholderText('your name'), 'ryan');
+        await user.click(screen.getByText('continue'));
+        await screen.findByText('singleplayer');
+
+        const wrapper = container.querySelector(
+            '.transition-opacity.duration-200',
+        ) as HTMLElement;
+
+        await waitFor(() => {
+            expect(wrapper).toHaveClass('opacity-100');
+        });
+
+        fireEvent.click(screen.getByText('singleplayer'));
+
+        expect(wrapper).toHaveClass('opacity-0');
+        expect(mocks.api.startSoloGame).toHaveBeenCalledWith('player-2');
+        expect(assignSpy).not.toHaveBeenCalled();
+
+        await waitFor(() => {
+            expect(assignSpy).toHaveBeenCalledWith('/singleplayer/solo-1');
+        });
+        vi.unstubAllGlobals();
+    });
+
     it('loads an existing player from local storage', async () => {
         mocks.localStorage.get.mockReturnValue('stored-player');
         mocks.api.getPlayer.mockResolvedValue({
@@ -219,7 +262,9 @@ describe('Lobby', () => {
         expect(handler).toBeDefined();
         handler?.({ game: { id: 'game-9' } });
 
-        expect(assignSpy).toHaveBeenCalledWith('/games/game-9?player_id=player-3');
+        expect(assignSpy).toHaveBeenCalledWith(
+            '/games/game-9?player_id=player-3',
+        );
         vi.unstubAllGlobals();
     });
 

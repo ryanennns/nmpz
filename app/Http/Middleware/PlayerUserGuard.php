@@ -14,7 +14,7 @@ class PlayerUserGuard
         $player = $request->route('player');
 
         if ($player === null) {
-            $player = Player::query()->first($request->input('player_id'));
+            $player = Player::query()->find($request->input('player_id'));
         }
 
         if (is_null($player) && ! $request->user()) {

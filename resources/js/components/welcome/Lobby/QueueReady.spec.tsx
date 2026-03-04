@@ -52,6 +52,7 @@ describe('QueueReady', () => {
             <QueueReady
                 playerName="ryan"
                 onJoinQueue={onJoinQueue}
+                onSinglePlayer={vi.fn()}
                 onEditName={onEditName}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}
@@ -66,6 +67,28 @@ describe('QueueReady', () => {
         expect(onJoinQueue).toHaveBeenCalledTimes(1);
     });
 
+    it('calls onSinglePlayer when clicking the singleplayer button', async () => {
+        const onSinglePlayer = vi.fn();
+
+        render(
+            <QueueReady
+                playerName="ryan"
+                onJoinQueue={vi.fn()}
+                onSinglePlayer={onSinglePlayer}
+                onEditName={vi.fn()}
+                isAuthenticated={false}
+                onSignUp={vi.fn()}
+                onReviewLocations={vi.fn()}
+                onSignOut={vi.fn()}
+            />,
+        );
+
+        const user = userEvent.setup();
+        await user.click(screen.getByText('singleplayer'));
+
+        expect(onSinglePlayer).toHaveBeenCalledTimes(1);
+    });
+
     it('edits the player name and trims input', async () => {
         const onJoinQueue = vi.fn();
         const onEditName = vi.fn();
@@ -74,6 +97,7 @@ describe('QueueReady', () => {
             <QueueReady
                 playerName="ryan"
                 onJoinQueue={onJoinQueue}
+                onSinglePlayer={vi.fn()}
                 onEditName={onEditName}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}
@@ -98,6 +122,7 @@ describe('QueueReady', () => {
             <QueueReady
                 playerName="ryan"
                 onJoinQueue={vi.fn()}
+                onSinglePlayer={vi.fn()}
                 onEditName={vi.fn()}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}
@@ -114,6 +139,7 @@ describe('QueueReady', () => {
             <QueueReady
                 playerName="ryan"
                 onJoinQueue={vi.fn()}
+                onSinglePlayer={vi.fn()}
                 onEditName={vi.fn()}
                 isAuthenticated={true}
                 onSignUp={vi.fn()}
@@ -134,6 +160,7 @@ describe('QueueReady', () => {
             <QueueReady
                 playerName="ryan"
                 onJoinQueue={vi.fn()}
+                onSinglePlayer={vi.fn()}
                 onEditName={vi.fn()}
                 isAuthenticated={false}
                 onSignUp={onSignUp}
@@ -155,6 +182,7 @@ describe('QueueReady', () => {
             <QueueReady
                 playerName="ryan"
                 onJoinQueue={vi.fn()}
+                onSinglePlayer={vi.fn()}
                 onEditName={vi.fn()}
                 isAuthenticated={true}
                 onSignUp={vi.fn()}
@@ -176,6 +204,7 @@ describe('QueueReady', () => {
             <QueueReady
                 playerName="ryan"
                 onJoinQueue={vi.fn()}
+                onSinglePlayer={vi.fn()}
                 onEditName={vi.fn()}
                 isAuthenticated={true}
                 onSignUp={vi.fn()}
@@ -206,6 +235,7 @@ describe('QueueReady', () => {
                 playerName="ryan"
                 playerId="player-1"
                 onJoinQueue={vi.fn()}
+                onSinglePlayer={vi.fn()}
                 onEditName={vi.fn()}
                 isAuthenticated={true}
                 onSignUp={vi.fn()}
@@ -225,6 +255,7 @@ describe('QueueReady', () => {
                 playerName="ryan"
                 playerId="player-1"
                 onJoinQueue={vi.fn()}
+                onSinglePlayer={vi.fn()}
                 onEditName={vi.fn()}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}
@@ -241,6 +272,7 @@ describe('QueueReady', () => {
             <QueueReady
                 playerName="ryan"
                 onJoinQueue={vi.fn()}
+                onSinglePlayer={vi.fn()}
                 onEditName={vi.fn()}
                 isAuthenticated={true}
                 onSignUp={vi.fn()}
@@ -257,6 +289,7 @@ describe('QueueReady', () => {
             <QueueReady
                 playerName="ryan"
                 onJoinQueue={vi.fn()}
+                onSinglePlayer={vi.fn()}
                 onEditName={vi.fn()}
                 isAuthenticated={false}
                 onSignUp={vi.fn()}

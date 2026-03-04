@@ -7,6 +7,7 @@ export const QueueReady = ({
     playerName,
     playerId,
     onJoinQueue,
+    onSinglePlayer,
     onEditName,
     isAuthenticated,
     onSignUp,
@@ -16,6 +17,7 @@ export const QueueReady = ({
     playerName: string;
     playerId?: string;
     onJoinQueue: () => void;
+    onSinglePlayer: () => void;
     onEditName: (name: string) => void;
     isAuthenticated: boolean;
     onSignUp: () => void;
@@ -95,12 +97,20 @@ export const QueueReady = ({
                     </>
                 )}
             </div>
-            <button
-                onClick={onJoinQueue}
-                className="w-full rounded bg-p1/15 px-2 py-1 text-xs text-p1 transition hover:bg-p1/25"
-            >
-                join queue
-            </button>
+            <div className={'flex gap-2'}>
+                <button
+                    onClick={onJoinQueue}
+                    className="w-full rounded bg-p1/15 px-2 py-1 text-xs text-p1 transition hover:bg-p1/25"
+                >
+                    join queue
+                </button>
+                <button
+                    onClick={onSinglePlayer}
+                    className="w-full rounded bg-p1/15 px-2 py-1 text-xs text-p1 transition hover:bg-p1/25"
+                >
+                    singleplayer
+                </button>
+            </div>
             {isAuthenticated && playerId && (
                 <div className="mt-3">
                     <PlayerStats playerId={playerId} />

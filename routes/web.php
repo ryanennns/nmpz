@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\ClaimPlayer;
 use App\Http\Controllers\CreatePlayer;
+use App\Http\Controllers\GetSoloGameRound;
+use App\Http\Controllers\SingleplayerPageController;
+use App\Http\Controllers\StartSoloGame;
+use App\Http\Controllers\SoloGameGuess;
 use App\Http\Controllers\GameSummaryController;
 use App\Http\Controllers\GetAuthPlayer;
 use App\Http\Controllers\GetGame;
@@ -20,6 +24,13 @@ use App\Http\Controllers\WaitingRoomStats;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomePageController::class);
+
+Route::prefix('singleplayer')->middleware('player.user')->group(function () {
+    Route::post('/games', StartSoloGame::class)->middleware('player.user');
+    Route::get('/{soloGame}', SingleplayerPageController::class);
+    Route::post('/{soloGame}/round', GetSoloGameRound::class)->middleware('player.user');
+    Route::post('/{soloGame}/guess', SoloGameGuess::class)->middleware('player.user');
+});
 
 Route::prefix('games')->group(function () {
     Route::middleware('player.user')->get('/{game}', GetGame::class);

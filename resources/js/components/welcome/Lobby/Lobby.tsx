@@ -162,6 +162,27 @@ export default function Lobby() {
         }, PHASE_TRANSITION_MS);
     };
 
+    const startSingleplayer = () => {
+        if (!player) {
+            return;
+        }
+
+        setPhaseVisible(false);
+
+        void api
+            .startSoloGame(player.id)
+            .then((response) => {
+                window.setTimeout(() => {
+                    window.location.assign(
+                        `/singleplayer/${response.data.game_id}`,
+                    );
+                }, PHASE_TRANSITION_MS);
+            })
+            .catch(() => {
+                setPhaseVisible(true);
+            });
+    };
+
     // fade in transition
     useEffect(() => {
         if (phase === displayPhase) {
@@ -255,6 +276,7 @@ export default function Lobby() {
                                 setPhase('queued');
                                 void api.joinQueue(player!.id);
                             }}
+                            onSinglePlayer={startSingleplayer}
                             onEditName={(name) => {
                                 void updatePlayerName(name);
                             }}
