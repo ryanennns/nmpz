@@ -201,7 +201,9 @@ describe('Lobby', () => {
         expect(assignSpy).not.toHaveBeenCalled();
 
         await waitFor(() => {
-            expect(assignSpy).toHaveBeenCalledWith('/singleplayer/solo-1');
+            expect(assignSpy).toHaveBeenCalledWith(
+                '/singleplayer/solo-1?player_id=player-2',
+            );
         });
         vi.unstubAllGlobals();
     });
