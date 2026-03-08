@@ -62,6 +62,7 @@ type GameState = {
     game_complete: boolean;
     current_round: RoundData | null;
     completed_rounds: CompletedRound[];
+    highest_singleplayer_score?: number;
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -294,6 +295,7 @@ export default function SingleplayerPage({
     const [selectedSummaryRound, setSelectedSummaryRound] = useState(1);
     const [summaryPanelHovered, setSummaryPanelHovered] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [highestSingleplayerScore, setHighestSingleplayerScore] = useState(0);
 
     useEffect(() => {
         const id = requestAnimationFrame(() => setPageVisible(true));
@@ -316,6 +318,7 @@ export default function SingleplayerPage({
     function applyGameState(gameState: GameState) {
         setCompletedRounds(gameState.completed_rounds);
         setLastResult(null);
+        setHighestSingleplayerScore(gameState.highest_singleplayer_score ?? 0);
         setSelectedSummaryRound(
             gameState.completed_rounds.at(-1)?.round_number ?? 1,
         );
@@ -485,6 +488,10 @@ export default function SingleplayerPage({
     ]);
 
     const totalScore = completedRounds.reduce((s, r) => s + r.score, 0);
+    const bestSingleplayerScore = Math.max(
+        highestSingleplayerScore,
+        totalScore,
+    );
 
     return (
         <>
@@ -651,6 +658,12 @@ export default function SingleplayerPage({
                                         <div className="mt-0.5 text-xs text-white/40">
                                             total score
                                         </div>
+                                    </div>
+                                    <div className="mb-4 text-center text-xs text-white/50">
+                                        best solo:{' '}
+                                        <span className="text-p1 tabular-nums">
+                                            {bestSingleplayerScore.toLocaleString()}
+                                        </span>
                                     </div>
                                     <div className="mb-4 space-y-0.5">
                                         {completedRounds.map((r) => (

@@ -6,6 +6,7 @@ import { PlayerStats } from './PlayerStats';
 export const QueueReady = ({
     playerName,
     playerId,
+    highestSingleplayerScore,
     onJoinQueue,
     onSinglePlayer,
     onEditName,
@@ -16,6 +17,7 @@ export const QueueReady = ({
 }: {
     playerName: string;
     playerId?: string;
+    highestSingleplayerScore?: number;
     onJoinQueue: () => void;
     onSinglePlayer: () => void;
     onEditName: (name: string) => void;
@@ -111,6 +113,14 @@ export const QueueReady = ({
                     singleplayer
                 </button>
             </div>
+            {highestSingleplayerScore !== undefined && (
+                <div className="text-xs text-white/40">
+                    best solo:{' '}
+                    <span className="text-p1 tabular-nums">
+                        {highestSingleplayerScore.toLocaleString()}
+                    </span>
+                </div>
+            )}
             {isAuthenticated && playerId && (
                 <div className="mt-3">
                     <PlayerStats playerId={playerId} />

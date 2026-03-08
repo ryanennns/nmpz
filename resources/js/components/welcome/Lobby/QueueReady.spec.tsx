@@ -284,6 +284,25 @@ describe('QueueReady', () => {
         expect(mocks.api.getPlayerStats).not.toHaveBeenCalled();
     });
 
+    it('shows the highest singleplayer score when provided', () => {
+        render(
+            <QueueReady
+                playerName="ryan"
+                highestSingleplayerScore={12345}
+                onJoinQueue={vi.fn()}
+                onSinglePlayer={vi.fn()}
+                onEditName={vi.fn()}
+                isAuthenticated={false}
+                onSignUp={vi.fn()}
+                onReviewLocations={vi.fn()}
+                onSignOut={vi.fn()}
+            />,
+        );
+
+        expect(screen.getByText('best solo:')).toBeInTheDocument();
+        expect(screen.getByText('12,345')).toBeInTheDocument();
+    });
+
     it('does not show "review reports" when not authenticated', () => {
         render(
             <QueueReady

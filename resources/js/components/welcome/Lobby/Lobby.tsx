@@ -30,6 +30,9 @@ export default function Lobby() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [player, setPlayer] = useState<Player | undefined>(undefined);
     const [showGuestProgressToast, setShowGuestProgressToast] = useState(false);
+    const [highestSingleplayerScore, setHighestSingleplayerScore] = useState<
+        number | undefined
+    >(undefined);
 
     const [phase, setPhase] = useState<
         'guest_signin' | 'queue_ready' | 'queued' | 'sign_in' | 'sign_up'
@@ -39,6 +42,7 @@ export default function Lobby() {
     const [phaseVisible, setPhaseVisible] = useState(false);
 
     const syncAuthenticatedPlayer = (data: { player: Player; user: User }) => {
+        setHighestSingleplayerScore(undefined);
         setPlayer(data.player);
         setUser(data.user);
         setPhase('queue_ready');
@@ -75,6 +79,7 @@ export default function Lobby() {
             if (key) {
                 api.getPlayer(key)
                     .then((data) => {
+                        setHighestSingleplayerScore(undefined);
                         setPlayer(data.data);
                         setShowGuestProgressToast(true);
 
@@ -108,6 +113,18 @@ export default function Lobby() {
         }
 
         localStorage.set(PLAYER_ID_KEY, player.id);
+        api.getPlayerStats(player.id)
+            .then((res) => {
+                const score = (
+                    res.data as { highest_singleplayer_score?: number }
+                ).highest_singleplayer_score;
+                setHighestSingleplayerScore(
+                    typeof score === 'number' ? score : 0,
+                );
+            })
+            .catch(() => {
+                setHighestSingleplayerScore(undefined);
+            });
 
         const channel = echo.channel(`player.${player.id}`);
 
@@ -130,6 +147,7 @@ export default function Lobby() {
             return;
         }
 
+        setHighestSingleplayerScore(undefined);
         setPlayer(response.data as Player);
         setPhase('queue_ready');
     };
@@ -149,6 +167,7 @@ export default function Lobby() {
         setShowGuestProgressToast(false);
         setPhase('guest_signin');
         setTimeout(() => {
+            setHighestSingleplayerScore(undefined);
             setPlayer(undefined);
             localStorage.remove(PLAYER_ID_KEY);
             setUser(null);
@@ -224,7 +243,14 @@ export default function Lobby() {
                 >
                     {shouldDisplayHeader && (
                         <>
-                            <LobbyHeader onClick={() => setHelpOpen(true)} />
+                            <div>
+                                <LobbyHeader
+                                    onClick={() => setHelpOpen(true)}
+                                />
+                                <p className={'max-w-60 text-xs'}>
+                                    a simple, free geography game
+                                </p>
+                            </div>
                             <button
                                 type="button"
                                 onClick={() => setSettingsOpen(true)}
@@ -280,6 +306,7 @@ export default function Lobby() {
                             onEditName={(name) => {
                                 void updatePlayerName(name);
                             }}
+                            highestSingleplayerScore={highestSingleplayerScore}
                             isAuthenticated={!!user}
                             onSignUp={() => setPhase('sign_up')}
                             onReviewLocations={reviewLocations}

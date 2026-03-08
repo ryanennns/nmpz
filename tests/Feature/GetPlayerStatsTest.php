@@ -3,7 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Game;
+use App\Models\Location;
+use App\Models\Map;
 use App\Models\Player;
+use App\Models\SoloGame;
+use App\Models\SoloRound;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -22,6 +26,7 @@ class GetPlayerStatsTest extends TestCase
                 'losses' => 0,
                 'draws' => 0,
                 'elo' => 1000,
+                'highest_singleplayer_score' => 0,
                 'recent_matches' => [],
             ]);
     }
@@ -68,6 +73,7 @@ class GetPlayerStatsTest extends TestCase
         $response->assertJsonPath('losses', 1);
         $response->assertJsonPath('draws', 1);
         $response->assertJsonPath('elo', 1150);
+        $response->assertJsonPath('highest_singleplayer_score', 0);
     }
 
     public function test_does_not_count_in_progress_games(): void
@@ -163,5 +169,48 @@ class GetPlayerStatsTest extends TestCase
     {
         $this->getJson('/players/nonexistent-uuid/stats')
             ->assertNotFound();
+    }
+
+    public function test_returns_highest_singleplayer_score(): void
+    {
+        $player = Player::factory()->create();
+        $map = Map::query()->create(['name' => 'likeacw-mapillary']);
+        $location = Location::factory()->create();
+        $map->locations()->attach($location->getKey());
+
+        $firstGame = SoloGame::query()->create([
+            'player_id' => $player->getKey(),
+            'status' => 'completed',
+        ]);
+        $secondGame = SoloGame::query()->create([
+            'player_id' => $player->getKey(),
+            'status' => 'completed',
+        ]);
+
+        SoloRound::query()->create([
+            'solo_game_id' => $firstGame->getKey(),
+            'location_id' => $location->getKey(),
+            'round_number' => 1,
+            'score' => 4000,
+            'finished_at' => now(),
+        ]);
+        SoloRound::query()->create([
+            'solo_game_id' => $firstGame->getKey(),
+            'location_id' => $location->getKey(),
+            'round_number' => 2,
+            'score' => 3800,
+            'finished_at' => now(),
+        ]);
+        SoloRound::query()->create([
+            'solo_game_id' => $secondGame->getKey(),
+            'location_id' => $location->getKey(),
+            'round_number' => 1,
+            'score' => 4999,
+            'finished_at' => now(),
+        ]);
+
+        $this->getJson("/players/{$player->id}/stats")
+            ->assertOk()
+            ->assertJsonPath('highest_singleplayer_score', 7800);
     }
 }

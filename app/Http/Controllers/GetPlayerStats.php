@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\GameStatus;
 use App\Models\Game;
 use App\Models\Player;
+use App\Models\SoloGame;
 use Illuminate\Http\JsonResponse;
 
 class GetPlayerStats extends Controller
@@ -53,11 +54,21 @@ class GetPlayerStats extends Controller
                 ];
             });
 
+        $highestSingleplayerScore = SoloGame::query()
+            ->where('player_id', $player->getKey())
+            ->where('status', 'completed')
+            ->leftJoin('solo_rounds', 'solo_rounds.solo_game_id', '=', 'solo_games.id')
+            ->groupBy('solo_games.id')
+            ->selectRaw('COALESCE(SUM(solo_rounds.score), 0) as total_score')
+            ->get()
+            ->max('total_score');
+
         return response()->json([
             'wins' => $wins,
             'losses' => $losses,
             'draws' => $draws,
             'elo' => $player->elo_rating,
+            'highest_singleplayer_score' => (int) ($highestSingleplayerScore ?? 0),
             'recent_matches' => $recentMatches,
         ]);
     }

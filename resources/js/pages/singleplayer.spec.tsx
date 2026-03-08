@@ -156,6 +156,7 @@ describe('SingleplayerPage', () => {
                     game_id: 'game-1',
                     total_rounds: 5,
                     game_complete: false,
+                    highest_singleplayer_score: 4500,
                     current_round: {
                         id: 'round-1',
                         round_number: 1,
@@ -404,7 +405,8 @@ describe('SingleplayerPage', () => {
         await waitFor(() => {
             expect(screen.getByText('total score')).toBeInTheDocument();
         });
-        expect(screen.getAllByText('4,999')).toHaveLength(2);
+        expect(screen.getAllByText('4,999')).toHaveLength(3);
+        expect(screen.getByText('best solo:')).toBeInTheDocument();
         expect(screen.getByText('play again [space]')).toBeInTheDocument();
         expect(screen.getByText('home')).toBeInTheDocument();
     });
@@ -474,6 +476,7 @@ describe('SingleplayerPage', () => {
                 game_id: 'game-1',
                 total_rounds: 5,
                 game_complete: true,
+                highest_singleplayer_score: 5500,
                 current_round: null,
                 completed_rounds: [
                     {
@@ -504,5 +507,6 @@ describe('SingleplayerPage', () => {
             expect(screen.getByText('total score')).toBeInTheDocument();
         });
         expect(screen.getAllByText('4,200')).toHaveLength(2);
+        expect(screen.getByText('5,500')).toBeInTheDocument();
     });
 });
