@@ -11,6 +11,13 @@ class PlayerUserGuard
 {
     public function handle(Request $request, Closure $next): Response
     {
+        self::canAccessResource($request);
+
+        return $next($request);
+    }
+
+    public static function canAccessResource(Request $request)
+    {
         $player = $request->route('player');
 
         if ($player === null) {
@@ -25,7 +32,5 @@ class PlayerUserGuard
             $mismatchPlayer = $request->user()?->getKey() !== $player->user()->first()?->getKey();
             abort_if($mismatchPlayer, Response::HTTP_UNAUTHORIZED, 'Unauthorized');
         }
-
-        return $next($request);
     }
 }

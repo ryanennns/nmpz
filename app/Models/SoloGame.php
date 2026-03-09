@@ -30,4 +30,9 @@ class SoloGame extends Model
     {
          $this->update(['status' => self::STATUS_COMPLETED]);
     }
+
+    public function isComplete(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED;
+    }
 }
