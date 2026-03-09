@@ -54,7 +54,7 @@ class SoloGameGuess extends Controller
         $isLast = $round->round_number >= StartSoloGame::TOTAL_ROUNDS;
 
         if ($isLast) {
-            $soloGame->update(['status' => 'completed']);
+            $soloGame->complete();
         }
 
         $nextRound = $isLast

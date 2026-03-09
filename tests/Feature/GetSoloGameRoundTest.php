@@ -84,8 +84,7 @@ class GetSoloGameRoundTest extends TestCase
             ->assertJsonPath('current_round.round_number', 2)
             ->assertJsonPath('completed_rounds.0.round_number', 1)
             ->assertJsonPath('completed_rounds.0.score', 4321)
-            ->assertJsonPath('completed_rounds.0.location.image_id', 'image-1')
-            ->assertJsonPath('highest_singleplayer_score', 0);
+            ->assertJsonPath('completed_rounds.0.location.image_id', 'image-1');
     }
 
     public function test_user_owned_games_require_the_matching_authenticated_user(): void
@@ -112,40 +111,5 @@ class GetSoloGameRoundTest extends TestCase
         $this->actingAs($user)
             ->postJson("/singleplayer/{$game->getKey()}/round")
             ->assertOk();
-    }
-
-    public function test_it_returns_highest_singleplayer_score_for_the_player(): void
-    {
-        $player = Player::factory()->create();
-        $map = Map::query()->create(['name' => 'likeacw-mapillary']);
-        $location = Location::factory()->create();
-        $map->locations()->attach($location->getKey());
-
-        $bestGame = SoloGame::query()->create([
-            'player_id' => $player->getKey(),
-            'status' => 'completed',
-        ]);
-        SoloRound::query()->create([
-            'solo_game_id' => $bestGame->getKey(),
-            'location_id' => $location->getKey(),
-            'round_number' => 1,
-            'score' => 4200,
-            'finished_at' => now(),
-        ]);
-
-        $currentGame = SoloGame::query()->create([
-            'player_id' => $player->getKey(),
-            'status' => 'in_progress',
-        ]);
-        SoloRound::query()->create([
-            'solo_game_id' => $currentGame->getKey(),
-            'location_id' => $location->getKey(),
-            'round_number' => 1,
-        ]);
-
-        $this->postJson("/singleplayer/{$currentGame->getKey()}/round", [
-            'player_id' => $player->getKey(),
-        ])->assertOk()
-            ->assertJsonPath('highest_singleplayer_score', 4200);
     }
 }

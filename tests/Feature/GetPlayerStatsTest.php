@@ -180,11 +180,11 @@ class GetPlayerStatsTest extends TestCase
 
         $firstGame = SoloGame::query()->create([
             'player_id' => $player->getKey(),
-            'status' => 'completed',
+            'status' => SoloGame::STATUS_IN_PROGRESS,
         ]);
         $secondGame = SoloGame::query()->create([
             'player_id' => $player->getKey(),
-            'status' => 'completed',
+            'status' => SoloGame::STATUS_IN_PROGRESS,
         ]);
 
         SoloRound::query()->create([
@@ -208,6 +208,8 @@ class GetPlayerStatsTest extends TestCase
             'score' => 4999,
             'finished_at' => now(),
         ]);
+
+        collect([$firstGame, $secondGame])->each(fn($g) => $g->complete());
 
         $this->getJson("/players/{$player->id}/stats")
             ->assertOk()

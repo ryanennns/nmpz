@@ -38,27 +38,12 @@ class GetSoloGameRound extends Controller
             ->whereNull('finished_at')
             ->first();
 
-        $highestSingleplayerScore = 0;
-        if ($soloGame->player_id !== null) {
-            $highestSingleplayerScore = (int) (
-                SoloGame::query()
-                    ->where('player_id', $soloGame->player_id)
-                    ->where('status', 'completed')
-                    ->leftJoin('solo_rounds', 'solo_rounds.solo_game_id', '=', 'solo_games.id')
-                    ->groupBy('solo_games.id')
-                    ->selectRaw('COALESCE(SUM(solo_rounds.score), 0) as total_score')
-                    ->get()
-                    ->max('total_score') ?? 0
-            );
-        }
-
         return response()->json([
             'game_id' => $soloGame->getKey(),
             'total_rounds' => StartSoloGame::TOTAL_ROUNDS,
             'game_complete' => $soloGame->status === 'completed',
             'current_round' => $currentRound ? StartSoloGame::roundPayload($currentRound) : null,
             'completed_rounds' => $completedRounds,
-            'highest_singleplayer_score' => $highestSingleplayerScore,
         ]);
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\SoloGame;
+use App\Observers\SoloGameObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -10,13 +12,12 @@ use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void
-    {
-        //
-    }
+    public function register(): void {}
 
     public function boot(): void
     {
+        SoloGame::observe(SoloGameObserver::class);
+
         $this->configureDefaults();
     }
 

@@ -11,6 +11,9 @@ class SoloGame extends Model
 {
     use HasUuids;
 
+    public const STATUS_IN_PROGRESS = 'in_progress';
+    public const STATUS_COMPLETED = 'completed';
+
     protected $guarded = [];
 
     public function player(): BelongsTo
@@ -21,5 +24,10 @@ class SoloGame extends Model
     public function rounds(): HasMany
     {
         return $this->hasMany(SoloRound::class)->orderBy('round_number');
+    }
+
+    public function complete(): void
+    {
+         $this->update(['status' => self::STATUS_COMPLETED]);
     }
 }

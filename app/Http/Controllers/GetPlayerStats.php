@@ -54,14 +54,7 @@ class GetPlayerStats extends Controller
                 ];
             });
 
-        $highestSingleplayerScore = SoloGame::query()
-            ->where('player_id', $player->getKey())
-            ->where('status', 'completed')
-            ->leftJoin('solo_rounds', 'solo_rounds.solo_game_id', '=', 'solo_games.id')
-            ->groupBy('solo_games.id')
-            ->selectRaw('COALESCE(SUM(solo_rounds.score), 0) as total_score')
-            ->get()
-            ->max('total_score');
+        $highestSingleplayerScore = $player->highScore();
 
         return response()->json([
             'wins' => $wins,

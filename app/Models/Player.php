@@ -57,4 +57,12 @@ class Player extends Model
             })
             ->exists();
     }
+
+    public function highScore(): int
+    {
+        return SoloGame::query()
+            ->orderByDesc('score')
+            ->select('score')
+            ->first()?->score ?? 0;
+    }
 }
