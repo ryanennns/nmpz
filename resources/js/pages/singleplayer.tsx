@@ -6,7 +6,11 @@ import { LocationReportMenu } from '@/components/welcome/LocationReportMenu';
 import MapillaryImagePanel from '@/components/welcome/MapillaryImagePanel';
 import MapPicker from '@/components/welcome/MapPicker';
 import { StandardCompass } from '@/components/welcome/StandardCompass';
-import type { LatLng, LocationReportReason } from '@/components/welcome/types';
+import type {
+    LatLng,
+    LocationReportReason,
+    Player,
+} from '@/components/welcome/types';
 import { getP1Color } from '@/hooks/use-theme';
 import { PLAYER_ID_KEY, useLocalStorage } from '@/hooks/useLocalStorage';
 
@@ -270,10 +274,12 @@ function SummaryMap({
 export default function SingleplayerPage({
     authenticated,
     soloGameId,
+    player,
     playerId,
 }: {
     authenticated: boolean;
     soloGameId: string;
+    player: Player | null;
     playerId: string | null;
 }) {
     const localStorage = useLocalStorage();
@@ -303,7 +309,7 @@ export default function SingleplayerPage({
     }, []);
 
     function getResolvedPlayerId() {
-        return playerId ?? localStorage.get(PLAYER_ID_KEY);
+        return player?.id ?? playerId ?? localStorage.get(PLAYER_ID_KEY);
     }
 
     function getPlayerPayload() {
@@ -492,6 +498,8 @@ export default function SingleplayerPage({
         highestSingleplayerScore,
         totalScore,
     );
+    const summaryPlayerName = player?.name ?? null;
+    const summaryUserName = player?.user?.name ?? null;
 
     return (
         <>
@@ -651,6 +659,11 @@ export default function SingleplayerPage({
                             />
                             <div className="absolute bottom-6 left-8 z-20">
                                 <div className="rounded border border-p1/20 bg-black/80 px-5 py-4 backdrop-blur-sm">
+                                    {summaryPlayerName && (
+                                        <div className="mb-3 text-center text-xs text-p1">
+                                            {`> ${summaryPlayerName}`}
+                                        </div>
+                                    )}
                                     <div className="mb-3 text-center">
                                         <div className="text-4xl font-bold text-p1 tabular-nums">
                                             {totalScore.toLocaleString()}
@@ -665,6 +678,18 @@ export default function SingleplayerPage({
                                             {bestSingleplayerScore.toLocaleString()}
                                         </span>
                                     </div>
+                                    {summaryUserName &&
+                                        summaryUserName !==
+                                            summaryPlayerName && (
+                                            <div className="mb-4 text-center text-xs text-white/50">
+                                                <div>
+                                                    account{' '}
+                                                    <span className="text-p1">
+                                                        {summaryUserName}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
                                     <div className="mb-4 space-y-0.5">
                                         {completedRounds.map((r) => (
                                             <div

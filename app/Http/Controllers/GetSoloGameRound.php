@@ -16,7 +16,6 @@ class GetSoloGameRound extends Controller
     public function __invoke(Request $request, SoloGame $soloGame): JsonResponse
     {
         if (!$soloGame->isComplete()) {
-            dd('asdf');
             PlayeruserGuard::canAccessResource($request);
         }
 

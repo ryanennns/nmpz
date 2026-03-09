@@ -26,6 +26,9 @@ class SingleplayerPageControllerTest extends TestCase
                 ->component('singleplayer')
                 ->where('authenticated', false)
                 ->where('soloGameId', $game->getKey())
+                ->where('player.id', $player->getKey())
+                ->where('player.name', $player->name)
+                ->where('player.user_id', null)
                 ->where('playerId', null),
             );
     }
@@ -47,6 +50,10 @@ class SingleplayerPageControllerTest extends TestCase
                 ->component('singleplayer')
                 ->where('authenticated', true)
                 ->where('soloGameId', $game->getKey())
+                ->where('player.id', $player->getKey())
+                ->where('player.name', $player->name)
+                ->where('player.user_id', $user->getKey())
+                ->where('player.user.name', $user->name)
                 ->where('playerId', $player->getKey()),
             );
     }

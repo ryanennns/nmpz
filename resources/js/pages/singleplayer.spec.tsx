@@ -197,6 +197,7 @@ describe('SingleplayerPage', () => {
             <SingleplayerPage
                 authenticated={false}
                 soloGameId="game-1"
+                player={null}
                 playerId={null}
             />,
         );
@@ -288,6 +289,7 @@ describe('SingleplayerPage', () => {
             <SingleplayerPage
                 authenticated={false}
                 soloGameId="game-1"
+                player={null}
                 playerId={null}
             />,
         );
@@ -336,6 +338,13 @@ describe('SingleplayerPage', () => {
             <SingleplayerPage
                 authenticated={true}
                 soloGameId="game-1"
+                player={{
+                    id: 'player-1',
+                    name: 'guest-1',
+                    is_guest: false,
+                    user_id: 1,
+                    user: { name: 'alice' },
+                }}
                 playerId="player-1"
             />,
         );
@@ -393,6 +402,12 @@ describe('SingleplayerPage', () => {
             <SingleplayerPage
                 authenticated={false}
                 soloGameId="game-1"
+                player={{
+                    id: 'player-1',
+                    name: 'guest-1',
+                    is_guest: true,
+                    user_id: null,
+                }}
                 playerId={null}
             />,
         );
@@ -407,6 +422,7 @@ describe('SingleplayerPage', () => {
         });
         expect(screen.getAllByText('4,999')).toHaveLength(3);
         expect(screen.getByText('highschore')).toBeInTheDocument();
+        expect(screen.getByText('> guest-1')).toBeInTheDocument();
         expect(screen.getByText('play again [space]')).toBeInTheDocument();
         expect(screen.getByText('home')).toBeInTheDocument();
     });
@@ -448,6 +464,7 @@ describe('SingleplayerPage', () => {
             <SingleplayerPage
                 authenticated={false}
                 soloGameId="game-1"
+                player={null}
                 playerId={null}
             />,
         );
@@ -499,6 +516,13 @@ describe('SingleplayerPage', () => {
             <SingleplayerPage
                 authenticated={false}
                 soloGameId="game-1"
+                player={{
+                    id: 'player-1',
+                    name: 'guest-1',
+                    is_guest: true,
+                    user_id: null,
+                    user: { name: 'alice' },
+                }}
                 playerId={null}
             />,
         );
@@ -508,5 +532,7 @@ describe('SingleplayerPage', () => {
         });
         expect(screen.getAllByText('4,200')).toHaveLength(2);
         expect(screen.getByText('5,500')).toBeInTheDocument();
+        expect(screen.getByText('> guest-1')).toBeInTheDocument();
+        expect(screen.getByText('alice')).toBeInTheDocument();
     });
 });

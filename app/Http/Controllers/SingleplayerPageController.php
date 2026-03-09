@@ -22,6 +22,7 @@ class SingleplayerPageController extends Controller
         return Inertia::render('singleplayer', [
             'authenticated' => auth()->check(),
             'soloGameId' => $soloGame->getKey(),
+            'player' => $soloGame->player?->loadMissing('user'),
             'playerId' => $soloGame->player?->user_id !== null
                 ? $soloGame->player?->getKey()
                 : null,
