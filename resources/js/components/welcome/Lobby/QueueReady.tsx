@@ -101,16 +101,16 @@ export const QueueReady = ({
             </div>
             <div className={'flex gap-2'}>
                 <button
-                    onClick={onJoinQueue}
-                    className="w-full rounded bg-p1/15 px-2 py-1 text-xs text-p1 transition hover:bg-p1/25"
-                >
-                    join queue
-                </button>
-                <button
                     onClick={onSinglePlayer}
                     className="w-full rounded bg-p1/15 px-2 py-1 text-xs text-p1 transition hover:bg-p1/25"
                 >
                     singleplayer
+                </button>
+                <button
+                    onClick={onJoinQueue}
+                    className="w-full rounded bg-p1/15 px-2 py-1 text-xs text-p1 transition hover:bg-p1/25"
+                >
+                    multiplayer
                 </button>
             </div>
             {highestSingleplayerScore !== undefined && (

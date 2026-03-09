@@ -138,7 +138,7 @@ describe('Lobby', () => {
         await user.type(screen.getByPlaceholderText('your name'), 'ryan');
         await user.click(screen.getByText('continue'));
 
-        expect(await screen.findByText('join queue')).toBeInTheDocument();
+        expect(await screen.findByText('multiplayer')).toBeInTheDocument();
         expect(screen.getByText('ryan')).toBeInTheDocument();
         expect(mocks.api.createPlayer).toHaveBeenCalledWith('ryan');
     });
@@ -154,8 +154,8 @@ describe('Lobby', () => {
         await user.type(screen.getByPlaceholderText('your name'), 'ryan');
         await user.click(screen.getByText('continue'));
 
-        await screen.findByText('join queue');
-        await user.click(screen.getByText('join queue'));
+        await screen.findByText('multiplayer');
+        await user.click(screen.getByText('multiplayer'));
 
         expect(
             await screen.findByText('waiting for opponent'),
@@ -217,7 +217,7 @@ describe('Lobby', () => {
 
         render(<Lobby />);
 
-        expect(await screen.findByText('join queue')).toBeInTheDocument();
+        expect(await screen.findByText('multiplayer')).toBeInTheDocument();
         expect(mocks.api.getPlayer).toHaveBeenCalledWith('stored-player');
         expect(screen.getByText('sam')).toBeInTheDocument();
         expect(screen.getByTestId('guest-progress-toast')).toBeInTheDocument();
@@ -258,7 +258,7 @@ describe('Lobby', () => {
         const user = userEvent.setup();
         await user.type(screen.getByPlaceholderText('your name'), 'ryan');
         await user.click(screen.getByText('continue'));
-        await screen.findByText('join queue');
+        await screen.findByText('multiplayer');
 
         const handler = mocks.listenHandlers['.GameReady'];
         expect(handler).toBeDefined();
@@ -305,7 +305,7 @@ describe('Lobby', () => {
 
         render(<Lobby />);
 
-        expect(await screen.findByText('join queue')).toBeInTheDocument();
+        expect(await screen.findByText('multiplayer')).toBeInTheDocument();
         expect(mocks.api.getAuthPlayer).toHaveBeenCalledTimes(1);
         expect(mocks.api.getPlayer).not.toHaveBeenCalled();
         expect(screen.getByText('alice')).toBeInTheDocument();
@@ -382,7 +382,7 @@ describe('Lobby', () => {
 
         const user = userEvent.setup();
 
-        await screen.findByText('join queue');
+        await screen.findByText('multiplayer');
         await user.click(screen.getByText('sign out'));
 
         await waitFor(() => {
@@ -429,7 +429,7 @@ describe('Lobby', () => {
         await user.type(screen.getByPlaceholderText('your name'), 'bob');
         await user.click(screen.getByText('continue'));
 
-        await screen.findByText('join queue');
+        await screen.findByText('multiplayer');
         await user.click(screen.getByText('create account'));
 
         expect(
@@ -448,12 +448,12 @@ describe('Lobby', () => {
         await user.type(screen.getByPlaceholderText('your name'), 'bob');
         await user.click(screen.getByText('continue'));
 
-        await screen.findByText('join queue');
+        await screen.findByText('multiplayer');
         await user.click(screen.getByText('create account'));
 
         await screen.findByPlaceholderText('confirm password');
         await user.click(screen.getByText('back'));
 
-        expect(await screen.findByText('join queue')).toBeInTheDocument();
+        expect(await screen.findByText('multiplayer')).toBeInTheDocument();
     });
 });

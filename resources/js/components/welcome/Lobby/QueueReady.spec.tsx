@@ -62,7 +62,7 @@ describe('QueueReady', () => {
         );
 
         const user = userEvent.setup();
-        await user.click(screen.getByText('join queue'));
+        await user.click(screen.getByText('multiplayer'));
 
         expect(onJoinQueue).toHaveBeenCalledTimes(1);
     });
