@@ -299,7 +299,7 @@ describe('QueueReady', () => {
             />,
         );
 
-        expect(screen.getByText('best solo:')).toBeInTheDocument();
+        expect(screen.getByText('high score:')).toBeInTheDocument();
         expect(screen.getByText('12,345')).toBeInTheDocument();
     });
 

@@ -660,7 +660,7 @@ export default function SingleplayerPage({
                                         </div>
                                     </div>
                                     <div className="mb-4 text-center text-xs text-white/50">
-                                        best solo:{' '}
+                                        highschore{' '}
                                         <span className="text-p1 tabular-nums">
                                             {bestSingleplayerScore.toLocaleString()}
                                         </span>

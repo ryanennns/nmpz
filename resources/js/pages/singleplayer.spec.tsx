@@ -406,7 +406,7 @@ describe('SingleplayerPage', () => {
             expect(screen.getByText('total score')).toBeInTheDocument();
         });
         expect(screen.getAllByText('4,999')).toHaveLength(3);
-        expect(screen.getByText('best solo:')).toBeInTheDocument();
+        expect(screen.getByText('highschore')).toBeInTheDocument();
         expect(screen.getByText('play again [space]')).toBeInTheDocument();
         expect(screen.getByText('home')).toBeInTheDocument();
     });

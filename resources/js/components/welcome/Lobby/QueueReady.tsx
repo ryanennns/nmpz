@@ -115,7 +115,7 @@ export const QueueReady = ({
             </div>
             {highestSingleplayerScore !== undefined && (
                 <div className="text-xs text-white/40">
-                    best solo:{' '}
+                    high score:{' '}
                     <span className="text-p1 tabular-nums">
                         {highestSingleplayerScore.toLocaleString()}
                     </span>
