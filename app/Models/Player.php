@@ -55,7 +55,7 @@ class Player extends Model
 
     public function hasActiveGame(): bool
     {
-        return $this->soloGames()
+        return $this->games()
             ->where('status', GameStatus::InProgress)
             ->where(function ($query) {
                 $query->where('player_one_id', $this->getKey())
