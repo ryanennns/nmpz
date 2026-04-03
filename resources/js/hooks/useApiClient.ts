@@ -70,8 +70,12 @@ export const useUnauthedApiClient = () => {
         voteOnLocationReport: (
             locationReportId: string,
             vote: 'keep' | 'remove',
+            playerId?: string | null,
         ) =>
-            client.post(`/location-reports/${locationReportId}/vote`, { vote }),
+            client.post(`/location-reports/${locationReportId}/vote`, {
+                vote,
+                ...(playerId ? { player_id: playerId } : {}),
+            }),
     };
 };
 
@@ -108,13 +112,24 @@ export function useApiClient() {
                 { message },
             );
         },
-        reportLocation: (locationId: string, reason: LocationReportReason) =>
-            client.post(`/locations/${locationId}/report`, { reason }),
+        reportLocation: (
+            locationId: string,
+            reason: LocationReportReason,
+            playerId?: string | null,
+        ) =>
+            client.post(`/locations/${locationId}/report`, {
+                reason,
+                ...(playerId ? { player_id: playerId } : {}),
+            }),
         voteOnLocationReport: (
             locationReportId: string,
             vote: 'keep' | 'remove',
+            playerId?: string | null,
         ) =>
-            client.post(`/location-reports/${locationReportId}/vote`, { vote }),
+            client.post(`/location-reports/${locationReportId}/vote`, {
+                vote,
+                ...(playerId ? { player_id: playerId } : {}),
+            }),
         fetchStats: () => client.get('/stats'),
         client,
     };

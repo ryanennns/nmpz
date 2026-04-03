@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\ReportStatus;
 use App\Models\Location;
 use App\Models\LocationReport;
+use App\Models\Player;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -13,14 +14,42 @@ class VoteOnLocationReportTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guest_is_redirected_to_login(): void
+    public function test_request_without_auth_or_player_id_is_unauthorized(): void
     {
         $location = Location::factory()->create();
         $report = $this->createPendingReport($location);
 
         $this->post(route('location-reports.vote', $report), [
             'vote' => 'keep',
-        ])->assertRedirect('/login');
+        ])->assertUnauthorized();
+    }
+
+    public function test_guest_player_can_vote_on_a_report(): void
+    {
+        $player = Player::factory()->create();
+        $location = Location::factory()->create();
+        $report = $this->createPendingReport($location);
+
+        $this->postJson(route('location-reports.vote', $report), [
+            'player_id' => $player->getKey(),
+            'vote' => 'keep',
+        ])->assertOk()
+            ->assertJson([
+                'report' => null,
+            ]);
+
+        $this->assertDatabaseHas('location_reports', [
+            'id' => $report->getKey(),
+            'votes_to_accept' => 1,
+            'votes_to_reject' => 0,
+            'status' => ReportStatus::Pending->value,
+        ]);
+
+        $this->assertDatabaseHas('location_report_votes', [
+            'location_report_id' => $report->getKey(),
+            'user_id' => null,
+            'vote' => 'keep',
+        ]);
     }
 
     public function test_vote_is_required(): void

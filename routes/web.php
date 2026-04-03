@@ -65,13 +65,11 @@ Route::middleware('auth')->get('/auth/player', GetAuthPlayer::class);
 
 Route::get('stats', WaitingRoomStats::class);
 
-Route::middleware('auth')->group(function () {
-    Route::get('locations/reports', GetLocationReports::class)
-        ->name('locations.reports');
-    Route::post('locations/{location}/report', ReportLocation::class)
-        ->name('locations.report');
-    Route::post('location-reports/{locationReport}/vote', VoteOnLocationReport::class)
-        ->name('location-reports.vote');
-});
+Route::get('locations/reports', GetLocationReports::class)
+    ->name('locations.reports');
+Route::post('locations/{location}/report', ReportLocation::class)
+    ->name('locations.report');
+Route::post('location-reports/{locationReport}/vote', VoteOnLocationReport::class)
+    ->name('location-reports.vote');
 
 require __DIR__ . '/settings.php';

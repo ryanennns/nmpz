@@ -14,13 +14,26 @@ class VoteOnLocationReport extends Controller
 {
     public function __invoke(Request $request, LocationReport $locationReport): JsonResponse
     {
+        $request->validate([
+            'player_id' => ['nullable', 'uuid', 'exists:players,id'],
+        ]);
+
+        if (! $request->user() && ! $request->filled('player_id')) {
+            return response()->json([
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
         if ($locationReport->status !== ReportStatus::Pending) {
             return response()->json([
                 'message' => 'This report has already been resolved.',
             ], 422);
         }
 
-        if ($locationReport->votes()->where('user_id', $request->user()->getKey())->exists()) {
+        if (
+            $request->user()
+            && $locationReport->votes()->where('user_id', $request->user()->getKey())->exists()
+        ) {
             return response()->json([
                 'message' => 'You have already voted on this report.',
             ]);
@@ -38,7 +51,7 @@ class VoteOnLocationReport extends Controller
             ], 422);
         }
 
-        if ($request->user()->getKey() === 1 && $vote === 'remove') {
+        if ($request->user()?->getKey() === 1 && $vote === 'remove') {
             $locationReport->update(['status' => ReportStatus::Rejected]);
             $locationReport->location()->delete();
         }
@@ -50,7 +63,7 @@ class VoteOnLocationReport extends Controller
 
         LocationReportVote::query()->create([
             'location_report_id' => $locationReport->getKey(),
-            'user_id' => $request->user()->getKey(),
+            'user_id' => $request->user()?->getKey(),
             'vote' => $vote,
         ]);
 
@@ -66,7 +79,7 @@ class VoteOnLocationReport extends Controller
         $locationReport->save();
 
         $report = $this->nextPendingReportForUser(
-            $request->user()->getKey(),
+            $request->user()?->getKey(),
             $locationReport->getKey(),
         );
 
@@ -99,7 +112,7 @@ class VoteOnLocationReport extends Controller
     }
 
     private function nextPendingReportForUser(
-        int $userId,
+        ?int $userId,
         ?string $excludeReportId = null,
     ): ?LocationReport {
         return LocationReport::query()
@@ -109,9 +122,12 @@ class VoteOnLocationReport extends Controller
                 $excludeReportId,
                 fn ($query) => $query->whereKeyNot($excludeReportId),
             )
-            ->whereDoesntHave('votes', function ($query) use ($userId) {
-                $query->where('user_id', $userId);
-            })
+            ->when(
+                $userId !== null,
+                fn ($query) => $query->whereDoesntHave('votes', function ($voteQuery) use ($userId) {
+                    $voteQuery->where('user_id', $userId);
+                }),
+            )
             ->oldest()
             ->first();
     }

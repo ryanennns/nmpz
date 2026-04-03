@@ -6,6 +6,7 @@ use App\Enums\ReportStatus;
 use App\Models\Location;
 use App\Models\LocationReport;
 use App\Models\LocationReportVote;
+use App\Models\Player;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -15,9 +16,38 @@ class GetLocationReportsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guest_is_redirected_to_login(): void
+    protected function setUp(): void
     {
-        $this->get('/locations/reports')->assertRedirect('/login');
+        parent::setUp();
+
+        $this->withoutVite();
+    }
+
+    public function test_request_without_auth_or_player_id_is_unauthorized(): void
+    {
+        $this->get('/locations/reports')->assertUnauthorized();
+    }
+
+    public function test_guest_player_can_view_the_oldest_pending_report(): void
+    {
+        $player = Player::factory()->create();
+        $location = Location::factory()->create();
+        $report = LocationReport::query()->create([
+            'reported_by_id' => null,
+            'location_id' => $location->getKey(),
+            'reason' => 'inaccurate',
+            'status' => ReportStatus::Pending,
+            'votes_to_accept' => 0,
+            'votes_to_reject' => 0,
+        ]);
+
+        $this->get('/locations/reports?player_id=' . $player->getKey())
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('LocationReports')
+                ->where('report.id', $report->getKey())
+                ->where('playerId', $player->getKey()),
+            );
     }
 
     public function test_authenticated_user_can_view_the_oldest_pending_report(): void

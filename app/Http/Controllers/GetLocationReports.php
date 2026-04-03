@@ -13,21 +13,33 @@ class GetLocationReports extends Controller
 {
     public function __invoke(Request $request): Response
     {
-        $report = $this->nextPendingReportForUser($request->user()->getKey());
+        $request->validate([
+            'player_id' => ['nullable', 'uuid', 'exists:players,id'],
+        ]);
+
+        if (! $request->user() && ! $request->filled('player_id')) {
+            abort(401);
+        }
+
+        $report = $this->nextPendingReportForUser($request->user()?->getKey());
 
         return Inertia::render('LocationReports', [
             'report' => $this->serializeReport($report),
+            'playerId' => $request->string('player_id')->value() ?: null,
         ]);
     }
 
-    private function nextPendingReportForUser(int $userId): ?LocationReport
+    private function nextPendingReportForUser(?int $userId): ?LocationReport
     {
         return LocationReport::query()
             ->with(['location', 'reportedBy'])
             ->where('status', ReportStatus::Pending)
-            ->whereDoesntHave('votes', function ($query) use ($userId) {
-                $query->where('user_id', $userId);
-            })
+            ->when(
+                $userId !== null,
+                fn ($query) => $query->whereDoesntHave('votes', function ($voteQuery) use ($userId) {
+                    $voteQuery->where('user_id', $userId);
+                }),
+            )
             ->oldest()
             ->first();
     }

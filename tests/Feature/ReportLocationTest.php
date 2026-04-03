@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\ReportReason;
 use App\Enums\ReportStatus;
 use App\Models\Location;
+use App\Models\Player;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -13,13 +14,37 @@ class ReportLocationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guest_cannot_report_a_location(): void
+    public function test_request_without_auth_or_player_id_cannot_report_a_location(): void
     {
         $location = Location::factory()->create();
 
         $this->postJson(route('locations.report', $location), [
             'reason' => ReportReason::Inaccurate->value,
         ])->assertUnauthorized();
+    }
+
+    public function test_guest_player_can_report_a_location(): void
+    {
+        $location = Location::factory()->create();
+        $player = Player::factory()->create();
+
+        $response = $this->postJson(route('locations.report', $location), [
+            'player_id' => $player->getKey(),
+            'reason' => ReportReason::Inaccurate->value,
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('reported_by_id', null)
+            ->assertJsonPath('location_id', $location->getKey())
+            ->assertJsonPath('reason', ReportReason::Inaccurate->value)
+            ->assertJsonPath('status', ReportStatus::Pending->value);
+
+        $this->assertDatabaseHas('location_reports', [
+            'reported_by_id' => null,
+            'location_id' => $location->getKey(),
+            'reason' => ReportReason::Inaccurate->value,
+            'status' => ReportStatus::Pending->value,
+        ]);
     }
 
     public function test_authenticated_user_can_report_a_location(): void
@@ -117,7 +142,7 @@ class ReportLocationTest extends TestCase
         $this->actingAs($secondUser)->postJson(route('locations.report', $location), [
             'reason' => ReportReason::BadCoverage->value,
         ])->assertStatus(409)
-            ->assertJsonPath('message', 'Location already reported.');
+            ->assertJsonPath('message', 'Location already has a pending report.');
 
         $this->assertDatabaseCount('location_reports', 1);
     }

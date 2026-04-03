@@ -755,16 +755,16 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
     }
 
     async function reportLocation(reason: LocationReportReason) {
-        if (
-            !location ||
-            player.user_id == null ||
-            reportedLocations[location.id]
-        ) {
+        if (!location || reportedLocations[location.id]) {
             return;
         }
 
         try {
-            await api.reportLocation(location.id, reason);
+            await api.reportLocation(
+                location.id,
+                reason,
+                player.user_id == null ? player.id : null,
+            );
             setReportedLocations((prev) => ({
                 ...prev,
                 [location.id]: true,
@@ -1004,21 +1004,17 @@ function Game({ player, roundData }: { player: Player; roundData: RoundData }) {
                         );
                     })()}
 
-                    {round &&
-                        !roundFinished &&
-                        !gameOver &&
-                        location &&
-                        player.user_id != null && (
-                            <div className="absolute bottom-4 left-4 z-20">
-                                <LocationReportMenu
-                                    key={`report-${location.id}`}
-                                    onSubmit={reportLocation}
-                                    disabled={
-                                        reportedLocations[location.id] === true
-                                    }
-                                />
-                            </div>
-                        )}
+                    {round && !roundFinished && !gameOver && location && (
+                        <div className="absolute bottom-4 left-4 z-20">
+                            <LocationReportMenu
+                                key={`report-${location.id}`}
+                                onSubmit={reportLocation}
+                                disabled={
+                                    reportedLocations[location.id] === true
+                                }
+                            />
+                        </div>
+                    )}
 
                     {/* Bottom-center: compass */}
                     {location && heading && (

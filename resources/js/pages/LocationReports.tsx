@@ -26,8 +26,10 @@ const FADE_MS = 300;
 
 export default function LocationReportsPage({
     report,
+    playerId,
 }: {
     report: LocationReportPageData;
+    playerId: string | null;
 }) {
     const api = useUnauthedApiClient();
     const [activeReport, setActiveReport] =
@@ -66,6 +68,7 @@ export default function LocationReportsPage({
             const response = await api.voteOnLocationReport(
                 activeReport.id,
                 vote,
+                playerId,
             );
             const payload = response.data as {
                 report: LocationReportPageData;

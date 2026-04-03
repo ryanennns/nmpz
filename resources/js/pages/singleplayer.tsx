@@ -424,6 +424,7 @@ export default function SingleplayerPage({
             return;
         await axios.post(`/locations/${currentRound.location.id}/report`, {
             reason,
+            ...(authenticated ? {} : { player_id: getResolvedPlayerId() }),
         });
         setReportedLocations((prev) => ({
             ...prev,
@@ -571,21 +572,19 @@ export default function SingleplayerPage({
                                 )}
 
                                 {/* Report menu — bottom left, auth only */}
-                                {phase === 'playing' &&
-                                    authenticated &&
-                                    currentRound && (
-                                        <div className="absolute bottom-4 left-4 z-20">
-                                            <LocationReportMenu
-                                                key={currentRound.location.id}
-                                                onSubmit={reportLocation}
-                                                disabled={
-                                                    reportedLocations[
-                                                        currentRound.location.id
-                                                    ] === true
-                                                }
-                                            />
-                                        </div>
-                                    )}
+                                {phase === 'playing' && currentRound && (
+                                    <div className="absolute bottom-4 left-4 z-20">
+                                        <LocationReportMenu
+                                            key={currentRound.location.id}
+                                            onSubmit={reportLocation}
+                                            disabled={
+                                                reportedLocations[
+                                                    currentRound.location.id
+                                                ] === true
+                                            }
+                                        />
+                                    </div>
+                                )}
 
                                 {/* Round result panel — bottom left */}
                                 {phase === 'result' && lastResult && (

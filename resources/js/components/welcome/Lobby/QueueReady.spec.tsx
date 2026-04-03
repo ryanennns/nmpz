@@ -303,7 +303,7 @@ describe('QueueReady', () => {
         expect(screen.getByText('12,345')).toBeInTheDocument();
     });
 
-    it('does not show "review reports" when not authenticated', () => {
+    it('does not show "review locations" when not authenticated', () => {
         render(
             <QueueReady
                 playerName="ryan"

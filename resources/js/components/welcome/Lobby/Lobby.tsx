@@ -177,7 +177,11 @@ export default function Lobby() {
     const reviewLocations = () => {
         setPhaseVisible(false);
         window.setTimeout(() => {
-            window.location.assign('/locations/reports');
+            window.location.assign(
+                player && !user
+                    ? `/locations/reports?player_id=${player.id}`
+                    : '/locations/reports',
+            );
         }, PHASE_TRANSITION_MS);
     };
 

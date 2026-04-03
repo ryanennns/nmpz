@@ -50,7 +50,7 @@ describe('LocationReportsPage', () => {
     });
 
     it('renders the empty state when there is no pending report', () => {
-        render(<LocationReportsPage report={null} />);
+        render(<LocationReportsPage report={null} playerId={null} />);
 
         expect(
             screen.queryByText('no pending location reports'),
@@ -65,7 +65,9 @@ describe('LocationReportsPage', () => {
     });
 
     it('fades in on mount', async () => {
-        const { container } = render(<LocationReportsPage report={null} />);
+        const { container } = render(
+            <LocationReportsPage report={null} playerId={null} />,
+        );
         const wrapper = container.firstChild as HTMLElement;
 
         expect(wrapper).toHaveClass('opacity-0');
@@ -78,6 +80,7 @@ describe('LocationReportsPage', () => {
     it('renders the current report details', () => {
         render(
             <LocationReportsPage
+                playerId={null}
                 report={{
                     id: 'report-1',
                     reason: 'inaccurate',
@@ -136,6 +139,7 @@ describe('LocationReportsPage', () => {
 
         render(
             <LocationReportsPage
+                playerId="player-1"
                 report={{
                     id: 'report-1',
                     reason: 'inaccurate',
@@ -160,6 +164,7 @@ describe('LocationReportsPage', () => {
         expect(mocks.api.voteOnLocationReport).toHaveBeenCalledWith(
             'report-1',
             'keep',
+            'player-1',
         );
 
         await waitFor(() => {
@@ -177,6 +182,7 @@ describe('LocationReportsPage', () => {
 
         render(
             <LocationReportsPage
+                playerId={null}
                 report={{
                     id: 'report-1',
                     reason: 'bad coverage',
@@ -201,6 +207,7 @@ describe('LocationReportsPage', () => {
         expect(mocks.api.voteOnLocationReport).toHaveBeenCalledWith(
             'report-1',
             'remove',
+            null,
         );
 
         await waitFor(() => {
@@ -217,7 +224,9 @@ describe('LocationReportsPage', () => {
         const assignSpy = vi.fn();
         vi.stubGlobal('location', { ...window.location, assign: assignSpy });
 
-        const { container } = render(<LocationReportsPage report={null} />);
+        const { container } = render(
+            <LocationReportsPage report={null} playerId={null} />,
+        );
         const wrapper = container.firstChild as HTMLElement;
 
         fireEvent.click(screen.getByText('home'));
